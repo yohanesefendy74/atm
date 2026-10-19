@@ -26,12 +26,16 @@ HP Krani (browser) --HTTPS--> API cloud <--HTTPS (keluar saja)-- PC Gateway --RS
    Untuk TSC jaringan: `Mode: "Tcp"`, `Host`, `Port: 9100`.
 6. **Firewall PC gudang**: izinkan koneksi keluar HTTPS ke server. Tidak ada aturan masuk.
 
-## Timbangan yang jauh: ESP32 sebagai jembatan serial-ke-WiFi
+## Timbangan yang jauh: ESP32 sebagai jembatan ke WiFi
 
-Untuk indikator A12E yang jauh dari PC Gateway: indikator (RS232C) -> modul **MAX3232** -> **ESP32** -> WiFi gudang -> Gateway.
-Firmware: `esp32/serial-wifi-bridge/serial-wifi-bridge.ino` (Arduino IDE, papan ESP32). Isi SSID/password WiFi dan `BAUD` sesuai setting A12E;
-ESP32 membuka server TCP port 4001 dan meneruskan byte apa adanya. **Wajib pakai MAX3232**: RS232 bertegangan +-12 V dan merusak pin ESP32 (3,3 V).
-Keluaran current loop A12E tidak dipakai. Beri ESP32 IP tetap (DHCP reservation di router). Satu ESP32 per indikator (1 mobil + 3 palet = 4 ESP32).
+Untuk indikator A12E: **current loop -> optocoupler (PC817/6N137) -> ESP32 -> WiFi gudang -> Gateway**. Ini cara yang dipakai sekarang (terisolasi, tanpa MAX3232).
+Alternatif: RS232C -> MAX3232 -> ESP32 (`MODE_OPTO = false` di firmware). Firmware: `esp32/serial-wifi-bridge/serial-wifi-bridge.ino` (Arduino IDE, papan ESP32);
+skema sambungan ada di komentar paling atas file itu. Hal penting:
+- Sinyal dari optocoupler **terbalik** (arus loop mengalir = RX LOW), firmware membaliknya (`invert`).
+- Resistor seri LED dan catu loop tergantung apakah loop A12E **aktif** (indikator memberi arus) atau **pasif**: cek manual A12E.
+- Lewat optocoupler hanya **menerima**; indikator harus diatur kirim **terus-menerus** (tidak bisa `PerintahMinta`).
+- Jangan menyambung RS232 (+-12 V) langsung ke ESP32.
+- Satu ESP32 per indikator (1 mobil + 3 palet = 4), IP tetap (DHCP reservation), sinyal WiFi kuat. Bila WiFi putus, timbang gagal (krani isi manual).
 
 Di `appsettings.json` Gateway, timbangan lewat ESP32 diatur dengan mode TCP (tidak butuh port COM di PC):
 
