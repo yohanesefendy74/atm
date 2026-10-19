@@ -81,7 +81,7 @@ Skrip ini: set zona waktu WIB, buat folder `C:\GudangAtm\{src,api,certs,backup,i
 
 ```powershell
 cd C:\GudangAtm\src\gudang-atm\deploy
-.\02-ambil-dan-publish.ps1 -RepoUrl https://github.com/<akun>/gudang-atm.git
+.\02-ambil-dan-publish.ps1 -RepoUrl https://github.com/yohanesefendy74/atm.git
 ```
 
 Untuk repo private, Git akan meminta login: username = akun GitHub, password = **Personal Access Token** (hak `repo` read). Simpan dengan

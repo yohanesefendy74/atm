@@ -5,7 +5,7 @@ Repository lokal sudah dibuat (branch `main`, sudah ada commit awal). Untuk meng
 1. Buat repository **kosong** di layanan Git Anda (tanpa README/.gitignore awal). Disarankan **private**.
 2. Di folder repo ini:
    ```
-   git remote add origin https://github.com/<akun>/gudang-atm.git
+   git remote add origin https://github.com/yohanesefendy74/atm.git
    git push -u origin main
    ```
    Git meminta login: username + **Personal Access Token** (GitHub › Settings › Developer settings › Tokens, hak `repo`).

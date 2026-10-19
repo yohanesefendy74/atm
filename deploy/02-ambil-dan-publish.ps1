@@ -1,6 +1,6 @@
 <#
  Gudang ATM - langkah 2 (dan setiap update): ambil kode dari Git lalu publish API ke C:\GudangAtm\api.
- Contoh pertama kali : .\02-ambil-dan-publish.ps1 -RepoUrl https://github.com/<akun>/gudang-atm.git
+ Contoh pertama kali : .\02-ambil-dan-publish.ps1 -RepoUrl https://github.com/yohanesefendy74/atm.git
  Contoh update       : .\02-ambil-dan-publish.ps1
  Rahasia (connection string, JWT, password sertifikat) TIDAK ikut: ada di pengaturan service (langkah 3).
 #>
