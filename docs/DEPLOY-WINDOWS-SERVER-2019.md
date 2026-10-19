@@ -167,8 +167,7 @@ Kalau gagal, lihat tabel masalah di bawah dan Event Viewer › Windows Logs › 
 - [ ] Windows Update dan pembaruan .NET 8 rutin (bulanan).
 - [ ] Rencana perubahan password `OUSR` dari Base64 ke hash (lihat README bagian "Yang masih perlu dilakukan tim IT").
 
-## Catatan arsitektur: perangkat di jaringan lokal gudang
+## Timbangan dan printer di jaringan lokal gudang
 
-Desain v2 memakai **indikator timbangan mobil/palet lewat LAN** (`192.168.x.x:4001`) dan printer label Bluetooth. Server di cloud
-**tidak bisa** mengakses IP lokal gudang. Bila server dipindah ke cloud, pembacaan timbangan harus dilakukan di sisi gudang
-(PC pos timbang / HP krani yang satu jaringan dengan indikator) lalu hasilnya dikirim ke API. Hal ini perlu diputuskan sebelum kode v2 dibuat.
+Server cloud tidak bisa menjangkau timbangan RS232 dan printer TSC di gudang, dan browser HP Krani tidak boleh memanggil alat lokal
+dari halaman HTTPS. Solusinya **PC Gateway** di gudang (koneksi keluar saja ke server). Panduan lengkap: [GATEWAY.md](GATEWAY.md).

@@ -122,7 +122,8 @@ public static class SecurityMiddleware
         var method = ctx.Request.Method;
         var unsafeMethod = !(HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method));
         var bearer = ctx.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase);
-        var isMobileLogin = ctx.Request.Path.Equals("/api/auth/login", StringComparison.OrdinalIgnoreCase);
+        var isMobileLogin = ctx.Request.Path.Equals("/api/auth/login", StringComparison.OrdinalIgnoreCase)
+            || ctx.Request.Path.StartsWithSegments("/api/gateway"); // gateway: tanpa cookie, memakai X-Gateway-Key
         if (unsafeMethod && !bearer && !isMobileLogin && ctx.Request.Path.StartsWithSegments("/api"))
         {
             var af = ctx.RequestServices.GetRequiredService<IAntiforgery>();

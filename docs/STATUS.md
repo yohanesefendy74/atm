@@ -16,3 +16,6 @@
 Urutan pengerjaan kode yang disarankan: (1) tabel + Setup, (2) SPBB/SPMB + titipan, (3) registrasi & timbang, (4) krani (scan sesuai dokumen),
 (5) Jadwal, (6) Surat Jalan, (7) riwayat berat & laporan.
 Pertanyaan yang masih terbuka ada di percakapan desain; tanyakan sebelum tahap 1.
+
+
+**Gateway alat (timbangan RS232, printer TSC):** API (`GatewayEndpoints.cs`), `database/gateway.sql`, dan `gateway/` sudah ditulis, belum dikompilasi/diuji. Lihat `GATEWAY.md`. Format data timbangan menunggu hasil `--sniff`.

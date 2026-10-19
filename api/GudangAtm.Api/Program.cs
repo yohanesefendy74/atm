@@ -177,9 +177,11 @@ SqlConnection Db() => new(connString);
 
 app.MapGet("/api/health", () => Results.Ok(new { ok = true }));
 app.MapAuth(auth);
+app.MapGateway(Db);   // PC gateway gudang, auth lewat X-Gateway-Key (bukan cookie)
 
 var api = app.MapGroup("/api").RequireAuthorization();
 api.MapKrani(Db);
+api.MapAlat(Db);
 
 var cms = app.MapGroup("/api/cms").RequireAuthorization("Admin");
 cms.MapCms(Db, cfg);
