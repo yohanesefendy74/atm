@@ -1,4 +1,5 @@
 using System.IO.Ports;
+using System.Net.Sockets;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -15,7 +16,10 @@ public sealed class ScaleReader : IDisposable
     readonly Regex pat, stabilPat;
     readonly object gate = new();
     readonly List<Reading> recent = new();
-    SerialPort? port;
+    Stream? stream;
+    TcpClient? tcp;
+    bool Tcp => o.Mode.Equals("Tcp", StringComparison.OrdinalIgnoreCase);
+    string Tujuan => Tcp ? $"{o.Host}:{o.TcpPort}" : o.Port;
     CancellationTokenSource? cts;
     public string? LastError { get; private set; }
 
@@ -40,18 +44,32 @@ public sealed class ScaleReader : IDisposable
         {
             try
             {
-                port = new SerialPort(o.Port, o.Baud, Enum.Parse<Parity>(o.Parity, true), o.DataBits, Enum.Parse<StopBits>(o.StopBits, true))
-                { ReadTimeout = 2000, WriteTimeout = 2000, Encoding = Encoding.ASCII };
-                port.Open();
+                if (Tcp)
+                {
+                    tcp = new TcpClient();
+                    tcp.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                    using var cc = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    cc.CancelAfter(TimeSpan.FromSeconds(8));
+                    await tcp.ConnectAsync(o.Host, o.TcpPort, cc.Token);
+                    stream = tcp.GetStream();
+                }
+                else
+                {
+                    port = new SerialPort(o.Port, o.Baud, Enum.Parse<Parity>(o.Parity, true), o.DataBits, Enum.Parse<StopBits>(o.StopBits, true))
+                    { ReadTimeout = 2000, WriteTimeout = 2000, Encoding = Encoding.ASCII };
+                    port.Open();
+                    stream = port.BaseStream;
+                }
                 LastError = null;
-                log.LogInformation("Timbangan {Kode}: {Port} terbuka ({Baud} baud)", o.Kode, o.Port, o.Baud);
+                log.LogInformation("Timbangan {Kode}: {T} terhubung", o.Kode, Tujuan);
                 var buf = new byte[256];
                 var line = new StringBuilder();
                 while (!ct.IsCancellationRequested)
                 {
                     int n;
-                    try { n = await port.BaseStream.ReadAsync(buf, 0, buf.Length, ct); }
+                    try { n = await stream.ReadAsync(buf, 0, buf.Length, ct); }
                     catch (TimeoutException) { continue; }
+                    if (n == 0) throw new IOException("Koneksi ditutup oleh alat");
                     for (int i = 0; i < n; i++)
                     {
                         var c = (char)buf[i];
@@ -63,11 +81,11 @@ public sealed class ScaleReader : IDisposable
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                LastError = $"{o.Port}: {ex.Message}";
+                LastError = $"{Tujuan}: {ex.Message}";
                 log.LogWarning("Timbangan {Kode}: {Err}. Coba lagi 5 detik.", o.Kode, LastError);
                 try { await Task.Delay(5000, ct); } catch (OperationCanceledException) { }
             }
-            finally { try { port?.Dispose(); } catch { } port = null; }
+            finally { stream = null; try { port?.Dispose(); } catch { } try { tcp?.Dispose(); } catch { } port = null; tcp = null; }
         }
     }
 
@@ -89,10 +107,11 @@ public sealed class ScaleReader : IDisposable
     /// Menunggu pembacaan stabil sampai timeout. Bila tidak stabil, mengembalikan pembacaan terakhir dengan Stabil=false.
     public async Task<(Reading? r, string? err)> ReadAsync(TimeSpan timeout)
     {
-        if (port is null || !port.IsOpen) return (null, LastError ?? $"Port {o.Port} belum terbuka");
+        var st = stream;
+        if (st is null) return (null, LastError ?? $"{Tujuan} belum terhubung");
         if (!string.IsNullOrEmpty(o.PerintahMinta))
         {
-            try { port.Write(Unescape(o.PerintahMinta)); } catch (Exception ex) { return (null, "Gagal mengirim perintah: " + ex.Message); }
+            try { var cmd = Encoding.ASCII.GetBytes(Unescape(o.PerintahMinta)); st.Write(cmd, 0, cmd.Length); st.Flush(); } catch (Exception ex) { return (null, "Gagal mengirim perintah: " + ex.Message); }
         }
         var until = DateTime.UtcNow + timeout;
         var since = DateTime.UtcNow.AddSeconds(-1);   // abaikan data lebih tua dari 1 detik sebelum permintaan
@@ -116,5 +135,5 @@ public sealed class ScaleReader : IDisposable
         return last is null ? (null, "Tidak ada data dari timbangan (cek kabel / baud / PerintahMinta)") : (last with { Stabil = false }, null);
     }
 
-    public void Dispose() { cts?.Cancel(); try { port?.Dispose(); } catch { } }
+    public void Dispose() { cts?.Cancel(); try { port?.Dispose(); } catch { } try { tcp?.Dispose(); } catch { } }
 }

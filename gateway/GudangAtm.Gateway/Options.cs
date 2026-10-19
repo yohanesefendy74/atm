@@ -11,6 +11,10 @@ public class ApiOptions
 public class ScaleOptions
 {
     public string Kode { get; set; } = "";
+    /// "Serial" (kabel RS232 ke PC ini) atau "Tcp" (jembatan serial-ke-jaringan, mis. ESP32 / Moxa, di Host:TcpPort)
+    public string Mode { get; set; } = "Serial";
+    public string Host { get; set; } = "";
+    public int TcpPort { get; set; } = 4001;
     public string Port { get; set; } = "COM1";
     public int Baud { get; set; } = 9600;
     public int DataBits { get; set; } = 8;

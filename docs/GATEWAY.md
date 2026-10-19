@@ -26,6 +26,23 @@ HP Krani (browser) --HTTPS--> API cloud <--HTTPS (keluar saja)-- PC Gateway --RS
    Untuk TSC jaringan: `Mode: "Tcp"`, `Host`, `Port: 9100`.
 6. **Firewall PC gudang**: izinkan koneksi keluar HTTPS ke server. Tidak ada aturan masuk.
 
+## Timbangan yang jauh: ESP32 sebagai jembatan serial-ke-WiFi
+
+Untuk indikator A12E yang jauh dari PC Gateway: indikator (RS232C) -> modul **MAX3232** -> **ESP32** -> WiFi gudang -> Gateway.
+Firmware: `esp32/serial-wifi-bridge/serial-wifi-bridge.ino` (Arduino IDE, papan ESP32). Isi SSID/password WiFi dan `BAUD` sesuai setting A12E;
+ESP32 membuka server TCP port 4001 dan meneruskan byte apa adanya. **Wajib pakai MAX3232**: RS232 bertegangan +-12 V dan merusak pin ESP32 (3,3 V).
+Keluaran current loop A12E tidak dipakai. Beri ESP32 IP tetap (DHCP reservation di router). Satu ESP32 per indikator (1 mobil + 3 palet = 4 ESP32).
+
+Di `appsettings.json` Gateway, timbangan lewat ESP32 diatur dengan mode TCP (tidak butuh port COM di PC):
+
+```json
+{ "Kode": "TP-02", "Mode": "Tcp", "Host": "192.168.1.52", "TcpPort": 4001, "Pattern": "...", "Satuan": "kg" }
+```
+
+Rekam data: `.\GudangAtm.Gateway.exe --sniff 192.168.1.52:4001 0 30`. Satu PC Gateway bisa membaca semua ESP32 selama satu jaringan WiFi/LAN.
+Syarat: sinyal WiFi di tiap titik timbang kuat; bila WiFi gudang tidak stabil, timbang gagal (krani bisa isi manual).
+Kode ESP32 belum diuji di perangkat.
+
 ## Menentukan format data timbangan (belum diketahui)
 
 Format tiap merek berbeda. Rekam dulu datanya (hentikan service dulu agar COM tidak terpakai):

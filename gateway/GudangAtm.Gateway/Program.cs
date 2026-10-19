@@ -40,20 +40,33 @@ await builder.Build().RunAsync();
 
 static void Sniff(string[] a)
 {
-    var portName = a.ElementAtOrDefault(1) ?? "COM1";
+    // --sniff COM3 9600 [detik] [perintah]   atau   --sniff 192.168.1.50:4001 0 [detik] [perintah]  (jembatan ESP32/converter)
+    var target = a.ElementAtOrDefault(1) ?? "COM1";
     var baud = int.TryParse(a.ElementAtOrDefault(2), out var b) ? b : 9600;
     var detik = int.TryParse(a.ElementAtOrDefault(3), out var d) ? d : 30;
     var cmd = a.ElementAtOrDefault(4);
-    Console.WriteLine($"Merekam {portName} @ {baud} baud selama {detik} dtk. Letakkan beban / tekan tombol print di indikator.");
-    using var p = new SerialPort(portName, baud, Parity.None, 8, StopBits.One) { ReadTimeout = 500 };
-    p.Open();
-    if (!string.IsNullOrEmpty(cmd)) { p.Write(ScaleReader.Unescape(cmd)); Console.WriteLine("Perintah dikirim: " + cmd); }
+    Console.WriteLine($"Merekam {target} selama {detik} dtk. Letakkan beban / tekan tombol print di indikator.");
+    Stream st; IDisposable owner;
+    if (target.Contains(':'))
+    {
+        var hp = target.Split(':');
+        var c = new System.Net.Sockets.TcpClient(hp[0], int.Parse(hp[1]));
+        c.ReceiveTimeout = 500; st = c.GetStream(); st.ReadTimeout = 500; owner = c;
+    }
+    else
+    {
+        var p = new SerialPort(target, baud, Parity.None, 8, StopBits.One) { ReadTimeout = 500 };
+        p.Open(); st = p.BaseStream; owner = p;
+    }
+    using var _ = owner;
+    if (!string.IsNullOrEmpty(cmd)) { var cb = Encoding.ASCII.GetBytes(ScaleReader.Unescape(cmd)); st.Write(cb, 0, cb.Length); Console.WriteLine("Perintah dikirim: " + cmd); }
     var end = DateTime.UtcNow.AddSeconds(detik);
     var buf = new byte[256];
     while (DateTime.UtcNow < end)
     {
         int n;
-        try { n = p.Read(buf, 0, buf.Length); } catch (TimeoutException) { continue; }
+        try { n = st.Read(buf, 0, buf.Length); } catch (Exception e) when (e is TimeoutException or IOException) { continue; }
+        if (n == 0) { Console.WriteLine("Koneksi ditutup."); break; }
         var hex = BitConverter.ToString(buf, 0, n);
         var txt = new StringBuilder();
         for (int i = 0; i < n; i++) txt.Append(buf[i] switch { 13 => "\\r", 10 => "\\n", < 32 or > 126 => ".", _ => ((char)buf[i]).ToString() });
