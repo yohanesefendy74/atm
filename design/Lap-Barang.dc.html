@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Stock per Barang</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A57A8}a:hover{color:#063E7A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D; overflow: hidden">
+  <header style="padding: 20px 20px 12px; display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border-bottom: 1px solid #DADDD6">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <a href="Laporan-Menu.dc.html" aria-label="Kembali" style="width: 44px; height: 44px; margin-left: -10px; display: flex; align-items: center; justify-content: center; color: #16191D"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></a>
+      <div style="flex: 1; display: flex; flex-direction: column">
+        <span style="font-size: 12px; font-weight: 600; color: #545B63; letter-spacing: 0.06em; text-transform: uppercase">Laporan · 08 Okt 2026</span>
+        <h1 style="margin: 0; font-size: 20px; font-weight: 700">Stock per Barang</h1>
+      </div>
+      <button style="height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid #16191D; background: #FFFFFF; font-family: inherit; font-size: 13px; font-weight: 600; color: #16191D; display: inline-flex; align-items: center; gap: 6px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"></path><path d="M14 3v5h5M9 12l5 5M14 12l-5 5"></path></svg>Excel</button>
+    </div>
+    <div role="group" aria-label="Nama grup" style="display: flex; gap: 6px">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+        <button onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+      </sc-for>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 10px">
+    <section aria-label="Subtotal grup" style="background: #16191D; color: #FFFFFF; border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 13px; font-weight: 600">{{g.title}}</span>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+        <sc-for list="{{g.stats}}" as="s" hint-placeholder-count="4">
+          <span style="display: flex; flex-direction: column; min-width: 0"><span style="font-size: 10px; color: #C5CAD1; font-weight: 600">{{s.label}}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600">{{s.sak}}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #C5CAD1">{{s.kg}}</span></span>
+        </sc-for>
+      </div>
+    </section>
+
+    <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="4">
+      <article style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px">
+        <div style="display: flex; justify-content: space-between; gap: 8px"><span style="font-size: 13px; font-weight: 600">{{r.name}}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #545B63; flex-shrink: 0">{{r.gudang}}</span></div>
+        <span style="font-size: 11px; color: #545B63">{{r.pt}} · {{r.merek}} · {{r.satuan}}</span>
+        <div style="display: grid; grid-template-columns: 34px repeat(4, minmax(0, 1fr)); gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-align: right">
+          <span></span><span style="color: #545B63">Awal</span><span style="color: #0A57A8">IN</span><span style="color: #8A2E08">OUT</span><span style="font-weight: 600">Sisa</span>
+          <span style="text-align: left; color: #545B63">SAK</span><span>{{r.aS}}</span><span>{{r.iS}}</span><span>{{r.oS}}</span><span style="font-weight: 600">{{r.sS}}</span>
+          <span style="text-align: left; color: #545B63">KG</span><span>{{r.aK}}</span><span>{{r.iK}}</span><span>{{r.oK}}</span><span style="font-weight: 600">{{r.sK}}</span>
+        </div>
+      </article>
+    </sc-for>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { grp: 0 };
+}
+renderVals() {
+const f = (n) => n.toLocaleString('id-ID', { maximumFractionDigits: 1 });
+const groups = [
+{ label: 'Henan', title: 'A. BAWANG HENAN', tot: [15606, 313121.7, 0, 0, 400, 0, 15206, 313121.7], rows: [
+['BAWANG PUTIH HENAN NC', 'NKRI', 'SEGAR HARUM', '20 KG', 'E11', 3043, 61540.8, 0, 0, 155, 0, 2888, 61540.8],
+['BAWANG PUTIH HENAN NC', 'PHS', 'SULTAN', '20 KG', 'E11', 4409, 88505.4, 0, 0, 0, 0, 4409, 88505.4],
+['BAWANG PUTIH HENAN NC', 'NKRI', 'SINAR MATAHARI', '20 KG', 'E11', 3383, 65979.5, 0, 0, 0, 0, 3383, 65979.5],
+['BAWANG PUTIH HENAN NC', 'ATM', 'SULTAN', '20 KG', 'E11', 1597, 33363.6, 0, 0, 0, 0, 1597, 33363.6]
+] },
+{ label: 'Kating', title: 'B. BAWANG KATING', tot: [605, 12159, 0, 0, 0, 0, 605, 12159], rows: [
+['BAWANG PUTIH KATING OC', 'NKRI', 'SANGKAYA HITAM', '20 KG', 'E11', 605, 10880, 0, 0, 0, 0, 605, 10880]
+] },
+{ label: 'Tunggal', title: 'C. BAWANG TUNGGAL', tot: [2730, 27220, 0, 0, 0, 0, 2730, 27220], rows: [
+['BAWANG TUNGGAL NC M', 'KKB', 'SANGKAYA HITAM', '10 KG', 'E11', 1250, 12510, 0, 0, 0, 0, 1250, 12510],
+['BAWANG TUNGGAL NC S', 'KKB', 'SANGKAYA HITAM', '10 KG', 'E11', 1000, 10010, 0, 0, 0, 0, 1000, 10010],
+['BAWANG TUNGGAL NC S', 'NKRI', 'SANGKAYA HITAM', '10 KG', 'E11', 425, 4250, 0, 0, 0, 0, 425, 4250],
+['BAWANG TUNGGAL NC L', 'KKB', 'SANGKAYA HITAM', '10 KG', 'E11', 55, 550, 0, 0, 0, 0, 55, 550]
+] },
+{ label: 'Bombay', title: 'D. BAWANG BOMBAY', tot: [3841, 68667.3, 0, 0, 0, 0, 3841, 68667.3], rows: [
+['BOMBAY NZ BESAR', 'ACA', 'INTEGROW', '20 KG', 'E5', 2578, 51810.3, 0, 0, 0, 0, 2578, 51810.3],
+['BOMBAY INDIA S', 'CSJM', 'NO BRAND', '9 KG', 'E5', 800, 7200, 0, 0, 0, 0, 800, 7200],
+['BOMBAY NZ KECIL', 'ACA', 'CAMBRIDGE FARMS', '20 KG', 'E5', 170, 3400, 0, 0, 0, 0, 170, 3400],
+['BOMBAY NZ BESAR', 'ACA', 'ONIONS BIRD', '20 KG', 'E11', 102, 2040, 0, 0, 0, 0, 102, 2040]
+] }
+];
+const sel = groups[this.state.grp];
+const base = 'height: 36px; padding: 0 12px; border-radius: 18px; font-family: inherit; font-size: 13px; cursor: pointer;';
+const tabs = groups.map((g, i) => ({
+label: g.label,
+style: base + (i === this.state.grp ? ' border: none; background: #16191D; color: #FFFFFF; font-weight: 600;' : ' border: 1px solid #DADDD6; background: #FFFFFF; color: #16191D; font-weight: 500;'),
+pick: () => this.setState({ grp: i })
+}));
+const t = sel.tot;
+const g = {
+title: sel.title,
+stats: [
+{ label: 'AWAL', sak: f(t[0]), kg: f(t[1]) + ' KG' },
+{ label: 'IN', sak: f(t[2]), kg: f(t[3]) + ' KG' },
+{ label: 'OUT', sak: f(t[4]), kg: f(t[5]) + ' KG' },
+{ label: 'SISA', sak: f(t[6]), kg: f(t[7]) + ' KG' }
+],
+rows: sel.rows.map((r) => ({
+name: r[0], pt: r[1], merek: r[2], satuan: r[3], gudang: r[4],
+aS: f(r[5]), aK: f(r[6]), iS: f(r[7]), iK: f(r[8]), oS: f(r[9]), oK: f(r[10]), sS: f(r[11]), sK: f(r[12])
+}))
+};
+return { tabs, g };
+}
+}
+</script>
+</body>
+</html>

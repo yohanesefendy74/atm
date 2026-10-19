@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Surat Jalan</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F2F3EF}
+a{color:#0A57A8}a:hover{color:#063E7A}
+</style>
+</helmet>
+<div style="width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D">
+  <aside aria-label="Menu CMS" style="flex: 1 1 220px; max-width: 100%; box-sizing: border-box; background: #16191D; color: #FFFFFF; padding: 24px 16px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; flex-direction: column; gap: 2px; padding: 0 8px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #C5CAD1">Gudang ATM</span>
+      <span style="font-size: 20px; font-weight: 700">CMS Admin</span>
+    </div>
+    <nav style="display: flex; flex-direction: column; gap: 4px">
+      <a href="CMS-Rencana.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">SPBB &amp; SPMB</a>
+      <a href="CMS-Surat-Jalan.dc.html" aria-current="page" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #2A2E34; color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 600">Surat Jalan</a>
+      <a href="CMS-Riwayat-Berat.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Riwayat Berat</a>
+      <a href="CMS-Jadwal.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Jadwal Bongkar Muat</a>
+      <a href="CMS-List.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Cek Input Krani</a>
+      <a href="CMS-Master-Ruangan.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Master Warehouse &amp; Ruangan</a>
+      <a href="CMS-Master-Palet.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Master Palet</a>
+      <a href="Laporan-Menu.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Laporan</a>
+      <a href="CMS-Cetak-Label.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Cetak Label</a>
+          <a href="CMS-Setup.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #2A2E34; color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 600">Setup</a>
+    </nav>
+  </aside>
+
+  
+  <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px; display: flex; flex-direction: column; gap: 20px">
+    <header style="display: flex; flex-direction: column; gap: 4px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #B93E0B">Outbound · Admin</span>
+      <h1 style="margin: 0; font-size: 28px; font-weight: 700">Surat Jalan</h1>
+      <p style="margin: 0; font-size: 14px; color: #545B63">Dibuat Admin dari SPMB yang sudah selesai dimuat, per mobil. Satu Surat Jalan bisa memuat beberapa SPMB di mobil yang sama, termasuk beda customer (PO dan alamat kirim diisi per customer). Hanya tercatat di Gudang ATM (belum dikirim ke SAP).</p>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+      <section aria-label="Mobil dan SPMB" style="flex: 1 1 340px; max-width: 460px; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+        <input type="search" value="{{q}}" onChange="{{setQ}}" placeholder="Cari no. polisi / container / SPMB / customer" aria-label="Cari" style="height: 40px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: inherit; font-size: 14px; color: #16191D; background: #FFFFFF">
+        <sc-for list="{{vehicles}}" as="v" hint-placeholder-count="2">
+          <div style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; overflow: hidden">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; background: #F7F8F5; border-bottom: 1px solid #ECEDE8">
+              <span style="display: flex; flex-direction: column; gap: 1px"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 700">{{v.plat}}</span><span style="font-size: 12px; color: #545B63">{{v.sub}}</span></span>
+              <span style="display: flex; align-items: center; gap: 8px"><sc-if value="{{v.canAll}}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{v.pickAll}}" style="height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 12px; font-weight: 600; color: #16191D; cursor: pointer">{{v.allLabel}}</button></sc-if><span style="font-size: 12px; font-weight: 600; color: #545B63">{{v.count}} SPMB</span></span>
+            </div>
+            <sc-for list="{{v.docs}}" as="d" hint-placeholder-count="2">
+              <button type="button" onClick="{{d.pick}}" aria-pressed="{{d.on}}" style="{{d.style}}">
+                <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600">{{d.no}}</span><span style="font-size: 12px; color: #545B63">{{d.card}} · {{d.kg}} KG</span></span>
+                <span style="{{d.stStyle}}">{{d.st}}</span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-for>
+        <sc-if value="{{noVeh}}" hint-placeholder-val="{{ false }}"><div style="padding: 14px; font-size: 13px; color: #545B63">Tidak ada SPMB yang cocok.</div></sc-if>
+      </section>
+
+      <section aria-label="Form Surat Jalan" style="flex: 999 1 520px; min-width: 0; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px">
+        <sc-if value="{{noSel}}" hint-placeholder-val="{{ false }}"><div style="padding: 30px 10px; text-align: center; font-size: 14px; color: #545B63">Pilih satu atau beberapa SPMB (mobil yang sama) di kiri untuk membuat Surat Jalan.</div></sc-if>
+        <sc-if value="{{hasSel}}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px">
+            <h2 style="margin: 0; font-size: 18px; font-weight: 700">Surat Jalan <span style="font-family: 'IBM Plex Mono', monospace;">{{f.sjNo}}</span></h2>
+            <span style="{{f.stStyle}}">{{f.st}}</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 14px">
+            <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; font-weight: 600; color: #545B63">No. polisi · sopir</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px">{{f.plat}} · {{f.sopir}}</span></div>
+            <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; font-weight: 600; color: #545B63">Container</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px">{{f.cont}}</span></div>
+            <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; font-weight: 600; color: #545B63">Isi Surat Jalan</span><span style="font-size: 14px; font-weight: 600">{{f.summary}}</span></div>
+            <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; font-weight: 600; color: #545B63">Tgl. muat selesai</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px">{{f.tgl}}</span></div>
+          </div>
+          <span style="{{f.gm.style}}">{{f.gm.text}}</span>
+
+          <sc-for list="{{f.groups}}" as="g" hint-placeholder-count="2">
+            <div style="border: 1px solid #DADDD6; border-radius: 12px; overflow: hidden">
+              <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px; padding: 10px 14px; background: #F7F8F5; border-bottom: 1px solid #ECEDE8">
+                <span style="display: flex; flex-direction: column; gap: 1px"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 700">{{g.no}}</span><span style="font-size: 13px; font-weight: 600">{{g.card}}</span></span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #545B63">SO {{g.so}}</span>
+              </div>
+              <div style="overflow-x: auto"><div style="min-width: 600px">
+                <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 100px 100px 70px 70px 90px; gap: 10px; padding: 8px 14px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #545B63"><span>Item</span><span style="text-align: right">SPMB (KG)</span><span style="text-align: right">Dimuat (KG)</span><span style="text-align: right">Sak</span><span style="text-align: right">Palet</span><span>Selisih</span></div>
+                <sc-for list="{{g.items}}" as="i" hint-placeholder-count="2">
+                  <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 100px 100px 70px 70px 90px; gap: 10px; align-items: center; padding: 8px 14px; border-top: 1px solid #ECEDE8; font-size: 13px">
+                    <span style="display: flex; flex-direction: column"><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{i.code}}</span><span style="font-size: 12px; color: #545B63">{{i.name}}</span></span>
+                    <span style="font-family: 'IBM Plex Mono', monospace; text-align: right">{{i.plan}}</span><span style="font-family: 'IBM Plex Mono', monospace; text-align: right; font-weight: 600">{{i.act}}</span><span style="font-family: 'IBM Plex Mono', monospace; text-align: right">{{i.sak}}</span><span style="font-family: 'IBM Plex Mono', monospace; text-align: right">{{i.plt}}</span><span style="{{i.dStyle}}">{{i.diff}}</span>
+                  </div>
+                </sc-for>
+                <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 100px 100px 70px 70px 90px; gap: 10px; padding: 8px 14px; border-top: 1px solid #DADDD6; font-size: 13px; font-weight: 700"><span>Subtotal</span><span style="font-family: 'IBM Plex Mono', monospace; text-align: right">{{g.tPlan}}</span><span style="font-family: 'IBM Plex Mono', monospace; text-align: right">{{g.tAct}}</span><span style="font-family: 'IBM Plex Mono', monospace; text-align: right">{{g.tSak}}</span><span style="font-family: 'IBM Plex Mono', monospace; text-align: right">{{g.tPlt}}</span><span></span></div>
+              </div></div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; padding: 12px 14px; border-top: 1px solid #ECEDE8">
+                <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">No. PO / NumAtCard
+                  <input type="text" value="{{g.po}}" onChange="{{g.setPo}}" style="height: 40px; box-sizing: border-box; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #16191D"><span style="font-size: 12px; font-weight: 500; color: #545B63">Dari Sales Order · boleh diubah</span>
+                </label>
+                <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Alamat kirim <span style="color: #B93E0B; display: inline">*</span>
+                  <input type="search" list="{{g.dlId}}" value="{{g.alamat}}" onChange="{{g.setAlamat}}" placeholder="Pilih dari alamat customer atau ketik" style="{{g.alStyle}}">
+                  <datalist id="{{g.dlId}}"><sc-for list="{{g.alOpts}}" as="a" hint-placeholder-count="2"><option value="{{a.v}}"></option></sc-for></datalist>
+                  <span style="{{g.am.style}}">{{g.am.text}}</span>
+                </label>
+              </div>
+            </div>
+          </sc-for>
+          <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 10px 14px; border-radius: 10px; background: #F2F3EF; font-size: 14px; font-weight: 700"><span>Total semua SPMB</span><span style="font-family: 'IBM Plex Mono', monospace">{{f.tAct}} KG · {{f.tSak}} sak · {{f.tPlt}} palet</span></div>
+          <span style="{{f.wm.style}}">{{f.wm.text}}</span>
+
+          <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600; max-width: 300px">Tanggal Surat Jalan
+            <input type="text" value="{{f.tglSj}}" onChange="{{setTgl}}" style="{{f.tglStyle}}"><span style="{{f.tm.style}}">{{f.tm.text}}</span>
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Catatan
+            <input type="text" value="{{f.cat}}" onChange="{{setCat}}" placeholder="Opsional" style="height: 40px; box-sizing: border-box; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: inherit; font-size: 14px; color: #16191D">
+          </label>
+
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 6px; border-top: 1px solid #ECEDE8">
+            <button type="button" onClick="{{terbit}}" aria-disabled="{{f.blocked}}" style="{{f.btn}}">{{f.btnLabel}}</button>
+            <sc-if value="{{f.issued}}" hint-placeholder-val="{{ false }}"><button type="button" onClick="{{batal}}" style="height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid #A32020; background: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 600; color: #A32020; cursor: pointer">Batalkan Surat Jalan</button></sc-if>
+            <span style="{{f.bm.style}}">{{f.bm.text}}</span>
+          </div>
+          <sc-if value="{{done}}" hint-placeholder-val="{{ false }}"><div style="{{doneStyle}}">{{done}}</div></sc-if>
+        </sc-if>
+      </section>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { q: '', sel: [], sj: {}, form: {}, shared: {}, done: '' };
+}
+renderVals() {
+const S = this.state;
+const f = (n) => n.toLocaleString('id-ID');
+const tone = { err: ['#A32020', '✕'], warn: ['#8A5A00', '!'], ok: ['#1F6B34', '✓'], hint: ['#545B63', ''] };
+const E = (text) => ({ k: 'err', text }), W = (text) => ({ k: 'warn', text }), OK = (text) => ({ k: 'ok', text }), H = (text) => ({ k: 'hint', text });
+const fm = (m) => ({ text: (tone[m.k][1] ? tone[m.k][1] + ' ' : '') + m.text, style: 'font-size: 12px; font-weight: 600; color: ' + tone[m.k][0] });
+const bord = (k) => k === 'err' ? '2px solid #A32020' : '1px solid #C9CDC5';
+const pill = (bg, fg) => 'padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; white-space: nowrap; background: ' + bg + '; color: ' + fg;
+// ---- data contoh: mobil terdaftar + SPMB di mobil itu (qty dimuat dari scan krani)
+const VEH = [
+{ plat: 'B 9555 KLA', cont: 'TGHU8812348', sopir: 'Hasan', tiket: 'TB-261013-0032', net: 28010, docs: [
+{ no: 'SPMB/2610/0021', card: 'PT SANGKAYA MAKMUR ABADI', so: '26100234', po: 'PO-SMA-0457', status: 'Selesai muat', tgl: '14/10/2026', items: [['GLA-001', 'Gula Pasir Kristal Putih', 20000, 19980, 400, 16], ['BRS-010', 'Beras Medium', 5000, 5000, 100, 4]] },
+{ no: 'SPMB/2610/0024', card: 'PT MEGA SAKTI JAYA', so: '26100251', po: 'MSJ/1013', status: 'Selesai muat', tgl: '14/10/2026', tit: true, items: [['TPG-003', 'Tepung Terigu', 3000, 3000, 120, 3]] }] },
+{ plat: 'B 9777 XYZ', cont: '', sopir: 'Ujang', tiket: 'TB-261014-0003', net: 2000, docs: [
+{ no: 'SPMB/2610/0025', card: 'OPIK SENEN', so: '26100260', po: '—', status: 'Selesai muat', tgl: '14/10/2026', items: [['GLA-001', 'Gula Pasir Kristal Putih', 2000, 2000, 40, 2]] }] },
+{ plat: 'B 9390 STU', cont: 'TCKU3301879', sopir: 'Dedi', tiket: 'TB-261014-0005', net: 0, docs: [
+{ no: 'SPMB/2610/0023', card: 'PT MEGA SAKTI JAYA', so: '26100251', po: 'MSJ/1013', status: 'Sedang muat', tgl: '—', items: [['TPG-003', 'Tepung Terigu', 7000, 2500, 100, 2]] }] }
+];
+const ADDR = { 'PT SANGKAYA MAKMUR ABADI': ['Jl. Industri Raya No. 12, Cikarang, Bekasi', 'Gudang Sangkaya, Jl. Tol Cibitung KM 3, Bekasi'], 'PT MEGA SAKTI JAYA': ['Jl. Pelabuhan Raya No. 8, Tanjung Priok, Jakarta Utara'], 'OPIK SENEN': ['Pasar Senen Blok III Lt. 2, Jakarta Pusat'] };
+const all = [].concat(...VEH.map((v) => v.docs.map((d) => Object.assign({ veh: v }, d))));
+const act = (d) => d.items.reduce((a, i) => a + i[3], 0);
+const q = String(S.q || '').toLowerCase();
+const match = (v, d) => !q || (v.plat + ' ' + v.cont + ' ' + d.no + ' ' + d.card).toLowerCase().indexOf(q) >= 0;
+const sjOf = (d) => { const k = Object.keys(S.sj).filter((n) => S.sj[n].docs.indexOf(d.no) >= 0)[0]; return k ? S.sj[k] : null; };
+const stOf = (d) => d.status !== 'Selesai muat' ? ['Belum selesai', '#FFF4D6', '#5C3F00'] : (sjOf(d) ? ['SJ ' + sjOf(d).no.slice(-4), '#E3F2E7', '#1F6B34'] : ['Siap dibuat SJ', '#E6EEF8', '#0A57A8']);
+const ready1 = (d) => d.status === 'Selesai muat' && !sjOf(d);
+const sel = S.sel;
+const pickDoc = (d) => { const sj = sjOf(d); if (sj) { this.setState({ sel: sj.docs.slice(), done: '' }); return; } const same = sel.length && all.filter((x) => x.no === sel[0])[0].veh === all.filter((x) => x.no === d.no)[0].veh && ready1(d); if (!same) { this.setState({ sel: [d.no], done: '' }); return; } if (sel.indexOf(d.no) < 0 && !!d.tit !== !!all.filter((x) => x.no === sel[0])[0].tit) { this.setState({ done: 'Titipan dan non-titipan tidak bisa dicampur dalam satu Surat Jalan · ' + d.no + (d.tit ? ' titipan' : ' non-titipan') }); return; } this.setState({ sel: sel.indexOf(d.no) >= 0 ? sel.filter((n) => n !== d.no) : sel.concat([d.no]), done: '' }); };
+const vehicles = VEH.map((v) => ({ v, docs: v.docs.filter((d) => match(v, d)) })).filter((x) => x.docs.length).map((x) => {
+const rdy = x.v.docs.filter(ready1), first = rdy[0], same = first ? rdy.filter((d) => !!d.tit === !!first.tit) : [], nReady = same.length;
+return { plat: x.v.plat, sub: (x.v.cont ? x.v.cont : 'tanpa container') + ' · sopir ' + x.v.sopir, count: x.docs.length, canAll: nReady > 1, allLabel: 'Pilih semua (' + nReady + ')',
+pickAll: () => this.setState({ sel: same.map((d) => d.no), done: rdy.length > same.length ? 'Hanya SPMB ' + (first.tit ? 'titipan' : 'non-titipan') + ' yang dipilih · titipan dan non-titipan tidak bisa dicampur' : '' }),
+docs: x.docs.map((d) => { const st = stOf(d), on = sel.indexOf(d.no) >= 0; return { no: d.no, card: d.card + (d.tit ? ' · TITIPAN' : ''), kg: f(act(d)), on, st: st[0], stStyle: pill(st[1], st[2]),
+style: 'width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: none; border-top: 1px solid #ECEDE8; font-family: inherit; cursor: pointer; color: #16191D; background: ' + (on ? '#FBEDE5' : '#FFFFFF'),
+pick: () => pickDoc(d) }; }) }; });
+const curDocs = sel.map((n) => all.filter((d) => d.no === n)[0]).filter(Boolean);
+let form = null;
+if (curDocs.length) {
+const veh = curDocs[0].veh;
+const sjRec = sjOf(curDocs[0]);
+const issued = !!sjRec;
+const nextNo = 'SJ/2610/' + String(4 + Object.keys(S.sj).length).padStart(4, '0');
+const sjNo = sjRec ? sjRec.no : nextNo;
+const SH = Object.assign({ tgl: '14/10/2026', cat: '' }, S.shared || {});
+const setSh = (o) => this.setState({ shared: Object.assign({}, SH, o), done: '' });
+const FD = (d) => Object.assign({ po: d.po, alamat: '' }, S.form[d.no] || {});
+const setD = (d, o) => this.setState({ form: Object.assign({}, S.form, { [d.no]: Object.assign({}, FD(d), o) }), done: '' });
+const tA = curDocs.reduce((a, d) => a + act(d), 0), tP = curDocs.reduce((a, d) => a + d.items.reduce((b, i) => b + i[2], 0), 0);
+const tSak = curDocs.reduce((a, d) => a + d.items.reduce((b, i) => b + i[4], 0), 0), tPlt = curDocs.reduce((a, d) => a + d.items.reduce((b, i) => b + i[5], 0), 0);
+const notReady = curDocs.filter((d) => d.status !== 'Selesai muat');
+const custs = curDocs.map((d) => d.card).filter((c, i, a) => a.indexOf(c) === i);
+const gm = notReady.length ? W(notReady.map((d) => d.no).join(', ') + ' belum selesai muat · Surat Jalan belum bisa dibuat') : (issued ? H('Surat Jalan ini memuat ' + curDocs.length + ' SPMB') : (custs.length > 1 ? H(custs.length + ' customer berbeda dalam satu Surat Jalan · isi PO dan alamat kirim tiap customer') : (veh.docs.length > curDocs.length ? H('Masih ada SPMB lain di mobil ini · pilih lebih dari satu bila ikut dalam satu Surat Jalan') : H(''))));
+let wm;
+const vehTotal = veh.docs.reduce((a, d) => a + act(d), 0);
+if (notReady.length) wm = H('');
+else if (!veh.net) wm = H('Belum ada timbangan');
+else { const pct = Math.abs(veh.net - vehTotal) / veh.net * 100; const part = veh.docs.length > curDocs.length ? ' (semua SPMB di mobil, sebagian di luar Surat Jalan ini)' : ''; wm = pct <= 0.5 ? OK('Net timbang mobil ' + f(veh.net) + ' KG cocok dengan total muatan ' + f(vehTotal) + ' KG' + part) : W('Net timbang ' + f(veh.net) + ' KG berbeda ' + pct.toFixed(1).replace('.', ',') + '% dari total muatan ' + f(vehTotal) + ' KG' + part + ' · periksa sebelum terbit'); }
+const dm = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(SH.tgl);
+let tm;
+if (!dm) tm = E('Format dd/mm/yyyy');
+else { const d = new Date(+dm[3], +dm[2] - 1, +dm[1]); const today = new Date(2026, 9, 14); if (d.getMonth() !== +dm[2] - 1) tm = E('Tanggal tidak valid'); else if (d > today) tm = E('Tidak boleh lewat hari ini'); else tm = OK('OK'); }
+let badAl = 0;
+const groups = curDocs.map((d, gi) => {
+const F = FD(d), al = String(F.alamat).trim();
+const am = !al ? E('Alamat kirim wajib diisi') : (al.length < 8 ? E('Terlalu singkat · isi alamat lengkap') : OK('OK'));
+if (am.k === 'err') badAl++;
+return { no: d.no, card: d.card + (d.tit ? ' · TITIPAN' : ''), so: d.so, dlId: 'alamat-list-' + gi,
+items: d.items.map((i) => { const x = i[3] - i[2]; return { code: i[0], name: i[1], plan: f(i[2]), act: f(i[3]), sak: f(i[4]), plt: i[5], diff: x === 0 ? '—' : (x > 0 ? '+' : '') + f(x), dStyle: 'font-family: \'IBM Plex Mono\', monospace; font-weight: 600; color: ' + (x === 0 ? '#545B63' : '#8A5A00') }; }),
+tPlan: f(d.items.reduce((a, i) => a + i[2], 0)), tAct: f(act(d)), tSak: f(d.items.reduce((a, i) => a + i[4], 0)), tPlt: d.items.reduce((a, i) => a + i[5], 0),
+po: F.po, setPo: (e) => setD(d, { po: e.target.value }), alamat: F.alamat, setAlamat: (e) => setD(d, { alamat: e.target.value }),
+alStyle: 'height: 40px; box-sizing: border-box; padding: 0 10px; border-radius: 10px; font-family: inherit; font-size: 14px; color: #16191D; border: ' + bord(am.k), am: fm(am), alOpts: (ADDR[d.card] || []).map((v) => ({ v })) }; });
+let bm = H(''), blocked = false;
+if (issued) { blocked = true; bm = OK('Sudah terbit ' + sjNo); }
+else if (notReady.length) { blocked = true; bm = E('Ada SPMB yang belum selesai muat'); }
+else if (tA <= 0) { blocked = true; bm = E('Tidak ada qty termuat'); }
+else if (tm.k === 'err' || badAl) { blocked = true; bm = E('Perbaiki isian yang merah'); }
+const ready = !notReady.length;
+const st = issued ? ['Terbit', '#E3F2E7', '#1F6B34'] : (ready ? ['Draft', '#ECEDE8', '#545B63'] : ['Belum bisa', '#FFF4D6', '#5C3F00']);
+const tgls = curDocs.map((d) => d.tgl).filter((t) => t !== '—');
+form = { sjNo, plat: veh.plat, sopir: veh.sopir, cont: veh.cont || '—', tgl: tgls.length ? tgls[tgls.length - 1] : '—', summary: curDocs.length + ' SPMB · ' + custs.length + ' customer', gm: fm(gm), st: st[0], stStyle: pill(st[1], st[2]),
+groups, tAct: f(tA), tSak: f(tSak), tPlt, wm: fm(wm),
+tglSj: SH.tgl, tglStyle: 'height: 40px; box-sizing: border-box; padding: 0 10px; border-radius: 10px; font-family: \'IBM Plex Mono\', monospace; font-size: 14px; color: #16191D; border: ' + bord(tm.k), tm: fm(tm), cat: SH.cat,
+blocked, issued, bm: fm(bm), btnLabel: issued ? 'Cetak Surat Jalan' : 'Terbitkan Surat Jalan',
+btn: 'height: 44px; padding: 0 20px; border-radius: 10px; border: none; font-family: inherit; font-size: 14px; font-weight: 600; ' + (issued ? 'background: #16191D; color: #FFFFFF; cursor: pointer' : (blocked ? 'background: #C9CDC5; color: #545B63; cursor: not-allowed' : 'background: #B93E0B; color: #FFFFFF; cursor: pointer')),
+_setSh: setSh, _blocked: blocked, _issued: issued, _sjNo: sjNo, _tA: tA, _veh: veh };
+}
+return {
+q: S.q, setQ: (e) => this.setState({ q: e.target.value }), vehicles, noVeh: !vehicles.length, noSel: !curDocs.length, hasSel: !!curDocs.length, f: form || {}, done: S.done, doneStyle: 'padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; ' + (/^(Titipan|Hanya)/.test(S.done) ? 'background: #FFF4D6; color: #5C3F00' : 'background: #E3F2E7; color: #1F6B34'),
+setTgl: (e) => form && form._setSh({ tgl: e.target.value }), setCat: (e) => form && form._setSh({ cat: e.target.value }),
+terbit: () => { if (!form) return; if (form._issued) { this.setState({ done: 'Mengirim ' + form._sjNo + ' ke pencetak…' }); return; } if (form._blocked) return; this.setState({ sj: Object.assign({}, S.sj, { [form._sjNo]: { no: form._sjNo, status: 'Terbit', docs: sel.slice() } }), done: form._sjNo + ' terbit untuk ' + curDocs.map((d) => d.no).join(', ') + ' · ' + f(form._tA) + ' KG · mobil ' + form._veh.plat }); },
+batal: () => { if (!form) return; const s2 = Object.assign({}, S.sj); delete s2[form._sjNo]; this.setState({ sj: s2, done: 'Surat Jalan dibatalkan · SPMB bisa dibuatkan Surat Jalan baru' }); }
+};
+}
+}
+</script>
+</body>
+</html>

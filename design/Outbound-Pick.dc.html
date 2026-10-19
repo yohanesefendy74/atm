@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Scan Palet Outbound</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#F2A27E}a:hover{color:#F7C4AC}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #0E1013; font-family: 'IBM Plex Sans', sans-serif; color: #FFFFFF; overflow: hidden">
+  <header style="padding: 20px 20px 8px; display: flex; flex-direction: column; gap: 8px">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <a href="Outbound-Header.dc.html" aria-label="Kembali ke dokumen" style="width: 44px; height: 44px; margin-left: -10px; display: flex; align-items: center; justify-content: center; color: #FFFFFF"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></a>
+      <div style="flex: 1; display: flex; flex-direction: column">
+        <span style="font-size: 12px; color: #B8BEC6">Langkah 2 dari 3 · {{docLabel}} · {{jenisLabel}}</span>
+        <span style="font-size: 18px; font-weight: 600">Scan palet keluar</span>
+      </div>
+      <button aria-label="Nyalakan senter" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #3A3F46; background: #1A1D21; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"></path></svg></button>
+    </div>
+  </header>
+
+  <section aria-label="Kamera" style="height: 150px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px">
+    <button onClick="{{scan}}" aria-label="Scan label QR palet" style="position: relative; width: 112px; height: 112px; border: none; background: transparent; padding: 0; cursor: pointer">
+      <span style="position: absolute; left: 0; top: 0; width: 26px; height: 26px; border-left: 4px solid #FFFFFF; border-top: 4px solid #FFFFFF; border-top-left-radius: 12px"></span>
+      <span style="position: absolute; right: 0; top: 0; width: 26px; height: 26px; border-right: 4px solid #FFFFFF; border-top: 4px solid #FFFFFF; border-top-right-radius: 12px"></span>
+      <span style="position: absolute; left: 0; bottom: 0; width: 26px; height: 26px; border-left: 4px solid #FFFFFF; border-bottom: 4px solid #FFFFFF; border-bottom-left-radius: 12px"></span>
+      <span style="position: absolute; right: 0; bottom: 0; width: 26px; height: 26px; border-right: 4px solid #FFFFFF; border-bottom: 4px solid #FFFFFF; border-bottom-right-radius: 12px"></span>
+      <span style="position: absolute; left: 12px; right: 12px; top: 54px; height: 3px; border-radius: 2px; background: #F2A27E"></span>
+    </button>
+    <span style="font-size: 13px; color: #D5DAE0">Container <span style="font-family: 'IBM Plex Mono', monospace; color: #FFFFFF; font-weight: 600">TGHU8812348</span> · QR container lain ditolak</span>
+  </section>
+
+  <section aria-label="Palet discan" style="flex: 1; min-height: 0; overflow-y: auto; background: #FFFFFF; color: #16191D; border-radius: 24px 24px 0 0; padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 12px">
+    <div style="border: 1.5px solid #16191D; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="width: 32px; height: 32px; border-radius: 16px; background: #1F7A3A; color: #FFFFFF; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg></span>
+        <span style="flex: 1; display: flex; flex-direction: column; min-width: 0"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600">GLA-001 · palet ke-{{lastNo}}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #545B63">QR 261009-GLA-001-TGHU8812348</span><span style="font-size: 12px; color: #545B63">Isi palet: <span style="font-family: 'IBM Plex Mono', monospace">1.250 KG · 25 krg</span></span></span>
+        <button onClick="{{undo}}" style="height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid #DADDD6; background: #FFFFFF; font-family: inherit; font-size: 13px; font-weight: 600; color: #16191D">Batalkan</button>
+      </div>
+
+      <div role="group" aria-label="Jumlah keluar" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; padding: 4px; border-radius: 12px; background: #F2F3EF">
+        <button onClick="{{setUtuh}}" aria-pressed="{{isUtuh}}" style="{{utuhStyle}}">Keluar utuh</button>
+        <button onClick="{{setSebagian}}" aria-pressed="{{isSebagian}}" style="{{sebagianStyle}}">Keluar sebagian</button>
+      </div>
+
+      <sc-if value="{{isSebagian}}" hint-placeholder-val="{{ true }}">
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+          <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+            <span style="font-size: 13px; font-weight: 600">Qty 2 (Karung)</span>
+            <div style="display: flex; align-items: center; gap: 4px">
+              <button aria-label="Kurangi karung" onClick="{{dec}}" style="width: 44px; height: 48px; border-radius: 12px; border: 1px solid #C9CDC5; background: #FFFFFF; font-size: 20px; font-family: inherit; color: #16191D">−</button>
+              <span style="flex: 1; text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 600">{{krg}}</span>
+              <button aria-label="Tambah karung" onClick="{{inc}}" style="width: 44px; height: 48px; border-radius: 12px; border: none; background: #B93E0B; color: #FFFFFF; font-size: 20px; font-family: inherit">+</button>
+            </div>
+          </div>
+          <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+            <span style="font-size: 13px; font-weight: 600">Qty (KG)</span>
+            <input type="number" inputmode="decimal" value="{{kg}}" onChange="{{setKg}}" style="{{kgStyle}}">
+          </label>
+        </div>
+        <sc-if value="{{hasPaletScale}}" hint-placeholder-val="{{ true }}">
+          <div role="radiogroup" aria-label="Pilih timbangan palet" style="display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 13px; font-weight: 600">Timbangan palet <span style="font-weight: 400; color: #545B63">· {{scaleCount}} unit di gudang ini</span></span>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px">
+            <sc-for list="{{scales}}" as="sc" hint-placeholder-count="2"><button type="button" role="radio" aria-checked="{{sc.on}}" onClick="{{sc.pick}}" style="{{sc.style}}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 700">{{sc.code}}</span><span style="font-size: 11px">{{sc.lok}}</span></button></sc-for>
+          </div>
+        </div>
+          <button onClick="{{weigh}}" style="height: 46px; border-radius: 12px; border: 1.5px solid #16191D; background: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 600; color: #16191D; cursor: pointer">Ambil dari {{tpCode}} · <span style="font-family: 'IBM Plex Mono', monospace">{{scaleKg}} kg</span></button>
+        </sc-if>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; min-height: 32px">
+          <span style="font-size: 12px; color: #545B63">{{kgHint}}</span>
+          <sc-if value="{{kgEdited}}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{resetKg}}" style="height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid #DADDD6; background: #FFFFFF; font-family: inherit; font-size: 12px; font-weight: 600; color: #16191D">Pakai otomatis</button>
+          </sc-if>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: #FFF4D6; color: #5C3F00">
+          <div style="display: flex; justify-content: space-between; font-size: 13px"><span style="font-weight: 600">Sisa di palet</span><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{sisaKg}} KG · {{sisaKrg}} krg</span></div>
+          <span style="font-size: 11px">Tercatat di sistem · label QR tetap dipakai</span>
+        </div>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{isOB}}" hint-placeholder-val="{{ false }}">
+      <h2 style="margin: 2px 0 0; font-size: 14px; font-weight: 600">Progres vs SPMB/2610/0021</h2>
+      <sc-for list="{{items}}" as="it" hint-placeholder-count="2">
+        <div style="display: flex; flex-direction: column; gap: 4px; padding: 4px 0 8px; border-bottom: 1px solid #ECEDE8">
+          <div style="display: flex; align-items: center; gap: 10px">
+            <span style="flex: 1; display: flex; flex-direction: column; min-width: 0"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600">{{it.code}}</span><span style="font-size: 12px; color: #545B63">{{it.palet}} plt{{it.note}}</span></span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; text-align: right">{{it.kg}} / {{it.target}} KG</span>
+          </div>
+          <div style="height: 5px; border-radius: 3px; background: #ECEDE8; overflow: hidden"><div style="{{it.bar}}"></div></div>
+        </div>
+      </sc-for>
+      <span style="font-size: 11px; color: #545B63">Scan melebihi qty SPMB ditolak</span>
+    </sc-if>
+    <sc-if value="{{isAdj}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 13px">
+        <span><strong style="color: #8A2E08">Keluar</strong> · {{tPalet}} palet</span>
+        <span><strong style="color: #1F6B34">Item Inbound</strong> · 1 item · 7 palet</span>
+      </div>    </sc-if>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px 14px; border-radius: 14px; background: #16191D; color: #FFFFFF">
+      <span style="display: flex; flex-direction: column"><span style="font-size: 11px; color: #C5CAD1; font-weight: 600">Total palet</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">{{tPalet}}</span></span>
+      <span style="display: flex; flex-direction: column"><span style="font-size: 11px; color: #C5CAD1; font-weight: 600">Total KG</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">{{tKg}}</span></span>
+      <span style="display: flex; flex-direction: column"><span style="font-size: 11px; color: #C5CAD1; font-weight: 600">Total karung</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">{{tKrg}}</span></span>
+    </div>
+
+    <a href="{{doneHref}}" style="margin-top: auto; height: 52px; border-radius: 14px; background: #B93E0B; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; text-decoration: none">{{doneLabel}}</a>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"jenis":{"editor":"enum","options":["OB","KR","RP"],"default":"OB"},"palet":{"editor":"boolean","default":true},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { gla: 6, mode: 'sebagian', krg: 10, kgManual: 490 };
+}
+renderVals() {
+const { gla, mode, krg, kgManual } = this.state;
+
+const SCALES = [['TP-01', 'Dekat Ruang A'], ['TP-02', 'Dekat Ruang B']]; // dari CMS · Master (timbangan palet aktif di gudang ini)
+const tpSel = SCALES.some((x) => x[0] === this.state.tp) ? this.state.tp : SCALES[0][0];
+const scales = SCALES.map((x) => ({ code: x[0], lok: x[1], on: x[0] === tpSel, style: 'min-height: 48px; min-width: 96px; padding: 4px 12px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: inherit; cursor: pointer; ' + (x[0] === tpSel ? 'border: 2px solid #0A57A8; background: #E6EEF8; color: #0A57A8;' : 'border: 1px solid #C9CDC5; background: #FFFFFF; color: #16191D;'), pick: () => this.setState({ tp: x[0] }) }));
+const KG_PER_KRG = 50, KRG_PER_PLT = 25, KG_PER_PLT = 1250;
+const f = (n) => n.toLocaleString('id-ID');
+const part = mode === 'sebagian';
+const autoKg = krg * KG_PER_KRG;
+const edited = kgManual !== null && kgManual !== undefined && kgManual !== '';
+const kgOut = edited ? Number(kgManual) || 0 : autoKg;
+const diff = kgOut - autoKg;
+const curKrg = part ? krg : KRG_PER_PLT;
+const curKg = part ? kgOut : KG_PER_PLT;
+const glaKrg = (gla - 1) * KRG_PER_PLT + curKrg;
+const glaKg = (gla - 1) * KG_PER_PLT + curKg;
+const kgBase = 'width: 100%; box-sizing: border-box; height: 48px; padding: 0 10px; border-radius: 12px; font-family: \'IBM Plex Mono\', monospace; font-size: 18px; font-weight: 600; color: #16191D;';
+const pbar = (v, t) => 'height: 5px; width: ' + Math.min(100, Math.round(v / t * 100)) + '%; background: ' + (v >= t ? '#1F7A3A' : '#B93E0B');
+const items = [
+{ code: 'GLA-001', palet: gla, note: part ? ' · 1 sebagian' : '', kg: f(glaKg), krg: f(glaKrg), target: f(20000), bar: pbar(glaKg, 20000) },
+{ code: 'BRS-010', palet: 2, note: '', kg: f(2500), krg: f(50), target: f(5000), bar: pbar(2500, 5000) }
+];
+const isOBj = (this.props.jenis ?? 'OB') === 'OB';
+const seg = 'height: 42px; border-radius: 9px; border: none; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;';
+const on = seg + ' background: #16191D; color: #FFFFFF;';
+const off = seg + ' background: transparent; color: #16191D;';
+return {
+lastNo: gla,
+docLabel: isOBj ? 'SPMB/2610/0021' : '261000000091',
+doneHref: 'Outbound-Ship.dc.html',
+doneLabel: isOBj ? 'Selesai muat · ke ringkasan' : 'Selesai scan · Ringkasan',
+isOB: (this.props.jenis ?? 'OB') === 'OB',
+isAdj: (this.props.jenis ?? 'OB') !== 'OB',
+jenisLabel: 'BT · Titipan',
+isUtuh: !part,
+isSebagian: part,
+utuhStyle: part ? off : on,
+sebagianStyle: part ? on : off,
+setUtuh: () => this.setState({ mode: 'utuh' }),
+setSebagian: () => this.setState({ mode: 'sebagian' }),
+krg,
+kg: edited ? kgManual : autoKg,
+kgEdited: edited,
+kgStyle: kgBase + (edited ? ' border: 2px solid #B93E0B; background: #FFFFFF;' : ' border: 1px solid #C9CDC5; background: #F2F3EF;'),
+kgHint: edited ? (this.state.kgSrc === 'timbang' ? 'Dari timbangan palet ' + tpSel + ' · selisih ' : 'Diubah manual · selisih ') + (diff > 0 ? '+' : '') + f(diff) + ' KG dari otomatis' : 'Otomatis ' + KG_PER_KRG + ' KG/karung · bisa diubah',
+setKg: (e) => this.setState({ kgManual: e.target.value, kgSrc: 'manual' }),
+resetKg: () => this.setState({ kgManual: null, kgSrc: null }),
+hasPaletScale: this.props.palet ?? true, scales, scaleCount: SCALES.length, tpCode: tpSel,
+scaleKg: f(Math.max(0, autoKg - 3)),
+weigh: () => this.setState({ kgManual: Math.max(0, autoKg - 3), kgSrc: 'timbang' }),
+sisaKrg: f(KRG_PER_PLT - krg),
+sisaKg: f(KG_PER_PLT - kgOut),
+inc: () => this.setState({ krg: Math.min(KRG_PER_PLT - 1, krg + 1), kgManual: null }),
+dec: () => this.setState({ krg: Math.max(1, krg - 1), kgManual: null }),
+items,
+tPalet: f(gla + 2),
+tKg: f(glaKg + 2500),
+tKrg: f(glaKrg + 50),
+scan: () => this.setState({ gla: Math.min(20, gla + 1), mode: 'utuh', kgManual: null }),
+undo: () => this.setState({ gla: Math.max(1, gla - 1), mode: 'utuh', kgManual: null })
+};
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Penyesuaian Stok</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#8A5A00}a:hover{color:#6B4500}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D; overflow: hidden">
+  <header style="padding: 20px 20px 12px; display: flex; align-items: center; gap: 8px; background: #FFFFFF; border-bottom: 1px solid #DADDD6">
+    <a href="Main.dc.html" aria-label="Kembali" style="width: 44px; height: 44px; margin-left: -10px; display: flex; align-items: center; justify-content: center; color: #16191D"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <div style="flex: 1; display: flex; flex-direction: column">
+      <span style="font-size: 12px; font-weight: 600; color: #8A5A00; letter-spacing: 0.06em; text-transform: uppercase">KR · SS</span>
+      <h1 style="margin: 0; font-size: 20px; font-weight: 700">Penyesuaian stok</h1>
+    </div>
+  </header>
+  <main style="flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px">
+    <div role="radiogroup" aria-label="Jenis" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 4px; border-radius: 12px; background: #E4E6E0">
+      <sc-for list="{{jenis}}" as="j" hint-placeholder-count="2"><button type="button" role="radio" aria-checked="{{j.on}}" onClick="{{j.pick}}" style="{{j.style}}">{{j.label}}</button></sc-for>
+    </div>
+    <p style="margin: 0; font-size: 12px; color: #545B63">{{jenisHint}}</p>
+
+    <section aria-label="Form penyesuaian" style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 14px">
+      <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><span style="font-size: 13px; font-weight: 600">Stok yang disesuaikan <span style="color: #B93E0B">*</span></span>
+        <input type="search" list="stock-list" value="{{stockVal}}" onChange="{{setStock}}" placeholder="Cari item / container" style="{{sm.input}}">
+        <datalist id="stock-list"><sc-for list="{{stockOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}">{{o.label}}</option></sc-for></datalist>
+        <span style="{{sm.style}}">{{sm.text}}</span>
+      </label>
+      <sc-if value="{{hasStock}}" hint-placeholder-val="{{ true }}">
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px 12px; border-radius: 12px; background: #F2F3EF; font-size: 12px; color: #545B63">
+        <span>Stok KG<br><strong style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; color: #16191D">{{st.kg}}</strong></span><span>Stok sak<br><strong style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; color: #16191D">{{st.sak}}</strong></span><span>Palet<br><strong style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; color: #16191D">{{st.plt}}</strong></span>
+      </div>
+      </sc-if>
+      <sc-if value="{{showArah}}" hint-placeholder-val="{{ true }}">
+      <div role="radiogroup" aria-label="Arah" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 4px; border-radius: 12px; background: #E4E6E0">
+        <sc-for list="{{arah}}" as="a" hint-placeholder-count="2"><button type="button" role="radio" aria-checked="{{a.on}}" onClick="{{a.pick}}" style="{{a.style}}">{{a.label}}</button></sc-for>
+      </div>
+      </sc-if>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+      <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><span style="font-size: 13px; font-weight: 600">Qty (KG) <span style="color: #B93E0B">*</span></span>
+        <input type="number" inputmode="decimal" value="{{qty}}" onChange="{{setQty}}" style="{{qm.input}}">
+        <span style="{{qm.style}}">{{qm.text}}</span>
+      </label>
+      <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><span style="font-size: 13px; font-weight: 600">Qty 2 (sak)</span>
+        <input type="number" inputmode="numeric" value="{{sak}}" onChange="{{setSak}}" disabled="{{sakOff}}" style="{{sakm.input}}">
+        <span style="{{sakm.style}}">{{sakm.text}}</span>
+      </label>
+      </div>
+      <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><span style="font-size: 13px; font-weight: 600">Alasan <span style="color: #B93E0B">*</span></span>
+        <select onChange="{{setAlasan}}" style="width: 100%; box-sizing: border-box; height: 48px; padding: 0 10px; border-radius: 12px; border: {{alasanBorder}}; background: #FFFFFF; font-family: inherit; font-size: 15px; color: #16191D"><option value="" selected="{{al0}}">Pilih alasan</option><sc-for list="{{alasanOpts}}" as="o" hint-placeholder-count="4"><option value="{{o.value}}" selected="{{o.on}}">{{o.label}}</option></sc-for></select>
+      </label>
+      <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><span style="font-size: 13px; font-weight: 600">Catatan <span style="font-weight: 400; color: #545B63">{{catatanHint}}</span></span>
+        <input type="text" value="{{catatan}}" onChange="{{setCatatan}}" placeholder="Keterangan singkat" style="width: 100%; box-sizing: border-box; height: 48px; padding: 0 12px; border-radius: 12px; border: {{catBorder}}; background: #FFFFFF; font-family: inherit; font-size: 15px; color: #16191D">
+      </label>
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+        <button type="button" onClick="{{shot}}" style="{{photoStyle}}">{{photoLabel}}</button>
+        <span style="{{pm.style}}">{{pm.text}}</span>
+      </div>
+      <div style="padding: 10px 12px; border-radius: 12px; background: #F2F3EF; font-size: 13px; display: flex; justify-content: space-between"><span style="color: #545B63">Stok setelah disesuaikan</span><strong style="font-family: 'IBM Plex Mono', monospace">{{after}}</strong></div>
+    </section>
+    <p style="margin: 0; font-size: 12px; color: #545B63">Penyesuaian tidak langsung mengubah stok. Dokumen dikirim ke Admin untuk dicek dan diposting di CMS (KR = ObjType 6720, SS = 6710).</p>
+    <sc-if value="{{done}}" hint-placeholder-val="{{ false }}"><div style="padding: 12px 14px; border-radius: 12px; background: #E3F2E7; color: #1F6B34; font-size: 13px; font-weight: 600">{{doneText}}</div></sc-if>
+  </main>
+  <footer style="padding: 12px 20px 14px; background: #FFFFFF; border-top: 1px solid #DADDD6; display: flex; flex-direction: column; gap: 6px">
+    <span style="font-size: 12px; font-weight: 600; color: #A32020; min-height: 14px">{{blockMsg}}</span>
+    <button type="button" onClick="{{send}}" aria-disabled="{{blocked}}" style="{{sendStyle}}">Kirim ke Admin</button>
+  </footer>
+  <nav aria-label="Navigasi utama" style="height: 76px; background: #FFFFFF; border-top: 1px solid #DADDD6; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; padding: 0 8px; box-sizing: border-box; flex-shrink: 0">
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; text-decoration: none; color: #16191D; font-size: 11px; font-weight: 600"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"></path></svg>Beranda</a>
+    <a href="Inbound-List.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; text-decoration: none; color: #545B63; font-size: 11px; font-weight: 500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0l-4-4m4 4l4-4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"></path></svg>Inbound</a>
+    <a href="Outbound-Pick.dc.html" aria-label="Scan QR" style="display: flex; justify-content: center; text-decoration: none"><span style="width: 56px; height: 56px; margin-top: -24px; border-radius: 18px; background: #16191D; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10"></path></svg></span></a>
+    <a href="Outbound-List.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; text-decoration: none; color: #545B63; font-size: 11px; font-weight: 500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14V3m0 0L8 7m4-4l4 4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"></path></svg>Outbound</a>
+    <a href="Laporan-Menu.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; text-decoration: none; color: #545B63; font-size: 11px; font-weight: 500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V11M12 20V5M19 20v-7M3 20h18"></path></svg>Laporan</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { j: 'KR', ar: 'kurang', stock: 'GLA-001 | TGHU8812348', qty: '120', sak: '', alasan: '', catatan: '', shot: false, tried: false, done: '' };
+}
+renderVals() {
+const S = this.state;
+const E = (text) => ({ k: 'err', text }), W = (text) => ({ k: 'warn', text }), OK = (text) => ({ k: 'ok', text }), H = (text) => ({ k: 'hint', text });
+const tone = { err: ['#A32020', '✕'], warn: ['#8A5A00', '!'], ok: ['#1F6B34', '✓'], hint: ['#545B63', ''] };
+const fm = (m) => ({ text: (m.k === 'hint' ? '' : tone[m.k][1] + ' ') + m.text, style: 'font-size: 12px; font-weight: ' + (m.k === 'hint' ? 400 : 600) + '; color: ' + tone[m.k][0], input: 'width: 100%; box-sizing: border-box; height: 48px; padding: 0 12px; border-radius: 12px; background: #FFFFFF; font-family: \'IBM Plex Mono\', monospace; font-size: 16px; font-weight: 600; color: #16191D; border: ' + (m.k === 'err' ? '2px solid #A32020' : (m.k === 'warn' ? '2px solid #C98A00' : '1px solid #C9CDC5')) + ';' });
+const f = (n) => Number(n).toLocaleString('id-ID');
+const seg = (on, c) => 'height: 44px; border-radius: 10px; border: none; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; ' + (on ? 'background: ' + c + '; color: #FFFFFF' : 'background: transparent; color: #16191D');
+const STOCK = [
+{ v: 'GLA-001 | TGHU8812348', code: 'GLA-001', name: 'Gula Pasir Kristal Putih', cont: 'TGHU8812348', room: 'R-A01', tit: false, kg: 24500, sak: 490, plt: 20, pack: 50 },
+{ v: 'BRS-010 | MSKU4410272', code: 'BRS-010', name: 'Beras Medium', cont: 'MSKU4410272', room: 'R-A02', tit: false, kg: 10000, sak: 200, plt: 8, pack: 50 },
+{ v: 'TPG-003 | MSKU4410272', code: 'TPG-003', name: 'Tepung Terigu', cont: 'MSKU4410272', room: 'R-B01', tit: true, kg: 5000, sak: 200, plt: 8, pack: 25 }
+];
+const stockOpts = STOCK.map((x) => ({ value: x.v, label: x.name + ' · ' + x.room + (x.tit ? ' (titipan)' : '') + ' · ' + f(x.kg) + ' KG' }));
+const isSS = S.j === 'SS';
+const SETUP = { ss: 1, kr: 5, rp1: 0.5, rp2: 2 }; // dibaca dari CMS · Setup (batas persen)
+const pc = (n) => String(n).replace('.', ',');
+const ar = isSS ? 'kurang' : S.ar;
+const st = STOCK.filter((x) => x.v === String(S.stock).trim())[0];
+const sm = !String(S.stock).trim() ? H('Pilih item dan container dari stok') : (st ? OK(st.name + ' · ' + st.cont + ' · ' + st.room + (st.tit ? ' · TITIPAN (BT)' : '')) : E('Stok tidak ditemukan di warehouse ini'));
+const qn = Number(S.qty);
+const sign = ar === 'kurang' ? -1 : 1;
+let qm;
+if (!st) qm = H('');
+else if (!(qn > 0)) qm = E('Isi qty lebih dari 0');
+else if (ar === 'kurang' && qn > st.kg) qm = E('Melebihi stok ' + f(st.kg) + ' KG');
+else if (isSS && qn > st.kg * SETUP.ss / 100) qm = W('Susut ' + (qn / st.kg * 100).toFixed(1).replace('.', ',') + '% dari stok (batas ' + pc(SETUP.ss) + '%) · Admin akan memeriksa');
+else if (!isSS && ar === 'kurang' && qn > st.kg * SETUP.kr / 100) qm = W('Koreksi besar (>' + pc(SETUP.kr) + '%) · sertakan catatan jelas');
+else qm = OK('OK');
+const sakOff = isSS;
+const sn = isSS ? 0 : (S.sak === '' ? 0 : Number(S.sak));
+let sakm;
+if (isSS) sakm = H('Susut tidak mengubah sak');
+else if (S.sak === '') sakm = H('Kosongkan bila hanya KG');
+else if (!Number.isInteger(sn) || sn < 0) sakm = E('Harus bilangan bulat');
+else if (st && ar === 'kurang' && sn > st.sak) sakm = E('Melebihi stok ' + f(st.sak) + ' sak');
+else sakm = OK(sn + ' sak');
+const AL = isSS ? [['lembab', 'Susut kelembaban / penguapan'], ['tumpah', 'Tumpah / bocor kemasan'], ['timbang', 'Selisih timbang']] : [['opname', 'Selisih opname'], ['salah', 'Salah input sebelumnya'], ['rusak', 'Barang rusak / afkir'], ['lain', 'Lainnya']];
+const alasan = AL.some((a) => a[0] === S.alasan) ? S.alasan : '';
+const needCat = alasan === 'lain';
+const catOk = !needCat || String(S.catatan).trim().length >= 5;
+const needShot = ar === 'kurang';
+let pm;
+if (!needShot) pm = H('Foto tidak wajib untuk penambahan');
+else pm = S.shot ? OK('Foto bukti tersimpan') : E('Foto bukti wajib untuk pengurangan');
+const bad = [!st, qm.k === 'err', sakm.k === 'err', !alasan, !catOk, needShot && !S.shot].filter(Boolean).length;
+const blocked = bad > 0 || !!S.done;
+const after = st && qn > 0 ? f(Math.max(0, st.kg + sign * qn)) + ' KG' + (!isSS && sn ? ' · ' + f(Math.max(0, st.sak + sign * sn)) + ' sak' : '') : '—';
+let blockMsg = '';
+if (S.tried && bad > 0) blockMsg = 'Lengkapi ' + bad + ' isian dulu';
+return {
+jenis: [['KR', 'Penyesuaian'], ['SS', 'Susut']].map((o) => ({ label: o[1], on: S.j === o[0], style: seg(S.j === o[0], '#8A5A00'), pick: () => this.setState({ j: o[0], alasan: '', done: '', tried: false }) })),
+jenisHint: isSS ? 'SS · Susut: mengurangi KG tanpa mengubah sak (kehilangan berat alami).' : 'KR · Penyesuaian: koreksi stok KG dan sak, bisa menambah atau mengurangi.',
+stockVal: S.stock, stockOpts, setStock: (e) => this.setState({ stock: e.target.value, done: '' }), sm: fm(sm), hasStock: !!st,
+st: st ? { kg: f(st.kg), sak: f(st.sak), plt: st.plt } : { kg: '—', sak: '—', plt: '—' },
+showArah: !isSS && !!st, arah: [['kurang', 'Kurang (−)'], ['tambah', 'Tambah (+)']].map((o) => ({ label: o[1], on: ar === o[0], style: seg(ar === o[0], o[0] === 'kurang' ? '#A32020' : '#1F7A3A'), pick: () => this.setState({ ar: o[0], shot: false, done: '' }) })),
+qty: S.qty, setQty: (e) => this.setState({ qty: e.target.value, done: '' }), qm: fm(qm),
+sak: isSS ? '' : S.sak, setSak: (e) => this.setState({ sak: e.target.value }), sakOff, sakm: fm(sakm),
+alasanOpts: AL.map((a) => ({ value: a[0], label: a[1], on: a[0] === alasan })), al0: !alasan, setAlasan: (e) => this.setState({ alasan: e.target.value }),
+alasanBorder: S.tried && !alasan ? '2px solid #A32020' : '1px solid #C9CDC5',
+catatan: S.catatan, setCatatan: (e) => this.setState({ catatan: e.target.value }), catatanHint: needCat ? '(wajib, min. 5 huruf)' : '(opsional)',
+catBorder: S.tried && !catOk ? '2px solid #A32020' : '1px solid #C9CDC5',
+shot: () => this.setState({ shot: !S.shot }), photoLabel: S.shot ? 'Foto diambil · ganti' : 'Ambil foto bukti',
+photoStyle: 'height: 40px; padding: 0 14px; border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; ' + (S.shot ? 'border: 1.5px solid #1F7A3A; background: #E3F2E7; color: #1F6B34' : 'border: 1px dashed #8A9098; background: transparent; color: #16191D'), pm: fm(pm),
+after, blockMsg, blocked, done: !!S.done, doneText: S.done,
+sendStyle: 'height: 52px; border-radius: 14px; border: none; font-family: inherit; font-size: 15px; font-weight: 600; ' + (blocked ? 'background: #C9CDC5; color: #545B63; cursor: not-allowed' : 'background: #8A5A00; color: #FFFFFF; cursor: pointer'),
+send: () => { if (S.done) return; if (bad > 0) { this.setState({ tried: true }); return; } this.setState({ done: (isSS ? 'SS' : 'KR') + ' 261000000021 dikirim ke Admin · ' + (sign < 0 ? '−' : '+') + f(qn) + ' KG ' + st.code + ' · menunggu posting' }); }
+};
+}
+}
+</script>
+</body>
+</html>

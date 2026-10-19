@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Master Warehouse dan Ruangan</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F2F3EF}
+a{color:#0A57A8}a:hover{color:#063E7A}
+</style>
+</helmet>
+<div style="width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D">
+  <aside aria-label="Menu CMS" style="flex: 1 1 220px; max-width: 100%; box-sizing: border-box; background: #16191D; color: #FFFFFF; padding: 24px 16px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; flex-direction: column; gap: 2px; padding: 0 8px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #C5CAD1">Gudang ATM</span>
+      <span style="font-size: 20px; font-weight: 700">CMS Admin</span>
+    </div>
+    <nav style="display: flex; flex-direction: column; gap: 4px">
+      <a href="CMS-Rencana.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">SPBB &amp; SPMB</a>
+      <a href="CMS-Surat-Jalan.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Surat Jalan</a>
+      <a href="CMS-Riwayat-Berat.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Riwayat Berat</a>
+      <a href="CMS-Jadwal.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Jadwal Bongkar Muat</a>
+      <a href="CMS-List.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Cek Input Krani</a>
+      <a href="CMS-Master-Ruangan.dc.html" aria-current="page" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #2A2E34; color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 600">Master Warehouse &amp; Ruangan</a>
+      <a href="CMS-Master-Palet.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Master Palet</a>
+      <a href="CMS-Setup.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Setup</a>
+      <a href="Laporan-Menu.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Laporan</a>
+      <a href="CMS-Cetak-Label.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Cetak Label</a>
+    </nav>
+  </aside>
+
+  <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px; display: flex; flex-direction: column; gap: 20px">
+    <header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #545B63">Master · Gudang ATM</span>
+        <h1 style="margin: 0; font-size: 28px; font-weight: 700">Warehouse &amp; Ruangan</h1>
+        <p style="margin: 0; font-size: 14px; color: #545B63">Daftar ruangan per warehouse dibuat dan diatur di sini (kode, nama, kapasitas tonase, tanda titipan). Ruangan titipan: SPBB dan SPMB wajib mengisi kode customer pemilik barang. Beban = barang + palet. Melebihi kapasitas hanya diberi peringatan.</p>
+      </div>
+      <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #545B63">Warehouse
+        <input type="search" list="wh-list" value="{{whCode}}" onChange="{{pickWh}}" placeholder="Cari warehouse" style="height: 40px; width: 240px; max-width: 100%; box-sizing: border-box; padding: 0 12px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #16191D">
+        <datalist id="wh-list"><option value="WH-JKT01">[Nama Warehouse 1] · titipan</option><option value="WH-JKT02">[Nama Warehouse 2]</option></datalist>
+      </label>
+    </header>
+
+    <section aria-label="Timbangan mobil" style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 16px 18px; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px">
+      <label style="display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; min-height: 40px">
+        <input type="checkbox" checked="{{hasScale}}" onChange="{{toggleScale}}" style="width: 20px; height: 20px; accent-color: #0A57A8">Gudang punya timbangan mobil
+      </label>
+      <sc-if value="{{hasScale}}" hint-placeholder-val="{{ true }}">
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #545B63">Kode indikator
+          <input type="text" value="TB-01" style="height: 40px; width: 120px; box-sizing: border-box; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #16191D">
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #545B63">Alamat LAN (IP:port)
+          <input type="text" value="192.168.10.21:4001" style="height: 40px; width: 200px; box-sizing: border-box; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #16191D">
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #545B63">Override toleransi selisih
+          <input type="text" value="" placeholder="ikut Setup" aria-label="Override toleransi selisih" style="height: 40px; width: 110px; box-sizing: border-box; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #16191D">
+          <span style="font-size: 11px; font-weight: 400; color: #545B63">Kosong = pakai Setup (0,5 % net). Isi % hanya untuk timbangan ini.</span>
+        </label>
+        <button style="height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 13px; font-weight: 600; color: #16191D">Tes koneksi</button>
+        <span style="display: inline-flex; align-items: center; gap: 6px; min-height: 40px; font-size: 13px; font-weight: 600; color: #1F6B34"><span style="width: 8px; height: 8px; border-radius: 4px; background: #1F7A3A"></span>Terhubung · 0 kg stabil</span>
+      </sc-if>
+      <sc-if value="{{noScale}}" hint-placeholder-val="{{ false }}">
+        <span style="min-height: 40px; display: inline-flex; align-items: center; font-size: 13px; color: #545B63">Tanpa timbangan mobil: krani mengisi data kendaraan sendiri di aplikasi, net barang = total berat palet (dari timbangan palet atau manual).</span>
+      </sc-if>
+    </section>
+
+    <section aria-label="Timbangan palet" style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+        <div style="display: flex; flex-direction: column; gap: 2px"><strong style="font-size: 15px">Timbangan palet · {{psCount}} unit</strong><span style="font-size: 12px; color: #545B63">Satu gudang boleh punya lebih dari satu timbangan palet. Krani memilih timbangan yang dipakai saat menimbang.</span></div>
+        <label style="display: flex; align-items: center; gap: 10px; font-size: 14px; min-height: 40px">
+          <input type="checkbox" checked style="width: 20px; height: 20px; accent-color: #0A57A8">Krani boleh isi berat manual
+        </label>
+      </div>
+      <div style="border: 1px solid #DADDD6; border-radius: 12px; overflow-x: auto">
+        <div style="min-width: 760px">
+          <div style="display: grid; grid-template-columns: 120px minmax(160px, 1fr) 200px 80px 90px 44px; gap: 10px; padding: 10px 14px; background: #F2F3EF; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #545B63"><span>Kode indikator</span><span>Lokasi / keterangan</span><span>Alamat LAN (IP:port)</span><span>Aktif</span><span>Status</span><span></span></div>
+          <sc-for list="{{pscales}}" as="p" hint-placeholder-count="2">
+            <div style="display: grid; grid-template-columns: 120px minmax(160px, 1fr) 200px 80px 90px 44px; gap: 10px; align-items: start; padding: 10px 14px; border-top: 1px solid #ECEDE8">
+              <div style="display: flex; flex-direction: column; gap: 3px"><input type="text" value="{{p.code}}" onChange="{{p.setCode}}" aria-label="Kode indikator" style="{{p.codeStyle}}"><span style="{{p.cm.style}}">{{p.cm.text}}</span></div>
+              <div style="display: flex; flex-direction: column; gap: 3px"><input type="text" value="{{p.lok}}" onChange="{{p.setLok}}" aria-label="Lokasi timbangan" placeholder="mis. Dekat Ruang A" style="height: 38px; width: 100%; box-sizing: border-box; padding: 0 10px; border-radius: 8px; border: 1px solid #C9CDC5; font-family: inherit; font-size: 13px; color: #16191D"></div>
+              <div style="display: flex; flex-direction: column; gap: 3px"><input type="text" value="{{p.ip}}" onChange="{{p.setIp}}" aria-label="Alamat LAN" style="{{p.ipStyle}}"><span style="{{p.im.style}}">{{p.im.text}}</span></div>
+              <label style="display: flex; align-items: center; min-height: 38px"><input type="checkbox" checked="{{p.aktif}}" onChange="{{p.toggle}}" aria-label="Aktif" style="width: 20px; height: 20px; accent-color: #0A57A8"></label>
+              <span style="display: inline-flex; align-items: center; gap: 6px; min-height: 38px; font-size: 12px; font-weight: 600; color: #1F6B34"><span style="width: 8px; height: 8px; border-radius: 4px; background: #1F7A3A"></span>Terhubung</span>
+              <button type="button" onClick="{{p.del}}" aria-label="Hapus timbangan" style="width: 38px; height: 38px; border-radius: 8px; border: 1px solid #DADDD6; background: #FFFFFF; color: #A32020; font-size: 18px; cursor: pointer">×</button>
+            </div>
+          </sc-for>
+          <sc-if value="{{psEmpty}}" hint-placeholder-val="{{ false }}"><div style="padding: 14px; font-size: 13px; color: #545B63">Belum ada timbangan palet · krani mengisi berat manual.</div></sc-if>
+        </div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+        <button type="button" onClick="{{addPs}}" style="height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 13px; font-weight: 600; color: #16191D; cursor: pointer">+ Tambah timbangan palet</button>
+        <span style="font-size: 12px; color: #545B63">Berat dari timbangan dikurangi berat palet (master) lalu dicatat bersama kode timbangannya. Berat manual ditandai “manual” di CMS Cek Input.</span>
+      </div>
+      <span style="{{psm.style}}">{{psm.text}}</span>
+    </section>
+
+    <section aria-label="Ringkasan warehouse" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px">
+      <div style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 12px; font-weight: 600; color: #545B63">KAPASITAS TOTAL</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600">{{sumCap}} t</span><span style="font-size: 12px; color: #545B63">{{nRoom}} ruangan</span></div>
+      <div style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 12px; font-weight: 600; color: #0A57A8">TERISI</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600">{{sumUsed}} t</span><span style="font-size: 12px; color: #545B63">{{pctAll}}% dari kapasitas</span></div>
+      <div style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 12px; font-weight: 600; color: #7A5300">HAMPIR PENUH / OVER</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600">{{nWarn}}</span><span style="font-size: 12px; color: #545B63">≥ 90% kapasitas</span></div>
+    </section>
+
+    <section aria-label="Daftar ruangan" style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; overflow-x: auto">
+      <div style="min-width: 1060px">
+        <div style="display: grid; grid-template-columns: 130px minmax(160px, 1fr) 120px 80px 90px 90px minmax(100px, 0.7fr) 110px 70px; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #DADDD6; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #545B63">
+          <span>Kode ruangan</span><span>Nama ruangan</span><span>Kapasitas (ton)</span><span>Titipan</span><span>Terisi</span><span>Sisa</span><span>Pemakaian</span><span>Status</span><span>Aktif</span>
+        </div>
+        <sc-for list="{{rooms}}" as="r" hint-placeholder-count="4">
+          <div style="display: grid; grid-template-columns: 130px minmax(160px, 1fr) 120px 80px 90px 90px minmax(100px, 0.7fr) 110px 70px; gap: 12px; align-items: start; padding: 10px 16px; border-bottom: 1px solid #ECEDE8; font-size: 13px">
+            <div style="display: flex; flex-direction: column; gap: 3px"><input type="text" value="{{r.code}}" onChange="{{r.setCode}}" readonly="{{r.locked}}" aria-label="Kode ruangan" style="{{r.codeStyle}}"><span style="{{r.cm.style}}">{{r.cm.text}}</span></div>
+            <div style="display: flex; flex-direction: column; gap: 3px"><input type="text" value="{{r.name}}" onChange="{{r.setName}}" aria-label="Nama ruangan" style="{{r.nameStyle}}"><span style="{{r.nm.style}}">{{r.nm.text}}</span></div>
+            <div style="display: flex; flex-direction: column; gap: 3px"><input type="text" inputmode="decimal" value="{{r.cap}}" onChange="{{r.setCap}}" aria-label="Kapasitas ton" style="{{r.capStyle}}"><span style="{{r.km.style}}">{{r.km.text}}</span></div>
+            <label style="display: flex; flex-direction: column; gap: 3px; padding-top: 8px"><input type="checkbox" checked="{{r.tit}}" onChange="{{r.toggleTit}}" aria-label="Ruangan titipan" style="width: 20px; height: 20px; accent-color: #0A57A8"><span style="{{r.tm.style}}">{{r.tm.text}}</span></label>
+            <span style="font-family: 'IBM Plex Mono', monospace; padding-top: 9px">{{r.used}} t</span>
+            <span style="{{r.sisaStyle}}">{{r.sisa}} t</span>
+            <span style="height: 8px; border-radius: 4px; background: #ECEDE8; overflow: hidden; display: block; margin-top: 15px"><span style="{{r.bar}}"></span></span>
+            <span style="{{r.stStyle}}">{{r.st}}</span>
+            <label style="display: flex; flex-direction: column; gap: 3px; padding-top: 8px"><input type="checkbox" checked="{{r.aktif}}" onChange="{{r.toggle}}" aria-label="Aktif" style="width: 20px; height: 20px; accent-color: #0A57A8"><span style="{{r.am.style}}">{{r.am.text}}</span></label>
+          </div>
+        </sc-for>
+        <sc-if value="{{noRooms}}" hint-placeholder-val="{{ false }}"><div style="padding: 14px; font-size: 13px; color: #545B63">Belum ada ruangan di warehouse ini.</div></sc-if>
+      </div>
+    </section>
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+        <button type="button" onClick="{{addRoom}}" style="height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 600; color: #16191D; cursor: pointer">+ Ruangan baru</button>
+        <span style="font-size: 12px; color: #545B63">Kode ruangan tidak bisa diubah setelah disimpan. Ruangan yang masih berisi barang tidak bisa dinonaktifkan.</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px"><span style="{{roomMsg.style}}">{{roomMsg.text}}</span>
+      <button type="button" onClick="{{saveRooms}}" aria-disabled="{{roomBlocked}}" style="{{roomBtn}}">Simpan ruangan</button></div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+const SEED = {
+'WH-JKT01': [['WH-JKT01-R-A01', 'Ruang A1 · gula', 200, 182.4], ['WH-JKT01-R-A02', 'Ruang A2 · beras', 150, 60], ['WH-JKT01-R-B01', 'Ruang B1 · tepung', 120, 117.5, 1], ['WH-JKT01-R-B02', 'Ruang B2', 120, 126.3, 1], ['WH-JKT01-YARD', 'Yard kontainer', 0, 0]],
+'WH-JKT02': [['WH-JKT02-R-C01', 'Ruang C1', 250, 98], ['WH-JKT02-R-C02', 'Ruang C2', 250, 40.5]]
+};
+const rm = {};
+Object.keys(SEED).forEach((w) => { rm[w] = SEED[w].map((r) => ({ code: r[0], name: r[1], cap: String(r[2]), used: r[3], aktif: true, isNew: false, tit: !!r[4] })); });
+this.state = { rm, saved: '', wh: 'WH-JKT01', ps: { 'WH-JKT01': [{ code: 'TP-01', lok: 'Dekat Ruang A', ip: '192.168.20.30:4001', aktif: true }, { code: 'TP-02', lok: 'Dekat Ruang B', ip: '192.168.20.31:4001', aktif: true }], 'WH-JKT02': [{ code: 'TP-03', lok: 'Pintu utama', ip: '192.168.30.31:4001', aktif: true }] } };
+}
+renderVals() {
+const wh = this.state.rm[this.state.wh] ? this.state.wh : 'WH-JKT01';
+const t = (n) => n.toLocaleString('id-ID', { maximumFractionDigits: 1 });
+const pill = (bg, fg) => 'justify-self: start; padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; margin-top: 7px; background: ' + bg + '; color: ' + fg;
+const tone0 = { err: ['#A32020', '✕'], warn: ['#8A5A00', '!'], ok: ['#1F6B34', '✓'], hint: ['#545B63', ''] };
+const fm0 = (m) => ({ text: (tone0[m.k][1] ? tone0[m.k][1] + ' ' : '') + m.text, style: 'font-size: 11px; font-weight: 600; color: ' + tone0[m.k][0] });
+const bord = (k) => k === 'err' ? '2px solid #A32020' : '1px solid #C9CDC5';
+const roomList = this.state.rm[wh] || [];
+const setRooms = (list) => this.setState({ rm: Object.assign({}, this.state.rm, { [wh]: list }), saved: '' });
+const allCodes = Object.keys(this.state.rm).reduce((a, w) => a.concat(this.state.rm[w].map((r, i) => ({ w, i, code: String(r.code).toUpperCase().trim() }))), []);
+let sumCap = 0, sumUsed = 0, nWarn = 0, roomBad = 0;
+const rooms = roomList.map((r, idx) => {
+const code = String(r.code).toUpperCase().trim();
+const capN = Number(String(r.cap).replace(',', '.'));
+let cm, nm, km, am;
+if (!code) cm = { k: 'err', text: 'Kode wajib diisi' };
+else if (!/^[A-Z0-9-]{3,30}$/.test(code)) cm = { k: 'err', text: 'Huruf/angka/-, 3-30' };
+else if (allCodes.some((o) => o.code === code && !(o.w === wh && o.i === idx))) cm = { k: 'err', text: 'Kode sudah dipakai' };
+else cm = { k: 'ok', text: r.isNew ? 'Kode baru' : 'Terkunci' };
+nm = !String(r.name).trim() ? { k: 'err', text: 'Nama wajib diisi' } : { k: 'ok', text: 'OK' };
+if (String(r.cap).trim() === '' || isNaN(capN)) km = { k: 'err', text: 'Isi angka ton' };
+else if (capN < 0) km = { k: 'err', text: 'Tidak boleh negatif' };
+else if (capN === 0) km = { k: 'hint', text: '0 = tanpa batas (yard)' };
+else if (capN > 5000) km = { k: 'warn', text: 'Di atas 5.000 t · cek angka' };
+else km = { k: 'ok', text: 'OK' };
+const cap = isNaN(capN) ? 0 : Math.max(0, capN), used = r.used;
+am = r.aktif ? { k: 'hint', text: '' } : { k: 'warn', text: 'Nonaktif' };
+const pct = cap > 0 ? used / cap * 100 : 0;
+const over = r.aktif && cap > 0 && used > cap, near = r.aktif && !over && pct >= 90;
+if (r.aktif) { sumCap += cap; sumUsed += used; if (over || near) nWarn++; }
+if ([cm, nm, km].some((m) => m.k === 'err')) roomBad++;
+const st = !r.aktif ? 'Nonaktif' : cap === 0 ? 'Tanpa batas' : over ? 'Over kapasitas' : near ? 'Hampir penuh' : 'Aman';
+const upd = (o) => setRooms(roomList.map((y, j) => (j === idx ? Object.assign({}, y, o) : y)));
+const mono = "font-family: 'IBM Plex Mono', monospace; ";
+return {
+code: r.code, name: r.name, cap: r.cap, locked: !r.isNew, used: t(used), sisa: t(cap - used), aktif: r.aktif,
+cm: fm0(cm), nm: fm0(nm), km: fm0(km), am: fm0(am), tit: !!r.tit, tm: fm0(r.tit ? { k: 'ok', text: 'Titipan' } : { k: 'hint', text: '' }),
+toggleTit: () => { if (used > 0) { this.setState({ saved: 'Ruangan ' + r.code + ' masih berisi ' + t(used) + ' t · status titipan tidak bisa diubah sebelum ruangan kosong' }); return; } upd({ tit: !r.tit }); },
+codeStyle: 'height: 36px; width: 100%; box-sizing: border-box; padding: 0 10px; border-radius: 8px; ' + mono + 'font-size: 13px; font-weight: 600; color: #16191D; border: ' + bord(cm.k) + (r.isNew ? '' : '; background: #F2F3EF'),
+nameStyle: 'height: 36px; width: 100%; box-sizing: border-box; padding: 0 10px; border-radius: 8px; font-family: inherit; font-size: 13px; color: #16191D; border: ' + bord(nm.k),
+capStyle: 'height: 36px; width: 100%; box-sizing: border-box; padding: 0 10px; border-radius: 8px; ' + mono + 'font-size: 13px; text-align: right; color: #16191D; border: ' + bord(km.k),
+setCode: (e) => { if (r.isNew) upd({ code: e.target.value }); }, setName: (e) => upd({ name: e.target.value }), setCap: (e) => upd({ cap: e.target.value }),
+toggle: () => { if (r.aktif && used > 0) { this.setState({ saved: 'Ruangan ' + r.code + ' masih berisi ' + t(used) + ' t · kosongkan dulu sebelum dinonaktifkan' }); return; } upd({ aktif: !r.aktif }); },
+sisaStyle: mono + 'padding-top: 9px; ' + (over ? 'color: #8A2E08; font-weight: 600' : ''),
+bar: 'display: block; height: 8px; width: ' + Math.min(100, pct) + '%; background: ' + (over ? '#C98A00' : near ? '#C98A00' : '#0A57A8'),
+st, stStyle: !r.aktif ? pill('#ECEDE8', '#545B63') : over ? pill('#FBEDE5', '#8A2E08') : near ? pill('#FFF4D6', '#5C3F00') : cap === 0 ? pill('#ECEDE8', '#545B63') : pill('#E3F2E7', '#1F6B34')
+};
+});
+const tone = { err: ['#A32020', '✕'], warn: ['#8A5A00', '!'], ok: ['#1F6B34', '✓'], hint: ['#545B63', ''] };
+const fm = (m) => ({ text: (tone[m.k][1] ? tone[m.k][1] + ' ' : '') + m.text, style: 'font-size: 11px; font-weight: 600; color: ' + tone[m.k][0] });
+const psAll = Object.keys(this.state.ps).reduce((a, w) => a.concat(this.state.ps[w].map((x, i) => ({ w, i, code: String(x.code).toUpperCase().trim(), ip: String(x.ip).trim() }))), []);
+const setPs = (list) => this.setState({ ps: Object.assign({}, this.state.ps, { [wh]: list }) });
+const psList = this.state.ps[wh] || [];
+const pscales = psList.map((x, i) => {
+const code = String(x.code).toUpperCase().trim(), ip = String(x.ip).trim();
+let cm, im;
+if (!code) cm = { k: 'err', text: 'Wajib diisi' };
+else if (!/^[A-Z0-9-]{2,10}$/.test(code)) cm = { k: 'err', text: 'Huruf/angka/-, 2-10' };
+else if (psAll.some((o) => o.code === code && !(o.w === wh && o.i === i))) cm = { k: 'err', text: 'Kode sudah dipakai' };
+else cm = { k: 'ok', text: 'OK' };
+const m = ip.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3}):(\d{2,5})$/);
+if (!ip) im = { k: 'err', text: 'Wajib diisi' };
+else if (!m || m.slice(1, 5).some((n) => Number(n) > 255) || Number(m[5]) > 65535) im = { k: 'err', text: 'Format IP:port salah' };
+else if (psAll.some((o) => o.ip === ip && !(o.w === wh && o.i === i))) im = { k: 'err', text: 'Alamat sudah dipakai' };
+else im = { k: 'ok', text: 'OK' };
+const upd = (o) => setPs(psList.map((y, j) => (j === i ? Object.assign({}, y, o) : y)));
+const bs = (k) => 'height: 38px; width: 100%; box-sizing: border-box; padding: 0 10px; border-radius: 8px; font-family: \'IBM Plex Mono\', monospace; font-size: 13px; color: #16191D; border: ' + (k === 'err' ? '2px solid #A32020' : '1px solid #C9CDC5');
+return { code: x.code, lok: x.lok, ip: x.ip, aktif: x.aktif, cm: fm(cm), im: fm(im), codeStyle: bs(cm.k), ipStyle: bs(im.k), bad: cm.k === 'err' || im.k === 'err',
+setCode: (e) => upd({ code: e.target.value }), setLok: (e) => upd({ lok: e.target.value }), setIp: (e) => upd({ ip: e.target.value }), toggle: () => upd({ aktif: !x.aktif }), del: () => setPs(psList.filter((y, j) => j !== i)) };
+});
+const psBad = pscales.filter((x) => x.bad).length, psAktif = pscales.filter((x) => x.aktif).length;
+const psm = psBad ? { k: 'err', text: 'Perbaiki ' + psBad + ' isian yang merah sebelum menyimpan' } : (!pscales.length ? { k: 'hint', text: 'Tanpa timbangan palet' } : (!psAktif ? { k: 'warn', text: 'Semua timbangan nonaktif · krani hanya bisa isi manual' } : { k: 'ok', text: psAktif + ' timbangan aktif muncul di pilihan krani' }));
+return {
+pscales, psCount: pscales.length, psEmpty: !pscales.length, psm: fm(psm), addPs: () => setPs(psList.concat([{ code: '', lok: '', ip: '', aktif: true }])),
+whCode: wh, pickWh: (e) => this.setState({ wh: e.target.value.toUpperCase() }),
+hasScale: (this.state.scale ?? { 'WH-JKT01': true, 'WH-JKT02': false })[wh],
+noScale: !(this.state.scale ?? { 'WH-JKT01': true, 'WH-JKT02': false })[wh],
+toggleScale: () => { const s = Object.assign({ 'WH-JKT01': true, 'WH-JKT02': false }, this.state.scale || {}); s[wh] = !s[wh]; this.setState({ scale: s }); },
+rooms, noRooms: !rooms.length, nRoom: rooms.filter((x) => x.aktif).length, addRoom: () => setRooms(roomList.concat([{ code: '', name: '', cap: '', used: 0, aktif: true, isNew: true, tit: false }])),
+roomMsg: roomBad ? fm0({ k: 'err', text: 'Perbaiki ' + roomBad + ' ruangan yang merah sebelum menyimpan' }) : (this.state.saved ? fm0({ k: this.state.saved.indexOf('masih berisi') >= 0 ? 'warn' : 'ok', text: this.state.saved }) : fm0({ k: 'hint', text: '' })), roomBlocked: roomBad > 0,
+roomBtn: 'height: 44px; padding: 0 18px; border-radius: 10px; border: none; font-family: inherit; font-size: 14px; font-weight: 600; ' + (roomBad ? 'background: #C9CDC5; color: #545B63; cursor: not-allowed' : 'background: #0A57A8; color: #FFFFFF; cursor: pointer'),
+saveRooms: () => { if (roomBad) return; this.setState({ rm: Object.assign({}, this.state.rm, { [wh]: roomList.map((r) => Object.assign({}, r, { isNew: false, code: String(r.code).toUpperCase().trim() })) }), saved: 'Tersimpan · ' + roomList.length + ' ruangan di ' + wh }); },
+ sumCap: t(sumCap), sumUsed: t(sumUsed), pctAll: sumCap ? Math.round(sumUsed / sumCap * 100) : 0, nWarn
+};
+}
+}
+</script>
+</body>
+</html>

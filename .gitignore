@@ -1,0 +1,24 @@
+# build
+app/build/
+app/.dart_tool/
+app/.flutter-plugins*
+app/android/.gradle/
+api/GudangAtm.Api/bin/
+api/GudangAtm.Api/obj/
+web/node_modules/
+publish/
+# rahasia - JANGAN di-commit
+*.pfx
+*.key
+*.pem
+certs/
+appsettings.Local.json
+appsettings.Secrets.json
+.env
+*.env
+# OS / editor
+Thumbs.db
+.DS_Store
+.vs/
+.vscode/
+*.user

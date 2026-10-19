@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Repacking</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#1F7A3A}a:hover{color:#14592A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D; overflow: hidden">
+  <header style="padding: 20px 20px 12px; display: flex; align-items: center; gap: 8px; background: #FFFFFF; border-bottom: 1px solid #DADDD6">
+    <a href="Main.dc.html" aria-label="Kembali" style="width: 44px; height: 44px; margin-left: -10px; display: flex; align-items: center; justify-content: center; color: #16191D"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <div style="flex: 1; display: flex; flex-direction: column">
+      <span style="font-size: 12px; font-weight: 600; color: #1F7A3A; letter-spacing: 0.06em; text-transform: uppercase">RP</span>
+      <h1 style="margin: 0; font-size: 20px; font-weight: 700">Repacking</h1>
+    </div>
+  </header>
+  <main style="flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px">
+    <section aria-label="Sumber" style="display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 style="margin: 0; font-size: 14px; font-weight: 700; color: #B93E0B">1 · Barang sumber (dikeluarkan)</h2><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600">{{totSrc}} KG</span></div>
+      <sc-for list="{{srcRows}}" as="r" hint-placeholder-count="2">
+        <div style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 12px; font-weight: 700; color: #545B63">SUMBER {{r.no}}</span><sc-if value="{{r.canDel}}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{r.del}}" aria-label="Hapus sumber" style="height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 12px; font-weight: 600; color: #A32020; cursor: pointer">Hapus</button></sc-if></div>
+          <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><span style="font-size: 13px; font-weight: 600">Stok sumber <span style="color: #B93E0B">*</span></span>
+            <input type="search" list="stock-list" value="{{r.stock}}" onChange="{{r.setStock}}" placeholder="Cari item / container" style="{{r.sm.input}}">
+            <span style="{{r.sm.style}}">{{r.sm.text}}</span></label>
+          <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><span style="font-size: 13px; font-weight: 600">Qty diambil (KG) <span style="color: #B93E0B">*</span> <span style="font-weight: 400; color: #545B63">{{r.avail}}</span></span>
+            <input type="number" inputmode="decimal" value="{{r.qty}}" onChange="{{r.setQty}}" style="{{r.qm.input}}">
+            <span style="{{r.qm.style}}">{{r.qm.text}}</span></label>
+        </div>
+      </sc-for>
+      <datalist id="stock-list"><sc-for list="{{stockOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}">{{o.label}}</option></sc-for></datalist>
+      <button type="button" onClick="{{addSrc}}" style="height: 44px; border-radius: 12px; border: 1.5px dashed #B93E0B; background: transparent; color: #B93E0B; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer">+ Tambah sumber</button>
+    </section>
+
+    <section aria-label="Hasil" style="display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 style="margin: 0; font-size: 14px; font-weight: 700; color: #1F6B34">2 · Hasil repacking (masuk kembali)</h2><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600">{{totRes}} KG</span></div>
+      <sc-for list="{{resRows}}" as="r" hint-placeholder-count="2">
+        <div style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 12px; font-weight: 700; color: #545B63">HASIL {{r.no}}</span><sc-if value="{{r.canDel}}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{r.del}}" aria-label="Hapus hasil" style="height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 12px; font-weight: 600; color: #A32020; cursor: pointer">Hapus</button></sc-if></div>
+          <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><span style="font-size: 13px; font-weight: 600">Item hasil <span style="color: #B93E0B">*</span></span>
+            <input type="search" list="item-list" value="{{r.item}}" onChange="{{r.setItem}}" placeholder="Cari item hasil" style="{{r.im.input}}">
+            <span style="{{r.im.style}}">{{r.im.text}}</span></label>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+            <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><span style="font-size: 13px; font-weight: 600">Brand <span style="color: #B93E0B">*</span></span>
+              <input type="search" list="brand-list" value="{{r.brand}}" onChange="{{r.setBrand}}" style="{{r.bm.input}}">
+              <span style="{{r.bm.style}}">{{r.bm.text}}</span></label>
+            <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><span style="font-size: 13px; font-weight: 600">Qty hasil (KG) <span style="color: #B93E0B">*</span></span>
+              <input type="number" inputmode="decimal" value="{{r.hasil}}" onChange="{{r.setHasil}}" style="{{r.hm.input}}">
+              <span style="{{r.hm.style}}">{{r.hm.text}}</span></label>
+            <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><span style="font-size: 13px; font-weight: 600">Qty 2 (sak)</span>
+              <input type="number" inputmode="numeric" value="{{r.sak}}" onChange="{{r.setSak}}" style="{{r.skm.input}}">
+              <span style="{{r.skm.style}}">{{r.skm.text}}</span></label>
+            <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><span style="font-size: 13px; font-weight: 600">Jenis palet <span style="color: #B93E0B">*</span></span>
+              <input type="search" list="pallet-list" value="{{r.plt}}" onChange="{{r.setPlt}}" style="{{r.pm.input}}">
+              <span style="{{r.pm.style}}">{{r.pm.text}}</span></label>
+            <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0; grid-column: 1 / -1"><span style="font-size: 13px; font-weight: 600">Ruangan hasil <span style="color: #B93E0B">*</span></span>
+              <input type="search" list="room-list" value="{{r.room}}" onChange="{{r.setRoom}}" placeholder="Cari ruangan" style="{{r.rmm.input}}">
+              <span style="{{r.rmm.style}}">{{r.rmm.text}}</span></label>
+          </div>
+          <span style="font-size: 12px; color: #545B63">Label QR hasil ini: <strong style="font-family: 'IBM Plex Mono', monospace; color: #16191D">{{r.palet}}</strong></span>
+        </div>
+      </sc-for>
+      <datalist id="room-list"><sc-for list="{{roomOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}">{{o.label}}</option></sc-for></datalist>
+      <datalist id="item-list"><sc-for list="{{itemOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}">{{o.label}}</option></sc-for></datalist>
+      <datalist id="brand-list"><option value="BRAND-A"></option><option value="BRAND-B"></option><option value="BRAND-C"></option><option value="BRAND-D"></option></datalist>
+      <datalist id="pallet-list"><option value="PLT-KY12">Kayu standar · 25 kg</option><option value="PLT-PL12">Plastik heavy duty · 18 kg</option><option value="PLT-KY11">Kayu ekspor · 22 kg</option></datalist>
+      <button type="button" onClick="{{addRes}}" style="height: 44px; border-radius: 12px; border: 1.5px dashed #1F7A3A; background: transparent; color: #1F6B34; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer">+ Tambah hasil</button>
+    </section>
+
+    <section aria-label="Ringkasan" style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; font-size: 12px; color: #545B63">
+        <span>Total sumber<br><strong style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; color: #16191D">{{totSrc}}</strong></span><span>Total hasil<br><strong style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; color: #16191D">{{totRes}}</strong></span><span>Selisih<br><strong style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; color: #16191D">{{selisih}}</strong></span>
+      </div>
+      <span style="{{tm.style}}">{{tm.text}}</span>
+      <span style="font-size: 12px; color: #545B63">Label QR dicetak: <strong style="font-family: 'IBM Plex Mono', monospace; color: #16191D">{{labels}}</strong></span>
+    </section>
+    <p style="margin: 0; font-size: 12px; color: #545B63">Selisih total sampai {{rpOk}}% dicatat sebagai susut repacking. Lebih dari {{rpMax}}% harus dipisah sebagai dokumen Susut (batas diatur Admin di CMS · Setup). Admin memeriksa dan memposting di CMS.</p>
+    <sc-if value="{{done}}" hint-placeholder-val="{{ false }}"><div style="padding: 12px 14px; border-radius: 12px; background: #E3F2E7; color: #1F6B34; font-size: 13px; font-weight: 600">{{doneText}}</div></sc-if>
+  </main>
+  <footer style="padding: 12px 20px 14px; background: #FFFFFF; border-top: 1px solid #DADDD6; display: flex; flex-direction: column; gap: 6px">
+    <span style="font-size: 12px; font-weight: 600; color: #A32020; min-height: 14px">{{blockMsg}}</span>
+    <button type="button" onClick="{{send}}" aria-disabled="{{blocked}}" style="{{sendStyle}}">Kirim ke Admin &amp; cetak label</button>
+  </footer>
+  <nav aria-label="Navigasi utama" style="height: 76px; background: #FFFFFF; border-top: 1px solid #DADDD6; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; padding: 0 8px; box-sizing: border-box; flex-shrink: 0">
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; text-decoration: none; color: #16191D; font-size: 11px; font-weight: 600"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"></path></svg>Beranda</a>
+    <a href="Inbound-List.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; text-decoration: none; color: #545B63; font-size: 11px; font-weight: 500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0l-4-4m4 4l4-4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"></path></svg>Inbound</a>
+    <a href="Outbound-Pick.dc.html" aria-label="Scan QR" style="display: flex; justify-content: center; text-decoration: none"><span style="width: 56px; height: 56px; margin-top: -24px; border-radius: 18px; background: #16191D; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10"></path></svg></span></a>
+    <a href="Outbound-List.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; text-decoration: none; color: #545B63; font-size: 11px; font-weight: 500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14V3m0 0L8 7m4-4l4 4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"></path></svg>Outbound</a>
+    <a href="Laporan-Menu.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; text-decoration: none; color: #545B63; font-size: 11px; font-weight: 500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V11M12 20V5M19 20v-7M3 20h18"></path></svg>Laporan</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { src: [{ stock: 'GLA-001 | TGHU8812348', qty: '3000' }, { stock: 'GLA-001 | MNBU3565534', qty: '2000' }], res: [{ item: 'GLA-025', brand: 'BRAND-D', hasil: '2990', sak: '', plt: 'PLT-KY12', room: 'R-A01' }, { item: 'GLA-050', brand: 'BRAND-D', hasil: '1990', sak: '', plt: 'PLT-KY12', room: 'R-A01' }], done: '', tried: false };
+}
+renderVals() {
+const S = this.state;
+const E = (text) => ({ k: 'err', text }), W = (text) => ({ k: 'warn', text }), OK = (text) => ({ k: 'ok', text }), H = (text) => ({ k: 'hint', text });
+const tone = { err: ['#A32020', '✕'], warn: ['#8A5A00', '!'], ok: ['#1F6B34', '✓'], hint: ['#545B63', ''] };
+const fm = (m) => ({ text: (m.k === 'hint' ? '' : tone[m.k][1] + ' ') + m.text, style: 'font-size: 12px; font-weight: ' + (m.k === 'hint' ? 400 : 600) + '; color: ' + tone[m.k][0], input: 'width: 100%; box-sizing: border-box; height: 48px; padding: 0 12px; border-radius: 12px; background: #FFFFFF; font-family: \'IBM Plex Mono\', monospace; font-size: 16px; font-weight: 600; color: #16191D; border: ' + (m.k === 'err' ? '2px solid #A32020' : (m.k === 'warn' ? '2px solid #C98A00' : '1px solid #C9CDC5')) + ';' });
+const f = (n) => Number(n).toLocaleString('id-ID');
+const seg = (on, c) => 'height: 44px; border-radius: 10px; border: none; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; ' + (on ? 'background: ' + c + '; color: #FFFFFF' : 'background: transparent; color: #16191D');
+const STOCK = [
+{ v: 'GLA-001 | TGHU8812348', code: 'GLA-001', name: 'Gula Pasir Kristal Putih', cont: 'TGHU8812348', room: 'R-A01', kg: 24500, sak: 490, plt: 20, pack: 50 },
+{ v: 'BRS-010 | MSKU4410272', code: 'BRS-010', name: 'Beras Medium', cont: 'MSKU4410272', room: 'R-A02', kg: 10000, sak: 200, plt: 8, pack: 50 },
+{ v: 'GLA-001 | MNBU3565534', code: 'GLA-001', name: 'Gula Pasir Kristal Putih', cont: 'MNBU3565534', room: 'R-A02', kg: 12000, sak: 240, plt: 10, pack: 50 },
+{ v: 'TPG-003 | MSKU4410272', code: 'TPG-003', name: 'Tepung Terigu', cont: 'MSKU4410272', room: 'R-B01', kg: 5000, sak: 200, plt: 8, pack: 25 }
+];
+const ROOMS = { 'R-A01': { name: 'Ruang A1', tit: false }, 'R-A02': { name: 'Ruang A2', tit: false }, 'R-B01': { name: 'Ruang B1', tit: true }, 'R-B02': { name: 'Ruang B2', tit: true } }; // tanda titipan dari Master Ruangan
+STOCK.forEach((x) => { x.tit = ROOMS[x.room].tit; });
+const stockOpts = STOCK.map((x) => ({ value: x.v, label: x.name + ' · ' + x.room + (x.tit ? ' (titipan)' : '') + ' · ' + f(x.kg) + ' KG' }));
+const baseSt = S.src.map((r) => STOCK.filter((x) => x.v === String(r.stock).trim())[0]).filter(Boolean)[0];
+const baseTit = baseSt ? baseSt.tit : null; // jenis repacking ditentukan oleh sumber pertama
+const roomOpts = Object.keys(ROOMS).filter((k) => baseTit === null || ROOMS[k].tit === baseTit).map((k) => ({ value: k, label: ROOMS[k].name + (ROOMS[k].tit ? ' · titipan' : '') }));
+const ITEMS = { 'GLA-001': ['Gula Pasir Kristal Putih (curah)', 50], 'GLA-025': ['Gula Pasir Kemasan 25 kg', 25], 'GLA-050': ['Gula Pasir Kemasan 50 kg', 50], 'BRS-010': ['Beras Medium', 50], 'TPG-003': ['Tepung Terigu', 25] };
+const PAL = { 'PLT-KY12': ['Kayu standar', 25, 25], 'PLT-PL12': ['Plastik heavy duty', 18, 25], 'PLT-KY11': ['Kayu ekspor', 22, 20] };
+const BR = ['BRAND-A', 'BRAND-B', 'BRAND-C', 'BRAND-D'];
+const upd = (key, i, patch) => this.setState({ [key]: S[key].map((r, j) => (j === i ? Object.assign({}, r, patch) : r)), done: '' });
+const del = (key, i) => this.setState({ [key]: S[key].filter((r, j) => j !== i), done: '' });
+const seen = {};
+const srcRows = S.src.map((r, i) => {
+const k = String(r.stock).trim();
+const st = STOCK.filter((x) => x.v === k)[0];
+const dup = !!k && seen[k]; seen[k] = true;
+const qn = Number(r.qty);
+const sm = !k ? E('Pilih stok sumber') : (!st ? E('Stok tidak ditemukan di warehouse ini') : (dup ? E('Stok ini sudah dipilih di sumber lain') : (baseTit !== null && st.tit !== baseTit ? E('Titipan dan non-titipan tidak boleh dicampur dalam satu repacking') : OK(st.name + ' · ' + st.cont + ' · ' + st.room + (st.tit ? ' · TITIPAN' : '')))));
+const qm = !st ? H('') : (!(qn > 0) ? E('Isi qty lebih dari 0') : (qn > st.kg ? E('Melebihi stok ' + f(st.kg) + ' KG') : OK('OK')));
+return { no: i + 1, canDel: S.src.length > 1, del: () => del('src', i), stock: r.stock, setStock: (e) => upd('src', i, { stock: e.target.value }), sm: fm(sm), qty: r.qty, setQty: (e) => upd('src', i, { qty: e.target.value }), qm: fm(qm), avail: st ? '(stok ' + f(st.kg) + ')' : '', bad: sm.k === 'err' || qm.k === 'err', kg: qn > 0 ? qn : 0 };
+});
+const resRows = S.res.map((r, i) => {
+const itU = String(r.item).toUpperCase().trim();
+const it = ITEMS[itU];
+const im = !itU ? E('Pilih item hasil') : (it ? OK(it[0] + ' · @' + it[1] + ' kg/sak') : E('Item tidak ada di master'));
+const bm = !String(r.brand).trim() ? E('Pilih brand') : (BR.indexOf(String(r.brand).toUpperCase().trim()) >= 0 ? OK('OK') : E('Brand tidak ada di master'));
+const hn = Number(r.hasil);
+const hm = !(hn > 0) ? E('Isi qty hasil') : OK('OK');
+const autoSak = it && hn > 0 ? Math.round(hn / it[1]) : 0;
+const sakV = r.sak === '' ? autoSak : Number(r.sak);
+let skm;
+if (!it) skm = H('');
+else if (!Number.isInteger(sakV) || sakV < 1) skm = E('Isi jumlah sak');
+else if (Math.abs(sakV * it[1] - hn) > it[1]) skm = W(sakV + ' × ' + it[1] + ' = ' + f(sakV * it[1]) + ' KG · beda dari qty');
+else skm = OK(r.sak === '' ? 'Otomatis ' + sakV : sakV + ' sak');
+const rU = String(r.room === undefined ? '' : r.room).toUpperCase().trim();
+const rr = ROOMS[rU];
+const rmm = !rU ? E('Pilih ruangan hasil') : (!rr ? E('Ruangan tidak ada di master') : (baseTit !== null && rr.tit !== baseTit ? E(baseTit ? 'Hasil repacking titipan harus masuk ruangan titipan' : 'Hasil repacking non-titipan tidak boleh masuk ruangan titipan') : OK(rr.name + (rr.tit ? ' · titipan' : ''))));
+const pU = String(r.plt).toUpperCase().trim();
+const pl = PAL[pU];
+const pm = !pU ? E('Pilih palet') : (pl ? OK(pl[0] + ' · ' + pl[1] + ' kg') : E('Tidak ada di master palet'));
+const palet = pl && sakV > 0 ? Math.ceil(sakV / pl[2]) : 0;
+return { no: i + 1, canDel: S.res.length > 1, del: () => del('res', i), item: r.item, setItem: (e) => upd('res', i, { item: e.target.value, sak: '' }), im: fm(im), brand: r.brand, setBrand: (e) => upd('res', i, { brand: e.target.value }), bm: fm(bm), hasil: r.hasil, setHasil: (e) => upd('res', i, { hasil: e.target.value, sak: '' }), hm: fm(hm), sak: r.sak === '' ? (autoSak || '') : r.sak, setSak: (e) => upd('res', i, { sak: e.target.value }), skm: fm(skm), plt: r.plt, setPlt: (e) => upd('res', i, { plt: e.target.value }), pm: fm(pm), palet, room: rU, setRoom: (e) => upd('res', i, { room: e.target.value }), rmm: fm(rmm), bad: [im, bm, hm, skm, pm, rmm].some((m) => m.k === 'err'), kg: hn > 0 ? hn : 0, label: itU + ' ' + String(r.brand).toUpperCase().trim() };
+});
+const SETUP = { ss: 1, kr: 5, rp1: 0.5, rp2: 2 }; // dibaca dari CMS · Setup (batas persen)
+const pc = (n) => String(n).replace('.', ',');
+const totS = srcRows.reduce((a, r) => a + r.kg, 0);
+const totR = resRows.reduce((a, r) => a + r.kg, 0);
+let tm;
+if (!(totS > 0) || !(totR > 0)) tm = H('Isi qty sumber dan hasil');
+else if (totR > totS) tm = E('Total hasil melebihi total sumber ' + f(Math.round((totR - totS) * 100) / 100) + ' KG');
+else {
+const pct = (totS - totR) / totS * 100;
+if (pct <= SETUP.rp1) tm = OK('Selisih ' + pct.toFixed(2).replace('.', ',') + '% · susut repacking wajar');
+else if (pct <= SETUP.rp2) tm = W('Susut ' + pct.toFixed(2).replace('.', ',') + '% · dicatat Admin');
+else tm = E('Susut ' + pct.toFixed(1).replace('.', ',') + '% > ' + pc(SETUP.rp2) + '% · pisah sebagai dokumen Susut');
+}
+const labels = resRows.reduce((a, r) => a + r.palet, 0);
+const bad = srcRows.filter((r) => r.bad).length + resRows.filter((r) => r.bad).length + (tm.k === 'err' ? 1 : 0);
+const blocked = bad > 0 || !!S.done;
+return {
+rpOk: pc(SETUP.rp1), rpMax: pc(SETUP.rp2), srcRows, resRows, stockOpts, roomOpts, itemOpts: Object.keys(ITEMS).map((c) => ({ value: c, label: ITEMS[c][0] })),
+addSrc: () => this.setState({ src: S.src.concat([{ stock: '', qty: '' }]), done: '' }), addRes: () => this.setState({ res: S.res.concat([{ item: '', brand: '', hasil: '', sak: '', plt: 'PLT-KY12', room: baseSt ? baseSt.room : '' }]), done: '' }),
+totSrc: f(totS), totRes: f(totR), selisih: totS > 0 && totR > 0 ? f(Math.round((totS - totR) * 100) / 100) + ' KG' : '—', tm: fm(tm), labels,
+blockMsg: S.tried && bad > 0 ? 'Perbaiki ' + bad + ' isian yang merah' : '', blocked, done: !!S.done, doneText: S.done,
+sendStyle: 'height: 52px; border-radius: 14px; border: none; font-family: inherit; font-size: 15px; font-weight: 600; ' + (blocked ? 'background: #C9CDC5; color: #545B63; cursor: not-allowed' : 'background: #1F7A3A; color: #FFFFFF; cursor: pointer'),
+send: () => { if (S.done) return; if (bad > 0) { this.setState({ tried: true }); return; } this.setState({ done: 'RP 261000000022 dikirim ke Admin · ' + srcRows.length + ' sumber (' + f(totS) + ' KG) → ' + resRows.length + ' hasil (' + f(totR) + ' KG) · ' + labels + ' label QR siap dicetak' }); }
+};
+}
+}
+</script>
+</body>
+</html>

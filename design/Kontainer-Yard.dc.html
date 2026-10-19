@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Kontainer di Gudang</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A57A8}a:hover{color:#063E7A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D; overflow: hidden">
+  <header style="padding: 20px 20px 12px; display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border-bottom: 1px solid #DADDD6">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <a href="Main.dc.html" aria-label="Kembali ke beranda" style="width: 44px; height: 44px; margin-left: -10px; display: flex; align-items: center; justify-content: center; color: #16191D"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+      <div style="flex: 1; display: flex; flex-direction: column">
+        <span style="font-size: 12px; font-weight: 600; color: #545B63; letter-spacing: 0.06em; text-transform: uppercase">Yard · ditinggal saat inbound</span>
+        <h1 style="margin: 0; font-size: 20px; font-weight: 700">Kontainer di gudang</h1>
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+      <span style="display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #F2F3EF"><span style="font-size: 11px; color: #545B63">Total</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 600">3</span></span>
+      <span style="display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #F2F3EF"><span style="font-size: 11px; color: #545B63">Kosong</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 600">2</span></span>
+      <span style="display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #FFF4D6"><span style="font-size: 11px; color: #5C3F00">Masih berisi</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 600">1</span></span>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 14px 20px 20px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; gap: 10px; padding: 10px 14px; border-radius: 12px; background: #FFFFFF; border: 1px solid #DADDD6; font-size: 12px; color: #545B63">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg>
+      <span>Kontainer ditinggal dan diambil mobil lain dicatat di pos timbang. Krani melihat posisinya dan membongkar kontainer yang masih berisi.</span>
+    </div>
+    <sc-for list="{{conts}}" as="c" hint-placeholder-count="3">
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 16px">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 17px; font-weight: 600">{{c.no}}</span>
+          <span style="{{c.stStyle}}">{{c.st}}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; font-size: 13px">
+          <span style="display: flex; flex-direction: column"><span style="font-size: 11px; color: #545B63">Area</span><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{c.area}}</span></span>
+          <span style="display: flex; flex-direction: column"><span style="font-size: 11px; color: #545B63">Ditinggal sejak</span><span style="font-weight: 600">{{c.since}}</span></span>
+          <span style="display: flex; flex-direction: column"><span style="font-size: 11px; color: #545B63">Dari dokumen</span><span style="font-family: 'IBM Plex Mono', monospace">{{c.doc}}</span></span>
+          <span style="display: flex; flex-direction: column"><span style="font-size: 11px; color: #545B63">Mobil pengantar</span><span style="font-family: 'IBM Plex Mono', monospace">{{c.mobil}}</span></span>
+        </div>
+        <sc-if value="{{c.isi}}" hint-placeholder-val="{{ false }}">
+          <a href="Inbound-Scan.dc.html" style="height: 44px; border-radius: 12px; background: #0A57A8; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; text-decoration: none">Bongkar · input barang SPBB</a>
+        </sc-if>
+      </div>
+    </sc-for>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+const data = [
+{ no: 'TGHU8812348', st: 'Kosong', area: 'YARD-A03', since: '13 Okt · 10:51', doc: 'SPBB/2610/0012', mobil: 'B 9123 KXT' },
+{ no: 'MSKU4410272', st: 'Masih berisi', area: 'YARD-A02', since: '12 Okt · 15:40', doc: 'SPBB/2610/0009', mobil: 'B 9071 UAB' },
+{ no: 'TCNU5523988', st: 'Kosong', area: 'YARD-B01', since: '11 Okt · 09:12', doc: 'SPBB/2610/0004', mobil: 'B 9310 KLM' }
+];
+const pill = (bg, fg) => 'padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; background: ' + bg + '; color: ' + fg;
+const conts = data.map((c) => Object.assign({}, c, {
+isi: c.st !== 'Kosong',
+stStyle: c.st === 'Kosong' ? pill('#ECEDE8', '#16191D') : pill('#FFF4D6', '#5C3F00')
+}));
+return { conts };
+}
+}
+</script>
+</body>
+</html>

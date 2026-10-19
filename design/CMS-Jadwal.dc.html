@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Jadwal Bongkar Muat</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F2F3EF}
+a{color:#0A57A8}a:hover{color:#063E7A}
+</style>
+</helmet>
+<div style="width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D">
+  <aside aria-label="Menu CMS" style="flex: 1 1 220px; max-width: 100%; box-sizing: border-box; background: #16191D; color: #FFFFFF; padding: 24px 16px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; flex-direction: column; gap: 2px; padding: 0 8px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #C5CAD1">Gudang ATM</span>
+      <span style="font-size: 20px; font-weight: 700">CMS Admin</span>
+    </div>
+    <nav style="display: flex; flex-direction: column; gap: 4px">
+      <a href="CMS-Jadwal.dc.html" aria-current="page" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #2A2E34; color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 600">Jadwal Bongkar Muat</a>
+      <a href="CMS-Rencana.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">SPBB &amp; SPMB</a>
+      <a href="CMS-Surat-Jalan.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Surat Jalan</a>
+      <a href="CMS-Riwayat-Berat.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Riwayat Berat</a>
+      <a href="CMS-List.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Cek Input Krani</a>
+      <a href="CMS-Master-Ruangan.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Master Warehouse &amp; Ruangan</a>
+      <a href="CMS-Master-Palet.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Master Palet</a>
+      <a href="Laporan-Menu.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Laporan</a>
+      <a href="CMS-Cetak-Label.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Cetak Label</a>
+          <a href="CMS-Setup.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #2A2E34; color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 600">Setup</a>
+    </nav>
+  </aside>
+
+  
+  <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px; display: flex; flex-direction: column; gap: 18px">
+    <header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #B93E0B">SPBB &amp; SPMB · Admin</span>
+        <h1 style="margin: 0; font-size: 28px; font-weight: 700">Jadwal Bongkar Muat</h1>
+        <p style="margin: 0; font-size: 14px; color: #545B63">Jadwal disusun otomatis dari perkiraan datang kendaraan dan lama bongkar/muat (qty ÷ kecepatan per jalur + waktu persiapan). Kendaraan yang datang bersamaan antre di jalur yang paling cepat kosong.</p>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end">
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #545B63">Warehouse
+          <input type="search" list="jd-wh" value="{{wh}}" onChange="{{setWh}}" placeholder="Cari warehouse" style="height: 40px; width: 180px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #16191D">
+          <datalist id="jd-wh"><option value="WH-JKT01">[Nama Warehouse 1]</option><option value="WH-JKT02">[Nama Warehouse 2]</option></datalist>
+        </label>
+        <div style="display: flex; align-items: center; gap: 4px">
+          <button type="button" onClick="{{prevDay}}" aria-label="Hari sebelumnya" style="width: 40px; height: 40px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-size: 18px; cursor: pointer">‹</button>
+          <span style="font-family: 'IBM Plex Mono', monospace; min-width: 150px; text-align: center; font-size: 14px; font-weight: 600">{{dayLabel}}</span>
+          <button type="button" onClick="{{nextDay}}" aria-label="Hari berikutnya" style="width: 40px; height: 40px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-size: 18px; cursor: pointer">›</button>
+        </div>
+      </div>
+    </header>
+
+    <section aria-label="Ringkasan" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px">
+      <sc-for list="{{kpis}}" as="k" hint-placeholder-count="4"><div style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 12px 16px; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 12px; font-weight: 600; color: #545B63; text-transform: uppercase">{{k.l}}</span><span style="{{k.vStyle}}">{{k.v}}</span><span style="font-size: 12px; color: #545B63">{{k.s}}</span></div></sc-for>
+    </section>
+
+    <section aria-label="Timeline jalur" style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; overflow-x: auto">
+      <div style="min-width: 900px; display: flex; flex-direction: column; gap: 8px">
+        <div style="display: grid; grid-template-columns: 90px 1fr; gap: 10px"><span></span>
+          <div style="position: relative; height: 18px"><sc-for list="{{hours}}" as="h" hint-placeholder-count="12"><span style="{{h.style}}">{{h.label}}</span></sc-for></div></div>
+        <sc-for list="{{lanes}}" as="l" hint-placeholder-count="2">
+          <div style="display: grid; grid-template-columns: 90px 1fr; gap: 10px; align-items: center">
+            <span style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 700">{{l.name}}</span><span style="font-size: 11px; color: #545B63">{{l.count}} kendaraan</span></span>
+            <div style="{{l.trackStyle}}">
+              <sc-for list="{{l.grid}}" as="g" hint-placeholder-count="12"><span style="{{g.style}}"></span></sc-for>
+              <span style="{{l.workStyle}}"></span>
+              <sc-for list="{{l.bars}}" as="b" hint-placeholder-count="3">
+                <span style="{{b.waitStyle}}"></span>
+                <span title="{{b.title}}" style="{{b.style}}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{b.plat}}</span><span style="font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{b.sub}}</span></span>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+        <div style="display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: #545B63; padding-left: 100px">
+          <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 14px; height: 10px; border-radius: 3px; background: #0A57A8"></span>Bongkar (SPBB)</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 14px; height: 10px; border-radius: 3px; background: #B93E0B"></span>Muat (SPMB)</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 14px; height: 10px; border-radius: 3px; background: repeating-linear-gradient(45deg, #F2D58A, #F2D58A 3px, #FFF4D6 3px, #FFF4D6 6px)"></span>Menunggu jalur</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 14px; height: 10px; border-radius: 3px; border: 2px solid #A32020"></span>Lewat jam kerja</span>
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="Daftar jadwal" style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; overflow-x: auto">
+      <div style="min-width: 1060px">
+        <div style="display: grid; grid-template-columns: 140px 130px minmax(140px, 1fr) 90px 100px 110px 90px 130px minmax(160px, 1fr); gap: 10px; padding: 12px 16px; border-bottom: 1px solid #DADDD6; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #545B63"><span>Dokumen</span><span>Kendaraan</span><span>Pihak</span><span style="text-align: right">Qty (KG)</span><span>Perkiraan datang</span><span>Jalur</span><span>Durasi</span><span>Mulai – selesai</span><span>Keterangan</span></div>
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+          <div style="display: grid; grid-template-columns: 140px 130px minmax(140px, 1fr) 90px 100px 110px 90px 130px minmax(160px, 1fr); gap: 10px; align-items: start; padding: 10px 16px; border-bottom: 1px solid #ECEDE8; font-size: 13px">
+            <span style="display: flex; flex-direction: column; gap: 3px"><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{r.no}}</span><span style="{{r.tagStyle}}">{{r.tag}}</span></span>
+            <span style="display: flex; flex-direction: column"><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{r.plat}}</span><span style="font-size: 11px; color: #545B63">{{r.cont}}</span></span>
+            <span style="padding-top: 2px">{{r.party}}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; text-align: right; padding-top: 2px">{{r.kg}}</span>
+            <div style="display: flex; flex-direction: column; gap: 3px"><input type="text" value="{{r.eta}}" onChange="{{r.setEta}}" aria-label="Perkiraan datang" placeholder="HH:MM" style="{{r.etaStyle}}"><span style="{{r.em.style}}">{{r.em.text}}</span></div>
+            <select onChange="{{r.setDock}}" aria-label="Jalur" style="height: 36px; padding: 0 6px; border-radius: 8px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 13px; color: #16191D"><sc-for list="{{r.dockOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}" selected="{{o.sel}}">{{o.t}}</option></sc-for></select>
+            <span style="font-family: 'IBM Plex Mono', monospace; padding-top: 2px">{{r.dur}}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600; padding-top: 2px">{{r.span}}</span>
+            <span style="{{r.nm.style}}">{{r.nm.text}}</span>
+          </div>
+        </sc-for>
+        <sc-if value="{{empty}}" hint-placeholder-val="{{ false }}"><div style="padding: 14px; font-size: 13px; color: #545B63">Tidak ada SPBB/SPMB berstatus Siap untuk gudang dan tanggal ini.</div></sc-if>
+      </div>
+    </section>
+
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+      <button type="button" onClick="{{apply}}" aria-disabled="{{blocked}}" style="{{btn}}">Terapkan jadwal &amp; kirim ke krani</button>
+      <span style="{{msg.style}}">{{msg.text}}</span>
+    </div>
+    <p style="margin: 0; font-size: 12px; color: #545B63">Kecepatan bongkar {{rb}} KG/jam, muat {{rm}} KG/jam per jalur, persiapan {{prep}} menit, jeda antar kendaraan {{gap}} menit, jam kerja {{ws}}–{{we}} (diatur di Setup). Kendaraan yang sudah menimbang masuk memakai jam datang aktualnya.</p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1250}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { wh: 'WH-JKT01', day: 0, eta: {}, pin: {}, applied: {}, done: '' };
+}
+renderVals() {
+const S = this.state;
+const f = (n) => Math.round(n).toLocaleString('id-ID');
+// batas dari CMS · Setup
+const SETUP = { rb: 12000, rm: 15000, prep: 15, gap: 10, ws: '08:00', we: '17:00' };
+const tone = { err: ['#A32020', '✕'], warn: ['#8A5A00', '!'], ok: ['#1F6B34', '✓'], hint: ['#545B63', ''] };
+const fm = (m) => ({ text: (tone[m.k][1] ? tone[m.k][1] + ' ' : '') + m.text, style: 'font-size: 12px; font-weight: 600; color: ' + tone[m.k][0] });
+const pill = (bg, fg) => 'justify-self: start; padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; background: ' + bg + '; color: ' + fg;
+const hm = (s) => { const m = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(String(s).trim()); return m ? +m[1] * 60 + +m[2] : null; };
+const tm = (n) => String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');
+const WS = hm(SETUP.ws), WE = hm(SETUP.we), T0 = 7 * 60, T1 = 19 * 60;
+const pct = (n) => Math.max(0, Math.min(100, (n - T0) / (T1 - T0) * 100));
+const DOCKS = { 'WH-JKT01': ['Jalur 1', 'Jalur 2'], 'WH-JKT02': ['Jalur 1'] };
+const DAYS = ['Rabu, 14 Okt 2026', 'Kamis, 15 Okt 2026', 'Jumat, 16 Okt 2026'];
+// dokumen berstatus Siap (SPBB Partial tidak dijadwalkan lewat registrasi masuk)
+const ALL = [
+{ day: 0, wh: 'WH-JKT01', no: 'SPBB/2610/0014', jenis: 'SPBB', plat: 'B 9071 UAB', cont: 'MSKU7712002', party: 'SHANDONG GOODFARMER', kg: 25000, eta: '08:30' },
+{ day: 0, wh: 'WH-JKT01', no: 'SPBB/2610/0017', jenis: 'SPBB', plat: 'B 9200 BBB', cont: 'TCKU3301879 + 1', party: 'JIANGSU TRI-LAND', kg: 40000, eta: '09:00' },
+{ day: 0, wh: 'WH-JKT01', no: 'SPMB/2610/0021', jenis: 'SPMB', plat: 'B 9555 KLA', cont: 'TGHU8812348', party: 'PT SANGKAYA MAKMUR ABADI', kg: 24980, eta: '08:45', arr: '08:41' },
+{ day: 0, wh: 'WH-JKT01', no: 'SPMB/2610/0024', jenis: 'SPMB', plat: 'B 9440 MNO', cont: '—', party: 'PT MEGA SAKTI JAYA', kg: 3000, eta: '10:15' },
+{ day: 0, wh: 'WH-JKT01', no: 'SPMB/2610/0026', jenis: 'SPMB', plat: 'B 9811 PQR', cont: 'MNBU3565534', party: 'OPIK SENEN', kg: 26000, eta: '14:00' },
+{ day: 0, wh: 'WH-JKT02', no: 'SPBB/2610/0016', jenis: 'SPBB', plat: 'B 9100 AAA', cont: 'MNBU3565534', party: 'SHANDONG GOODFARMER', kg: 22000, eta: '08:00' },
+{ day: 0, wh: 'WH-JKT02', no: 'SPMB/2610/0023', jenis: 'SPMB', plat: 'B 9390 STU', cont: 'TCKU3301879', party: 'PT MEGA SAKTI JAYA', kg: 7000, eta: '09:30' },
+{ day: 1, wh: 'WH-JKT01', no: 'SPBB/2610/0019', jenis: 'SPBB', plat: 'B 9333 CCC', cont: 'SEGU9913680', party: 'JIANGSU TRI-LAND', kg: 18000, eta: '09:00' }
+];
+const wh = DOCKS[S.wh] ? S.wh : 'WH-JKT01';
+const docks = DOCKS[wh];
+const docs = ALL.filter((d) => d.wh === wh && d.day === S.day).map((d) => {
+const etaTxt = S.eta[d.no] !== undefined ? S.eta[d.no] : (d.arr || d.eta);
+const etaMin = hm(etaTxt);
+return Object.assign({}, d, { etaTxt, etaMin, pin: S.pin[d.no] || 'auto', dur: Math.ceil((SETUP.prep + d.kg / (d.jenis === 'SPBB' ? SETUP.rb : SETUP.rm) * 60) / 5) * 5 });
+});
+// penjadwalan: urut ETA, tiap kendaraan ke jalur yang paling cepat kosong (atau jalur yang dipin Admin)
+const free = {}; docks.forEach((k) => { free[k] = WS; });
+const sched = {};
+docs.filter((d) => d.etaMin !== null).sort((a, b) => a.etaMin - b.etaMin || a.no.localeCompare(b.no)).forEach((d) => {
+const cand = d.pin !== 'auto' && free[d.pin] !== undefined ? [d.pin] : docks;
+let best = null;
+cand.forEach((k) => { const st = Math.max(d.etaMin, free[k], WS); if (!best || st < best.st) best = { k, st }; });
+const en = best.st + d.dur;
+sched[d.no] = { dock: best.k, st: best.st, en, wait: best.st - Math.max(d.etaMin, WS), late: en > WE };
+free[best.k] = en + SETUP.gap;
+});
+const rows = docs.map((d) => {
+const sc = sched[d.no];
+let em;
+if (d.etaMin === null) em = { k: 'err', text: 'Format HH:MM' };
+else if (d.arr && S.eta[d.no] === undefined) em = { k: 'ok', text: 'Aktual (timbang masuk)' };
+else if (d.etaMin < WS) em = { k: 'warn', text: 'Sebelum jam kerja' };
+else if (d.etaMin >= WE) em = { k: 'err', text: 'Setelah jam kerja' };
+else em = { k: 'hint', text: 'Perkiraan' };
+let nm;
+if (!sc) nm = { k: 'err', text: 'Isi perkiraan datang yang valid' };
+else if (sc.late) nm = { k: 'err', text: 'Selesai ' + tm(sc.en) + ' · lewat jam kerja ' + SETUP.we };
+else if (sc.wait >= 30) nm = { k: 'warn', text: 'Menunggu jalur ' + sc.wait + ' menit' };
+else if (sc.wait > 0) nm = { k: 'hint', text: 'Menunggu ' + sc.wait + ' menit' };
+else nm = { k: 'ok', text: 'Langsung dikerjakan' };
+const isIn = d.jenis === 'SPBB';
+return { _sc: sc, _bad: !sc || em.k === 'err' || sc.late, _d: d, em, nm,
+no: d.no, tag: isIn ? 'BONGKAR' : 'MUAT', tagStyle: pill(isIn ? '#E6EEF8' : '#FBEDE5', isIn ? '#0A57A8' : '#8A2E08'),
+plat: d.plat, cont: d.cont, party: d.party, kg: f(d.kg), eta: d.etaTxt,
+etaStyle: 'height: 36px; width: 100%; box-sizing: border-box; padding: 0 8px; border-radius: 8px; font-family: \'IBM Plex Mono\', monospace; font-size: 13px; color: #16191D; border: ' + (em.k === 'err' ? '2px solid #A32020' : '1px solid #C9CDC5'),
+setEta: (e) => this.setState({ eta: Object.assign({}, S.eta, { [d.no]: e.target.value }), done: '' }),
+dockOpts: [{ v: 'auto', t: 'Otomatis', sel: d.pin === 'auto' }].concat(docks.map((k) => ({ v: k, t: k, sel: d.pin === k }))),
+setDock: (e) => this.setState({ pin: Object.assign({}, S.pin, { [d.no]: e.target.value }), done: '' }),
+dur: d.dur + ' mnt', span: sc ? tm(sc.st) + ' – ' + tm(sc.en) : '—' };
+});
+const lanes = docks.map((k) => {
+const bars = rows.filter((r) => r._sc && r._sc.dock === k).map((r) => { const sc = r._sc, isIn = r._d.jenis === 'SPBB';
+const eta = Math.max(r._d.etaMin, WS);
+return { plat: r._d.plat, sub: r._d.kg.toLocaleString('id-ID') + ' KG', title: r.no + ' · ' + r._d.party + ' · ' + tm(sc.st) + '–' + tm(sc.en),
+waitStyle: sc.wait > 0 ? 'position: absolute; top: 6px; bottom: 6px; left: ' + pct(eta) + '%; width: ' + (pct(sc.st) - pct(eta)) + '%; border-radius: 6px; background: repeating-linear-gradient(45deg, #F2D58A, #F2D58A 4px, #FFF4D6 4px, #FFF4D6 8px)' : 'display: none',
+style: 'position: absolute; top: 4px; bottom: 4px; left: ' + pct(sc.st) + '%; width: ' + (pct(sc.en) - pct(sc.st)) + '%; box-sizing: border-box; padding: 3px 8px; border-radius: 8px; display: flex; flex-direction: column; justify-content: center; color: #FFFFFF; background: ' + (isIn ? '#0A57A8' : '#B93E0B') + (sc.late ? '; outline: 2px solid #A32020; outline-offset: 1px' : '') };
+});
+return { name: k, count: bars.length, bars,
+trackStyle: 'position: relative; height: 54px; border-radius: 10px; background: #F7F8F5; border: 1px solid #ECEDE8; overflow: hidden',
+workStyle: 'position: absolute; top: 0; bottom: 0; left: ' + pct(WS) + '%; width: ' + (pct(WE) - pct(WS)) + '%; background: #FFFFFF; box-shadow: inset 0 0 0 1px #ECEDE8',
+grid: Array.from({ length: 13 }, (_, i) => ({ style: 'position: absolute; top: 0; bottom: 0; left: ' + (i / 12 * 100) + '%; width: 1px; background: #E3E5DF' })) };
+});
+const hours = Array.from({ length: 13 }, (_, i) => ({ label: String(7 + i).padStart(2, '0') + ':00', style: 'position: absolute; top: 0; left: ' + (i / 12 * 100) + '%; transform: translateX(-50%); font-size: 11px; color: #545B63; font-family: \'IBM Plex Mono\', monospace' }));
+const nWait = rows.filter((r) => r._sc && r._sc.wait > 0).length, nLate = rows.filter((r) => r._sc && r._sc.late).length;
+const totKg = docs.reduce((a, d) => a + d.kg, 0);
+const bad = rows.filter((r) => r._bad).length;
+const applied = !!S.applied[wh + '|' + S.day];
+const kpis = [
+{ l: 'Dokumen dijadwalkan', v: String(rows.length), vStyle: M0(), s: docs.filter((d) => d.jenis === 'SPBB').length + ' bongkar · ' + docs.filter((d) => d.jenis === 'SPMB').length + ' muat' },
+{ l: 'Total qty', v: f(totKg) + ' KG', vStyle: M0(), s: f(totKg / 1000) + ' ton hari ini' },
+{ l: 'Menunggu jalur', v: String(nWait), vStyle: M0(nWait ? '#8A5A00' : ''), s: nWait ? 'kendaraan antre' : 'tidak ada antrean' },
+{ l: 'Lewat jam kerja', v: String(nLate), vStyle: M0(nLate ? '#A32020' : ''), s: nLate ? 'atur ulang jalur / pindah hari' : 'semua selesai sebelum ' + SETUP.we }
+];
+function M0(c) { return 'font-family: \'IBM Plex Mono\', monospace; font-size: 24px; font-weight: 600' + (c ? '; color: ' + c : ''); }
+const msg = bad ? fm({ k: 'err', text: bad + ' dokumen perlu diperbaiki (ETA tidak valid atau lewat jam kerja)' }) : (S.done ? fm({ k: 'ok', text: S.done }) : (applied ? fm({ k: 'ok', text: 'Jadwal sudah diterapkan' }) : fm({ k: 'hint', text: nWait ? nWait + ' kendaraan akan menunggu jalur · bisa dipin ke jalur lain' : 'Jadwal siap diterapkan' })));
+return {
+wh, setWh: (e) => { const v = String(e.target.value).toUpperCase().trim(); if (DOCKS[v]) this.setState({ wh: v, done: '' }); },
+dayLabel: DAYS[S.day], prevDay: () => this.setState({ day: Math.max(0, S.day - 1), done: '' }), nextDay: () => this.setState({ day: Math.min(DAYS.length - 1, S.day + 1), done: '' }),
+kpis, hours, lanes, rows, empty: !rows.length, msg,
+blocked: bad > 0 || !rows.length, btn: 'height: 44px; padding: 0 20px; border-radius: 10px; border: none; font-family: inherit; font-size: 14px; font-weight: 600; ' + (bad || !rows.length ? 'background: #C9CDC5; color: #545B63; cursor: not-allowed' : 'background: #B93E0B; color: #FFFFFF; cursor: pointer'),
+apply: () => { if (bad || !rows.length) return; const a = Object.assign({}, S.applied); a[wh + '|' + S.day] = true; this.setState({ applied: a, done: 'Jadwal ' + DAYS[S.day] + ' untuk ' + wh + ' dikirim ke krani: ' + rows.length + ' dokumen, ' + f(totKg) + ' KG' }); },
+rb: f(SETUP.rb), rm: f(SETUP.rm), prep: SETUP.prep, gap: SETUP.gap, ws: SETUP.ws, we: SETUP.we
+};
+}
+}
+</script>
+</body>
+</html>

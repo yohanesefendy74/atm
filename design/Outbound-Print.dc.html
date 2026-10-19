@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Label Tambahan Item Inbound</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B93E0B}a:hover{color:#8A2E08}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D; overflow: hidden">
+  <header style="padding: 20px 20px 12px; display: flex; align-items: center; gap: 8px; background: #FFFFFF; border-bottom: 1px solid #DADDD6">
+    <a href="Outbound-List.dc.html" aria-label="Kembali" style="width: 44px; height: 44px; margin-left: -10px; display: flex; align-items: center; justify-content: center; color: #16191D"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <div style="flex: 1; display: flex; flex-direction: column">
+      <span style="font-size: 12px; font-weight: 600; color: #B93E0B; letter-spacing: 0.06em; text-transform: uppercase">{{jenisLabel}} · Label tambahan</span>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 17px; font-weight: 600">261000000092</span>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; gap: 10px; padding: 10px 14px; border-radius: 12px; background: #E3F2E7; color: #1F6B34; font-size: 13px; font-weight: 500">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>
+      <span>Label Item Inbound utama sudah dicetak Admin · 7 dari 7 palet, 09/10 15:02. Di sini krani hanya mencetak <strong>label tambahan</strong> atau mengganti brand.</span>
+    </div>
+
+    <section aria-label="Pratinjau label" style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px">
+      <div aria-label="Label palet" style="width: 300px; height: 210px; box-sizing: border-box; border: 1.5px solid #16191D; border-radius: 6px; padding: 10px 12px; display: flex; gap: 10px; background: #FFFFFF; color: #16191D">
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-transform: uppercase; font-size: 11px; font-weight: 600; line-height: 1.3">
+          <span style="font-size: 22px; font-weight: 700; line-height: 1.1; letter-spacing: 0.02em; margin-bottom: 6px">{{cur.contDisp}}</span>
+          <span>09/10/2026</span>
+          <span>{{cur.name}}</span>
+          <span style="{{brandStyle}}">{{brandShown}}</span>
+          <span>@{{cur.pack}}</span>
+          <span>[Nama PT]</span>
+          <span style="margin-top: auto; font-family: 'IBM Plex Mono', monospace; font-size: 8px; font-weight: 500; color: #545B63; text-transform: none; word-break: break-all">{{cur.qr}}</span>
+        </div>
+        <div style="width: 78px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px">
+          <div aria-label="QR code" style="width: 78px; height: 78px; display: grid; grid-template-columns: repeat(21, minmax(0, 1fr))">
+            <sc-for list="{{cells}}" as="c" hint-placeholder-count="441">
+              <div style="{{c.style}}"></div>
+            </sc-for>
+          </div>
+          <div style="height: 28px; border: 1.5px solid #16191D; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700">{{cur.sak}} SAK</div>
+          <div style="height: 28px; background: #16191D; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; letter-spacing: 0.06em">TAMBAHAN</div>
+          <div style="height: 28px; border: 1.5px solid #16191D"></div>
+        </div>
+      </div>
+      <span style="font-size: 12px; color: #545B63">Contoh label tambahan · ukuran {{sizeLabel}} · QR sama dengan label utama</span>
+    </section>
+
+    <section aria-label="Pilih item" style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 16px; padding: 4px 14px">
+      <div style="display: flex; justify-content: space-between; padding: 10px 0; font-size: 12px; font-weight: 600; color: #545B63; text-transform: uppercase; letter-spacing: 0.04em"><span>Item</span><span>Utama · Tambahan</span></div>
+      <sc-for list="{{items}}" as="it" hint-placeholder-count="3">
+        <button type="button" onClick="{{it.pick}}" aria-pressed="{{it.on}}" style="{{it.rowStyle}}">
+          <span style="flex: 1; display: flex; flex-direction: column; align-items: flex-start; min-width: 0"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600">{{it.code}}</span><span style="font-size: 12px; color: #545B63">{{it.name}} · {{it.brandNow}}</span></span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600">{{it.palet}} · +{{it.extra}}</span>
+        </button>
+      </sc-for>
+    </section>
+
+    <section aria-label="Label tambahan" style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 14px">
+      <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Brand
+        <input type="search" list="brand-list" value="{{brand}}" onChange="{{setBrand}}" autocapitalize="characters" aria-invalid="{{bm.bad}}" style="{{bm.input}}">
+        <datalist id="brand-list"><option value="BRAND-A"></option><option value="BRAND-B"></option><option value="BRAND-C"></option><option value="BRAND-D"></option><option value="CAMBRIDGE FARMS"></option><option value="INTEGROW"></option><option value="NO BRAND"></option></datalist>
+        <span style="{{bm.style}}">{{bm.text}}</span>
+      </label>
+      <sc-if value="{{brandChanged}}" hint-placeholder-val="{{ false }}">
+        <label style="display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: #FFF4D6; font-size: 13px; color: #5C3F00">
+          <input type="checkbox" checked="{{apply}}" onChange="{{toggleApply}}" style="width: 20px; height: 20px; accent-color: #5C3F00; flex-shrink: 0">
+          <span>Ubah juga brand pada baris dokumen. Admin melihat tanda "brand diubah krani" di CMS sebelum posting.</span>
+        </label>
+      </sc-if>
+      <div style="display: flex; flex-direction: column; gap: 5px">
+        <span style="font-size: 13px; font-weight: 600">Jumlah label tambahan</span>
+        <div style="display: grid; grid-template-columns: 56px minmax(0, 1fr) 56px; gap: 8px; align-items: center">
+          <button type="button" onClick="{{dec}}" aria-label="Kurangi" style="height: 48px; border-radius: 12px; border: 1px solid #C9CDC5; background: #FFFFFF; font-size: 22px; font-family: inherit; color: #16191D">−</button>
+          <input type="number" value="{{qty}}" onChange="{{setQty}}" aria-label="Jumlah label" style="{{qm.input}} text-align: center; height: 48px; font-size: 20px;">
+          <button type="button" onClick="{{inc}}" aria-label="Tambah" style="height: 48px; border-radius: 12px; border: 1px solid #C9CDC5; background: #FFFFFF; font-size: 22px; font-family: inherit; color: #16191D">+</button>
+        </div>
+        <span style="{{qm.style}}">{{qm.text}}</span>
+      </div>
+      <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Alasan
+        <select onChange="{{setAlasan}}" aria-invalid="{{am.bad}}" style="height: 44px; padding: 0 10px; border-radius: 10px; border: {{alasanBorder}}; background: #FFFFFF; font-family: inherit; font-size: 14px; color: #16191D"><option value="" selected="{{a0}}">Pilih alasan</option><option value="rusak" selected="{{a1}}">Label rusak / terkelupas</option><option value="hilang" selected="{{a2}}">Label hilang</option><option value="tambah" selected="{{a3}}">Palet tambahan / pecah palet</option><option value="brand" selected="{{a4}}">Koreksi brand</option></select>
+        <span style="{{am.style}}">{{am.text}}</span>
+      </label>
+    </section>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <span style="font-size: 13px; font-weight: 600">Ukuran label</span>
+      <div role="group" aria-label="Ukuran label" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{sizes}}" as="s" hint-placeholder-count="3">
+          <button type="button" onClick="{{s.pick}}" style="{{s.style}}">{{s.label}}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 12px; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 10px 14px">
+      <span style="width: 40px; height: 40px; border-radius: 12px; background: #E3F2E7; color: #1F6B34; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M7 14h10v7H7z"></path></svg></span>
+      <span style="flex: 1; display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 600">[Nama Printer] · Bluetooth</span><span style="font-size: 12px; color: #1F6B34; font-weight: 500">Terhubung</span></span>
+      <button type="button" style="height: 44px; padding: 0 12px; border: none; background: transparent; color: #B93E0B; font-family: inherit; font-size: 14px; font-weight: 600">Ganti</button>
+    </div>
+    <p style="margin: 0; font-size: 12px; color: #545B63">Brand tidak masuk isi QR (tanggal + item + container), jadi QR label lama tetap valid. Setiap cetak tambahan dan perubahan brand tercatat di log Admin.</p>
+  </main>
+
+  <footer style="padding: 12px 20px 20px; background: #FFFFFF; border-top: 1px solid #DADDD6; display: flex; flex-direction: column; gap: 8px">
+    <sc-if value="{{done}}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; font-weight: 600; color: #1F6B34">{{doneText}}</span></sc-if>
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 10px">
+      <button type="button" style="height: 52px; border-radius: 14px; border: 1.5px solid #16191D; background: #FFFFFF; color: #16191D; font-family: inherit; font-size: 15px; font-weight: 600">Simpan PDF</button>
+      <button type="button" onClick="{{print}}" aria-disabled="{{blocked}}" style="{{printStyle}}">{{printLabel}}</button>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"jenis":{"editor":"enum","options":["KR","RP"],"default":"RP"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { pick: 0, size: 2, brands: {}, extras: {}, qty: 1, alasan: '', apply: true, tried: false, done: '' };
+}
+renderVals() {
+const S = this.state, N = 21;
+const finder = (r, c) => {
+const corners = [[0, 0], [0, N - 7], [N - 7, 0]];
+for (const [fr, fc] of corners) {
+const y = r - fr, x = c - fc;
+if (y >= 0 && y < 7 && x >= 0 && x < 7) {
+const ring = Math.min(y, x, 6 - y, 6 - x);
+return ring === 0 || ring >= 2 ? 1 : 0;
+}
+if (y >= -1 && y <= 7 && x >= -1 && x <= 7) return 0;
+}
+return -1;
+};
+let seed = 7 + S.pick * 31;
+const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+const cells = [];
+for (let r = 0; r < N; r++) {
+for (let c = 0; c < N; c++) {
+const f = finder(r, c);
+const on = f === -1 ? (r === 6 || c === 6 ? (r + c) % 2 === 0 : rnd() > 0.52) : f === 1;
+cells.push({ style: 'aspect-ratio: 1; background: ' + (on ? '#16191D' : '#FFFFFF') });
+}
+}
+const MASTER = ['BRAND-A', 'BRAND-B', 'BRAND-C', 'BRAND-D', 'CAMBRIDGE FARMS', 'INTEGROW', 'NO BRAND'];
+const data = [
+{ code: 'GLA-025', name: 'Gula Pasir Kemasan 25 kg', brand: 'BRAND-A', origin: 'Brazil', palet: 7, pack: 25, sak: 40 }
+];
+const d = data[S.pick];
+const brandNow = (i) => S.brands[i] || data[i].brand;
+const typed = S.brands[S.pick] !== undefined ? S.brands[S.pick] : d.brand;
+const bu = String(typed || '').toUpperCase().trim();
+const E = (text) => ({ k: 'err', text }), W = (text) => ({ k: 'warn', text }), OK = (text) => ({ k: 'ok', text }), H = (text) => ({ k: 'hint', text });
+let bmv;
+if (!bu) bmv = E('Brand wajib diisi');
+else if (MASTER.indexOf(bu) < 0) bmv = E('Brand tidak ada di master · pilih dari daftar');
+else if (bu !== d.brand) bmv = W('Diubah dari ' + d.brand + ' · tercatat dan ditandai untuk Admin');
+else bmv = H('Sama dengan dokumen · ketik untuk mengganti');
+const brandOK = MASTER.indexOf(bu) >= 0;
+const brandChanged = brandOK && bu !== d.brand;
+const q = Number(S.qty);
+let qmv;
+if (!Number.isInteger(q) || q < 1) qmv = E('Minimal 1 label');
+else if (q > 10) qmv = E('Maksimal 10 label sekali cetak · lebih dari itu minta Admin');
+else qmv = OK(q + ' label tambahan · ukuran ' + ['50 × 30', '80 × 50', '100 × 70'][S.size] + ' mm');
+let alasan = S.alasan;
+const aEff = brandChanged && !alasan ? 'brand' : alasan;
+const amv = !aEff ? (S.tried ? E('Alasan wajib dipilih') : H('Wajib untuk setiap cetak tambahan')) : (brandChanged && aEff !== 'brand' && aEff !== '' ? W('Brand berubah · alasan "Koreksi brand" disarankan') : OK(brandChanged && !alasan ? 'Otomatis: Koreksi brand' : 'Alasan tercatat'));
+const bad = [bmv.k === 'err', qmv.k === 'err', amv.k === 'err' || !aEff].filter(Boolean).length;
+const blocked = bad > 0;
+const tone = { err: ['#A32020', '✕'], warn: ['#8A5A00', '!'], ok: ['#1F6B34', '✓'], hint: ['#545B63', ''] };
+const fm = (m) => ({ text: (m.k === 'hint' ? '' : tone[m.k][1] + ' ') + m.text, style: 'font-size: 12px; font-weight: ' + (m.k === 'hint' ? 400 : 600) + '; color: ' + tone[m.k][0], bad: m.k === 'err', input: 'height: 44px; padding: 0 12px; border-radius: 10px; font-family: ' + "'IBM Plex Mono', monospace" + '; font-size: 16px; font-weight: 600; color: #16191D; box-sizing: border-box; border: ' + (m.k === 'err' ? '2px solid #A32020' : (m.k === 'warn' ? '2px solid #C98A00' : '1px solid #C9CDC5')) + ';' });
+const rowBase = 'width: 100%; min-height: 52px; display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin: 0 -10px 2px; box-sizing: content-box; border: none; border-radius: 10px; font-family: inherit; color: #16191D; text-align: left; cursor: pointer;';
+const items = data.map((x, i) => Object.assign({}, x, {
+on: S.pick === i, brandNow: brandNow(i), extra: S.extras[i] || 0,
+rowStyle: rowBase + (S.pick === i ? ' background: #FBEDE5;' : ' background: transparent;'),
+pick: () => this.setState({ pick: i, qty: 1, alasan: '', tried: false, done: '', apply: true })
+}));
+const labels = ['50 × 30 mm', '80 × 50 mm', '100 × 70 mm'];
+const base = 'height: 44px; border-radius: 12px; font-family: inherit; font-size: 13px; font-weight: 600;';
+const sizes = labels.map((label, i) => ({
+label,
+style: base + (S.size === i ? ' border: 2px solid #16191D; background: #16191D; color: #FFFFFF;' : ' border: 1px solid #DADDD6; background: #FFFFFF; color: #16191D;'),
+pick: () => this.setState({ size: i })
+}));
+const clamp = (v) => Math.max(1, Math.min(10, v));
+const jenis = this.props.jenis ?? 'RP';
+return {
+jenisLabel: jenis === 'RP' ? 'RP' : 'KR', cells, items, sizes, sizeLabel: labels[S.size],
+cur: Object.assign({}, d, { qr: '261009-' + d.code + '-TGHU8812348', contDisp: 'TGHU 8812348' }),
+brandShown: bu || '—', brandStyle: brandChanged ? 'background: #16191D; color: #FFFFFF; padding: 0 4px; align-self: flex-start' : '',
+brand: typed, bm: fm(bmv), qm: fm(qmv), am: fm(amv), qty: S.qty, brandChanged, apply: S.apply,
+toggleApply: () => this.setState({ apply: !S.apply }),
+setBrand: (e) => this.setState({ brands: Object.assign({}, S.brands, { [S.pick]: e.target.value }), done: '' }),
+setQty: (e) => this.setState({ qty: Number(e.target.value), done: '' }),
+dec: () => this.setState({ qty: clamp((Number(S.qty) || 1) - 1) }), inc: () => this.setState({ qty: clamp((Number(S.qty) || 0) + 1) }),
+setAlasan: (e) => this.setState({ alasan: e.target.value }),
+alasanBorder: amv.k === 'err' ? '2px solid #A32020' : '1px solid #C9CDC5',
+a0: !alasan, a1: alasan === 'rusak', a2: alasan === 'hilang', a3: alasan === 'tambah', a4: alasan === 'brand',
+done: !!S.done, doneText: S.done,
+blocked,
+printLabel: blocked ? 'Lengkapi ' + bad + ' isian' : 'Cetak ' + (Number.isInteger(q) ? q : 0) + ' label tambahan',
+printStyle: 'height: 52px; border-radius: 14px; border: none; font-family: inherit; font-size: 15px; font-weight: 600; ' + (blocked ? 'background: #C9CDC5; color: #545B63; cursor: not-allowed' : 'background: #B93E0B; color: #FFFFFF; cursor: pointer'),
+print: () => {
+if (blocked) { this.setState({ tried: true }); return; }
+this.setState({ extras: Object.assign({}, S.extras, { [S.pick]: (S.extras[S.pick] || 0) + q }), done: q + ' label tambahan dicetak' + (brandChanged ? ' · brand ' + d.brand + ' → ' + bu + (S.apply ? ' diterapkan ke dokumen' : ' (hanya pada label)') : '') + ' · tercatat untuk Admin', qty: 1, alasan: '', tried: false });
+}
+};
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Daftar Inbound</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A57A8}a:hover{color:#063E7A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D; overflow: hidden">
+  <header style="padding: 20px 20px 12px; display: flex; flex-direction: column; gap: 14px; background: #FFFFFF; border-bottom: 1px solid #DADDD6">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <a href="Main.dc.html" aria-label="Kembali" style="width: 44px; height: 44px; margin-left: -10px; display: flex; align-items: center; justify-content: center; color: #16191D"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></a>
+      <div style="flex: 1; display: flex; flex-direction: column">
+        <span style="font-size: 12px; font-weight: 600; color: #0A57A8; letter-spacing: 0.06em; text-transform: uppercase">Inbound</span>
+        <h1 style="margin: 0; font-size: 20px; font-weight: 700">Penerimaan Barang</h1>
+        <span style="font-size: 12px; color: #545B63">Daftar tugas dari Admin (SPBB/SPMB yang di-assign ke Anda)</span>
+      </div>
+    </div>
+    <label style="display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 14px; border-radius: 12px; background: #F2F3EF; border: 1px solid #DADDD6; color: #545B63">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+      <input type="search" aria-label="Cari nomor inbound, mobil, kontainer atau item" placeholder="Cari no. inbound / mobil / kontainer" style="flex: 1; min-width: 0; border: none; background: transparent; font-family: inherit; font-size: 15px; color: #16191D; outline: none">
+    </label>
+    <div role="group" aria-label="Filter status" style="display: flex; gap: 8px; overflow-x: auto; margin: 0 -20px; padding: 0 20px">
+      <button style="height: 36px; padding: 0 14px; border-radius: 18px; flex-shrink: 0; white-space: nowrap; font-family: inherit; font-size: 13px; border: none; background: #16191D; color: #FFFFFF; font-weight: 600">Semua</button>
+      <button style="height: 36px; padding: 0 14px; border-radius: 18px; flex-shrink: 0; white-space: nowrap; font-family: inherit; font-size: 13px; border: 1px solid #DADDD6; background: #FFFFFF; color: #16191D; font-weight: 500">Draft</button>
+      <button style="height: 36px; padding: 0 14px; border-radius: 18px; flex-shrink: 0; white-space: nowrap; font-family: inherit; font-size: 13px; border: 1px solid #DADDD6; background: #FFFFFF; color: #16191D; font-weight: 500">Menunggu PT</button>
+      <button style="height: 36px; padding: 0 14px; border-radius: 18px; flex-shrink: 0; white-space: nowrap; font-family: inherit; font-size: 13px; border: 1px solid #DADDD6; background: #FFFFFF; color: #16191D; font-weight: 500">Siap cetak</button>
+      <button style="height: 36px; padding: 0 14px; border-radius: 18px; flex-shrink: 0; white-space: nowrap; font-family: inherit; font-size: 13px; border: 1px solid #DADDD6; background: #FFFFFF; color: #16191D; font-weight: 500">Selesai</button>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow: hidden; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px">
+    <a href="Print-QR.dc.html" style="display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; background: #FFFFFF; border: 2px solid #0A57A8; border-radius: 16px; text-decoration: none; color: #16191D">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600">SPBB/2610/0011</span>
+        <span style="padding: 4px 10px; border-radius: 10px; background: #E6EEF8; color: #0A57A8; font-size: 12px; font-weight: 600">Label dicetak Admin</span>
+      </div>
+      <span style="font-size: 13px; color: #545B63; font-family: 'IBM Plex Mono', monospace">WH-JKT01 · B 9123 KXT · TGHU8812348</span>
+      <span style="font-size: 13px">PT <strong>ATM</strong> diisi Admin · <span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">36 plt</span></span>
+      <span style="height: 44px; border-radius: 12px; background: #0A57A8; color: #FFFFFF; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 600"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M7 14h10v7H7z"></path></svg>Cetak 36 label QR</span>
+    </a>
+
+    <a href="Inbound-Receive.dc.html" style="display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 16px; text-decoration: none; color: #16191D">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600">SPBB/2610/0013</span>
+        <span style="padding: 4px 10px; border-radius: 10px; background: #FFF4D6; color: #7A5300; font-size: 12px; font-weight: 600">Menunggu PT</span>
+      </div>
+      <span style="font-size: 13px; color: #545B63; font-family: 'IBM Plex Mono', monospace">WH-JKT02 · B 9071 UAB · MSKU4410272</span>
+      <span style="font-size: 13px; color: #545B63; display: flex; align-items: center; gap: 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>Label terkunci sampai PT diisi Admin</span>
+    </a>
+
+    <a href="Inbound-Scan.dc.html" style="display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 16px; text-decoration: none; color: #16191D">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600">SPBB/2610/0012</span>
+        <span style="padding: 4px 10px; border-radius: 10px; background: #ECEDE8; color: #545B63; font-size: 12px; font-weight: 600">Draft</span>
+      </div>
+      <span style="font-size: 13px; color: #545B63; font-family: 'IBM Plex Mono', monospace">WH-JKT01 · B 9455 TQS · TCKU3301879</span>
+      <span style="font-size: 13px">1 baris detail · <span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">8.000 KG · 160 krg</span></span>
+    </a>
+
+    <p style="margin: 0; font-size: 12px; color: #545B63; display: flex; gap: 6px; align-items: flex-start"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5M12 8h.01"></path></svg>Dokumen dibuat Admin dari BL/DO SAP dan di-assign ke Anda; krani tidak membuat dokumen baru. Label QR utama dicetak Admin.</p>
+  </main>
+
+  <nav aria-label="Navigasi utama" style="height: 76px; background: #FFFFFF; border-top: 1px solid #DADDD6; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; padding: 0 8px; box-sizing: border-box; flex-shrink: 0">
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; text-decoration: none; color: #545B63; font-size: 11px; font-weight: 500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"></path></svg>Beranda</a>
+    <a href="Inbound-List.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; text-decoration: none; color: #0A57A8; font-size: 11px; font-weight: 600"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0l-4-4m4 4l4-4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"></path></svg>Inbound</a>
+    <a href="Outbound-Pick.dc.html" aria-label="Scan QR" style="display: flex; justify-content: center; text-decoration: none"><span style="width: 56px; height: 56px; margin-top: -24px; border-radius: 18px; background: #16191D; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10"></path></svg></span></a>
+    <a href="Outbound-List.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; text-decoration: none; color: #545B63; font-size: 11px; font-weight: 500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14V3m0 0L8 7m4-4l4 4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"></path></svg>Outbound</a>
+    <a href="Laporan-Menu.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; text-decoration: none; color: #545B63; font-size: 11px; font-weight: 500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V11M12 20V5M19 20v-7M3 20h18"></path></svg>Laporan</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

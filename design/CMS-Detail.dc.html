@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>CMS Detail dan Posting</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F2F3EF}
+a{color:#0A57A8}a:hover{color:#063E7A}
+</style>
+</helmet>
+<div style="width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D">
+  <aside aria-label="Menu CMS" style="flex: 1 1 220px; max-width: 100%; box-sizing: border-box; background: #16191D; color: #FFFFFF; padding: 24px 16px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; flex-direction: column; gap: 2px; padding: 0 8px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #C5CAD1">Gudang ATM</span>
+      <span style="font-size: 20px; font-weight: 700">CMS Admin</span>
+    </div>
+    <nav style="display: flex; flex-direction: column; gap: 4px">
+      <a href="CMS-List.dc.html" aria-current="page" style="display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #2A2E34; color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 600">Cek Input Krani <span style="padding: 2px 8px; border-radius: 10px; background: #F2A27E; color: #16191D; font-size: 12px; font-weight: 700">4</span></a>
+      <a href="#" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Stock &amp; Kartu Stok</a>
+      <a href="Laporan-Menu.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Laporan</a>
+      <a href="CMS-Cetak-Label.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Cetak Label</a>
+      <a href="#" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Master Item</a>
+      <a href="#" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Business Partner (OCRD)</a>
+    </nav>
+  </aside>
+
+  <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 24px 32px 32px; display: flex; flex-direction: column; gap: 18px">
+    <a href="CMS-List.dc.html" style="font-size: 13px; font-weight: 600; text-decoration: none">← Cek Input Krani</a>
+
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+      <span style="font-size: 12px; font-weight: 600; color: #545B63; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 4px">Antrian cek</span>
+      <sc-for list="{{queue}}" as="q" hint-placeholder-count="4">
+        <button onClick="{{q.pick}}" style="{{q.style}}">{{q.no}}</button>
+      </sc-for>
+    </div>
+
+    <header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+          <h1 style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600">{{d.no}}</h1>
+          <span style="{{statusStyle}}">{{statusText}}</span>
+        </div>
+        <span style="font-size: 14px; color: #545B63">Input krani: <strong style="color: #16191D">{{d.input}}</strong> · ObjType <span style="font-family: 'IBM Plex Mono', monospace; color: #16191D">{{objType}}</span> · {{d.krani}} · {{d.tgl}}</span>
+        <span style="{{spbbStyle}}">{{spbbText}}</span>
+      </div>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+      <section aria-label="Data dari krani" style="flex: 1 1 300px; min-width: 0; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 14px">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 600">Data header (input krani)</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px">
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #545B63">Warehouse<input value="{{d.wh}}" readonly="{{posted}}" style="height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #16191D; background: #FFFFFF"></label>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #545B63">No. Mobil<input value="{{d.mobil}}" readonly="{{posted}}" style="height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #16191D; background: #FFFFFF"></label>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #545B63">Container<input value="{{d.cont}}" readonly="{{posted}}" style="height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #16191D; background: #FFFFFF"></label>
+        </div>
+        <p style="margin: 0; font-size: 12px; color: #545B63">Semua field bisa dikoreksi admin selama status masih Open.</p>
+      </section>
+
+      <section aria-label="Klasifikasi transaksi" style="flex: 2 1 420px; min-width: 0; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <h2 style="margin: 0; font-size: 15px; font-weight: 600">TrxCode <span style="font-weight: 400; color: #545B63">· pilah dari input krani "{{d.input}}"</span></h2>
+          <div role="radiogroup" aria-label="TrxCode" style="display: flex; flex-wrap: wrap; gap: 8px">
+            <sc-for list="{{trxOpts}}" as="o" hint-placeholder-count="2">
+              <button role="radio" aria-checked="{{o.on}}" onClick="{{o.pick}}" style="{{o.style}}">{{o.label}}</button>
+            </sc-for>
+          </div>
+          <span style="font-size: 12px; color: #545B63">{{objNote}}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px">
+          <sc-for list="{{fields}}" as="f" hint-placeholder-count="4">
+            <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #545B63">
+              <span>{{f.label}} <span style="color: #B93E0B">*</span></span>
+              <span style="{{f.boxStyle}}"><span style="{{f.valStyle}}">{{f.shown}}</span><sc-if value="{{f.lookup}}" hint-placeholder-val="{{ true }}"><span style="font-size: 12px; font-weight: 600; color: #0A57A8">Cari</span></sc-if></span>
+              <span style="font-weight: 400; color: #545B63">{{f.hint}}</span>
+            </label>
+          </sc-for>
+        </div>
+        <sc-if value="{{isRetur}}" hint-placeholder-val="{{ false }}">
+          <p style="margin: 0; padding: 10px 12px; border-radius: 10px; background: #E6EEF8; color: #063E7A; font-size: 13px">Retur: NumAtCard diisi <strong>per baris detail</strong> dan divalidasi ke ODLN.DocNum milik customer yang dipilih.</p>
+        </sc-if>
+      </section>
+    </div>
+
+    <section aria-label="Detail barang" style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; overflow: hidden">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 14px 18px; border-bottom: 1px solid #DADDD6">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 600">Detail barang · {{lineCount}} baris</h2>
+        <span style="font-size: 12px; color: #545B63">Kolom abu-abu = nilai asli krani (qty_scan, qty2_scan, QtyPalet_scan) · oranye = dikoreksi admin</span>
+      </div>
+      <div style="overflow-x: auto">
+        <div style="{{gridMin}}">
+          <div style="{{headStyle}}">
+            <span>#</span><span>Item</span><span>UOM</span><span style="text-align: right">Qty</span><span style="text-align: right">Qty scan</span><span style="text-align: right">Qty 2</span><span style="text-align: right">Qty2 scan</span><span style="text-align: right">Palet</span><span style="text-align: right">Palet scan</span>
+            <sc-if value="{{isRetur}}" hint-placeholder-val="{{ false }}"><span>NumAtCard (DO)</span></sc-if>
+            <span>Status</span>
+          </div>
+          <sc-for list="{{lines}}" as="l" hint-placeholder-count="3">
+            <div style="{{l.rowStyle}}">
+              <span style="font-family: 'IBM Plex Mono', monospace; color: #545B63">{{l.n}}</span>
+              <span style="display: flex; flex-direction: column; min-width: 0"><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{l.code}}</span><span style="font-size: 12px; color: #545B63">{{l.name}} · {{l.brand}} · {{l.origin}}</span><span style="{{l.chgStyle}}">{{l.chg}}</span></span>
+              <span style="font-family: 'IBM Plex Mono', monospace">{{l.uom}}</span>
+              <input value="{{l.q}}" readonly="{{posted}}" aria-label="Qty" style="{{l.qStyle}}">
+              <span style="font-family: 'IBM Plex Mono', monospace; text-align: right; color: #545B63; background: #F2F3EF; padding: 8px; border-radius: 8px">{{l.qs}}</span>
+              <input value="{{l.q2}}" readonly="{{posted}}" aria-label="Qty 2" style="{{l.q2Style}}">
+              <span style="font-family: 'IBM Plex Mono', monospace; text-align: right; color: #545B63; background: #F2F3EF; padding: 8px; border-radius: 8px">{{l.q2s}}</span>
+              <input value="{{l.p}}" readonly="{{posted}}" aria-label="Qty palet" style="{{l.pStyle}}">
+              <span style="font-family: 'IBM Plex Mono', monospace; text-align: right; color: #545B63; background: #F2F3EF; padding: 8px; border-radius: 8px">{{l.ps}}</span>
+              <sc-if value="{{isRetur}}" hint-placeholder-val="{{ false }}">
+                <span style="display: flex; flex-direction: column; gap: 3px"><span style="{{l.numStyle}}">{{l.num}}</span><span style="{{l.valStyle}}">{{l.valText}}</span></span>
+              </sc-if>
+              <span style="{{l.stStyle}}">{{l.st}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="Posting" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px; padding: 16px 18px; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px">
+      <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+        <sc-if value="{{hasMissing}}" hint-placeholder-val="{{ false }}">
+          <strong style="font-size: 14px; color: #8A2E08">Belum bisa posting · lengkapi:</strong>
+          <span style="font-size: 13px; color: #8A2E08">{{missingText}}</span>
+        </sc-if>
+        <sc-if value="{{ready}}" hint-placeholder-val="{{ true }}">
+          <strong style="font-size: 14px; color: #1F6B34">Siap posting</strong>
+          <span style="font-size: 13px; color: #545B63">Posting menulis ke ItemHistoryWhs &amp; SaldoWhs per container, lalu header dan semua baris menjadi Closed.</span>
+        </sc-if>
+        <sc-if value="{{posted}}" hint-placeholder-val="{{ false }}">
+          <strong style="font-size: 14px; color: #1F6B34">Sudah diposting · masuk stock</strong>
+          <span style="font-size: 13px; color: #545B63">Header &amp; detail berstatus Closed. Data tidak bisa diedit lagi.</span>
+        </sc-if>
+      </div>
+      <div style="display: flex; gap: 10px">
+        <a href="CMS-Cetak-Label.dc.html" style="height: 46px; padding: 0 18px; box-sizing: border-box; display: inline-flex; align-items: center; border-radius: 12px; border: 1.5px solid #16191D; background: #FFFFFF; font-size: 14px; font-weight: 600; color: #16191D; text-decoration: none">Cetak label</a>
+        <button style="height: 46px; padding: 0 18px; border-radius: 12px; border: 1.5px solid #16191D; background: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 600; color: #16191D">Simpan perubahan</button>
+        <button onClick="{{post}}" disabled="{{cantPost}}" style="{{postStyle}}">Posting ke Stock</button>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { doc: 0, trx: { 0: 'IB', 1: 'RC', 2: 'BT', 3: 'SS' }, posted: {} };
+}
+renderVals() {
+const docs = [
+{ no: '261000000144', input: 'Inbound', krani: 'ANDIKA', tgl: '09/10/2026', wh: 'WH-JKT02', titipan: false, mobil: 'B 9071 UAB', cont: 'MSKU4410272', opts: ['IB', 'RC'], pt: 'PHS', sup: 'SHANDONG GOODFARMER', cus: '', num: '014981', bl: '[No BL]', lines: [
+['GLA-001', 'Gula Pasir Kristal Putih', 'BRAND-A', 'Brazil', 'KG', 25000, 25000, 500, 500, 20, 20],
+['BRS-010', 'Beras Medium', 'BRAND-B', 'Thailand', 'KG', 10000, 10000, 200, 200, 8, 8],
+['TPG-003', 'Tepung Terigu', 'BRAND-D', 'Indonesia', 'KG', 4950, 5000, 198, 200, 8, 8, '', false, 'BRAND-C']] },
+{ no: '261000000143', input: 'Inbound', krani: 'CHESYA', tgl: '08/10/2026', wh: 'WH-JKT02', mobil: 'B 9455 TQS', cont: '—', opts: ['IB', 'RC'], pt: 'ACA', sup: '', cus: 'PT MEGA SAKTI JAYA (CI MERI)', num: '', bl: '', lines: [
+['BNZ-KCL', 'Bombay NZ Kecil', 'CAMBRIDGE FARMS', 'New Zealand', 'KG', 5000, 5000, 250, 250, 10, 10, 'SJ005473', true],
+['BNZ-KCL', 'Bombay NZ Kecil', 'CAMBRIDGE FARMS', 'New Zealand', 'KG', 180, 180, 9, 9, 1, 1, 'SJ005941', true],
+['BNZ-BSR', 'Bombay NZ Besar', 'INTEGROW', 'New Zealand', 'KG', 200, 200, 10, 10, 1, 1, 'SJ005999', false]] },
+{ no: '261000000091', input: 'Outbound', krani: 'CHESYA', tgl: '09/10/2026', wh: 'WH-JKT01', mobil: 'B 9555 KLA', cont: 'TGHU8812348', titipan: true, opts: ['OB'], pt: 'ATM', sup: '', cus: 'PT SANGKAYA MAKMUR ABADI', num: 'SJ005617', bl: '', lines: [
+['GLA-001', 'Gula Pasir Kristal Putih', 'BRAND-A', 'Brazil', 'KG', 6740, 6740, 135, 135, 6, 6],
+['BRS-010', 'Beras Medium', 'BRAND-B', 'Thailand', 'KG', 2500, 2500, 50, 50, 2, 2]] },
+{ no: '261000000012', input: 'Penyesuaian', krani: 'ANDIKA', tgl: '07/10/2026', wh: 'WH-JKT02', mobil: '—', cont: 'MNBU3565534', opts: ['KR', 'SS', 'RP'], pt: 'ACA', sup: '', cus: '', num: '', bl: '', lines: [
+['BNZ-KCL', 'Bombay NZ Kecil', 'CAMBRIDGE FARMS', 'New Zealand', 'KG', -10, -10, 0, 0, 0, 0]] }
+];
+const di = this.state.doc;
+const d = docs[di];
+const trx = this.state.trx[di];
+const posted = !!this.state.posted[di];
+const spbbText = di === 0 ? 'SPBB/2610/0012 · penerimaan ke-1 · outstanding GLA-001 5.000 KG (SPBB Partial)' : '';
+const spbbStyle = 'font-size: 12px; font-weight: 700; color: #7A5300;' + (spbbText ? ' margin-top: 2px;' : '');
+const isRetur = trx === 'RC';
+const TRX = { IB: 'Inbound Supplier', BT: 'Barang Titipan', RC: 'Retur Customer', OB: 'Outbound', KR: 'Penyesuaian', SS: 'Susut', RP: 'Repacking' };
+const opts = d.titipan ? d.opts.map((o) => (o === 'IB' || o === 'OB') ? 'BT' : o) : d.opts;
+const objType = (trx === 'KR' || trx === 'RP') ? '6720' : (trx === 'SS' || trx === 'OB' || (trx === 'BT' && d.input === 'Outbound')) ? '6710' : '6730';
+const f = (n) => n.toLocaleString('id-ID');
+
+let fields;
+if (trx === 'IB' || (trx === 'BT' && d.input === 'Inbound')) fields = [
+{ label: 'PT', value: d.pt, lookup: true, hint: 'Kode PT dari OPRC · wajib diisi agar krani bisa cetak label QR' },
+{ label: 'CardCode (Supplier)', value: d.sup, lookup: true, hint: 'Hanya BP Supplier (CardType S)' },
+{ label: 'Nomor DO / NumAtCard', value: d.num, mono: true, hint: 'Nomor dokumen dari supplier' },
+{ label: 'No BL', value: d.bl, mono: true, hint: 'Bill of Lading' }];
+else if (isRetur) fields = [
+{ label: 'PT / Consignee', value: d.pt, lookup: true, hint: 'Kode PT dari OPRC · wajib diisi agar krani bisa cetak label QR' },
+{ label: 'CardCode (Customer)', value: d.cus, lookup: true, hint: 'Hanya BP Customer (CardType C)' }];
+else if (trx === 'OB' || trx === 'BT') fields = [
+{ label: 'PT', value: d.pt, lookup: true, hint: 'Kode PT dari OPRC' },
+{ label: 'CardCode (Customer)', value: d.cus, lookup: true, hint: 'Hanya BP Customer (CardType C)' },
+{ label: 'Nomor DO / NumAtCard', value: d.num, mono: true, hint: 'Nomor DO / surat jalan' }];
+else fields = [{ label: 'PT', value: d.pt, lookup: true, hint: trx === 'SS' ? 'Susut mengurangi KG tanpa mengubah sak' : 'Pemilik barang · wajib diisi agar krani bisa cetak label Item Inbound' }];
+
+const ro = posted ? ' background: #F2F3EF;' : ' background: #FFFFFF;';
+fields = fields.map((x) => ({
+label: x.label, hint: x.hint, lookup: !!x.lookup && !posted,
+shown: x.value || (x.lookup ? 'Pilih dari daftar' : 'Belum diisi'),
+boxStyle: 'height: 40px; padding: 0 10px; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px;' + ro + (x.value ? ' border: 1px solid #C9CDC5;' : ' border: 1.5px dashed #B93E0B;'),
+valStyle: 'font-size: 14px; font-weight: ' + (x.value ? '500' : '400') + '; color: ' + (x.value ? '#16191D' : '#8A2E08') + ';' + (x.mono ? ' font-family: \'IBM Plex Mono\', monospace;' : '')
+}));
+
+const missing = fields.filter((x) => x.shown === 'Pilih dari daftar' || x.shown === 'Belum diisi').map((x) => x.label);
+const badLines = isRetur ? d.lines.filter((l) => !l[12]).length : 0;
+if (badLines) missing.push(badLines + ' baris NumAtCard tidak ditemukan di ODLN customer ini');
+
+const cols = isRetur ? '36px minmax(200px, 1.6fr) 52px repeat(6, minmax(78px, 1fr)) minmax(190px, 1.4fr) 84px' : '36px minmax(220px, 2fr) 52px repeat(6, minmax(84px, 1fr)) 84px';
+const inp = (v, s) => 'height: 36px; width: 100%; box-sizing: border-box; padding: 0 8px; border-radius: 8px; text-align: right; font-family: \'IBM Plex Mono\', monospace; font-size: 13px; color: #16191D;' + (posted ? ' background: #F2F3EF; border: 1px solid #DADDD6;' : v !== s ? ' background: #FBEDE5; border: 2px solid #B93E0B; font-weight: 600;' : ' background: #FFFFFF; border: 1px solid #C9CDC5;');
+const lines = d.lines.map((l, i) => ({
+chg: l[13] ? 'Brand diubah krani: ' + l[13] + ' → ' + l[2] : '', chgStyle: 'font-size: 11px; font-weight: 700; color: #B93E0B;' + (l[13] ? ' margin-top: 2px;' : ''),
+n: i + 1, code: l[0], name: l[1], brand: l[2], origin: l[3], uom: l[4],
+q: f(l[5]), qs: f(l[6]), q2: f(l[7]), q2s: f(l[8]), p: f(l[9]), ps: f(l[10]),
+qStyle: inp(l[5], l[6]), q2Style: inp(l[7], l[8]), pStyle: inp(l[9], l[10]),
+num: l[11] || '—',
+numStyle: 'font-family: \'IBM Plex Mono\', monospace; font-size: 13px; padding: 7px 8px; border-radius: 8px; border: ' + (l[12] ? '1px solid #C9CDC5' : '2px solid #B93E0B') + ';',
+valText: l[12] ? '✓ ODLN ' + (l[11] || '').replace('SJ00', '') + ' · ' + d.cus.split(' (')[0] : '✕ Tidak ada di ODLN customer ini',
+valStyle: 'font-size: 11px; font-weight: 600; color: ' + (l[12] ? '#1F6B34' : '#8A2E08'),
+st: posted ? 'Closed' : 'Open',
+stStyle: 'justify-self: start; padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; background: ' + (posted ? '#E3F2E7; color: #1F6B34' : '#ECEDE8; color: #3D4349'),
+rowStyle: 'display: grid; grid-template-columns: ' + cols + '; gap: 10px; align-items: center; padding: 10px 18px; border-top: 1px solid #ECEDE8; font-size: 13px'
+}));
+
+const qBase = 'height: 34px; padding: 0 12px; border-radius: 17px; font-family: \'IBM Plex Mono\', monospace; font-size: 12px; cursor: pointer;';
+const queue = docs.map((x, i) => ({
+no: x.no + (this.state.posted[i] ? ' ✓' : ''),
+style: qBase + (i === di ? ' border: none; background: #16191D; color: #FFFFFF; font-weight: 600;' : ' border: 1px solid #DADDD6; background: #FFFFFF; color: #16191D;'),
+pick: () => this.setState({ doc: i })
+}));
+const oBase = 'height: 40px; padding: 0 16px; border-radius: 10px; font-family: inherit; font-size: 14px; cursor: pointer;';
+const trxOpts = opts.map((o) => ({
+label: o + ' · ' + TRX[o] + (o === 'BT' ? ' (otomatis, Whs titipan)' : ''), on: o === trx,
+style: oBase + (o === trx ? ' border: 2px solid #16191D; background: #16191D; color: #FFFFFF; font-weight: 600;' : ' border: 1px solid #C9CDC5; background: #FFFFFF; color: #16191D; font-weight: 500;'),
+pick: () => { if (!posted) this.setState({ trx: Object.assign({}, this.state.trx, { [di]: o }) }); }
+}));
+const cantPost = posted || missing.length > 0;
+return {
+d, posted, spbbText, spbbStyle, isRetur, fields, lines, queue, trxOpts, objType,
+objNote: d.input === 'Penyesuaian' ? 'KR/RP memakai ObjType 6720, SS memakai 6710 — mengganti TrxCode di sini mengubah seri nomor dokumen saat posting.' : '',
+lineCount: d.lines.length,
+gridMin: 'min-width: ' + (isRetur ? 1120 : 960) + 'px',
+headStyle: 'display: grid; grid-template-columns: ' + cols + '; gap: 10px; padding: 10px 18px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #545B63',
+statusText: posted ? 'Closed' : 'Open',
+statusStyle: 'padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 700; background: ' + (posted ? '#E3F2E7; color: #1F6B34' : '#FFF4D6; color: #7A5300'),
+hasMissing: !posted && missing.length > 0,
+ready: !posted && missing.length === 0,
+missingText: missing.join(' · '),
+cantPost,
+postStyle: 'height: 46px; padding: 0 22px; border-radius: 12px; border: none; font-family: inherit; font-size: 14px; font-weight: 600; ' + (cantPost ? 'background: #DADDD6; color: #545B63; cursor: not-allowed;' : 'background: #0A57A8; color: #FFFFFF; cursor: pointer;'),
+post: () => { if (!cantPost) this.setState({ posted: Object.assign({}, this.state.posted, { [di]: true }) }); }
+};
+}
+}
+</script>
+</body>
+</html>

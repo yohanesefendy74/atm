@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Master Palet</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F2F3EF}
+a{color:#0A57A8}a:hover{color:#063E7A}
+</style>
+</helmet>
+<div style="width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D">
+  <aside aria-label="Menu CMS" style="flex: 1 1 220px; max-width: 100%; box-sizing: border-box; background: #16191D; color: #FFFFFF; padding: 24px 16px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; flex-direction: column; gap: 2px; padding: 0 8px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #C5CAD1">Gudang ATM</span>
+      <span style="font-size: 20px; font-weight: 700">CMS Admin</span>
+    </div>
+    <nav style="display: flex; flex-direction: column; gap: 4px">
+      <a href="CMS-Rencana.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">SPBB &amp; SPMB</a>
+      <a href="CMS-Surat-Jalan.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Surat Jalan</a>
+      <a href="CMS-Riwayat-Berat.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Riwayat Berat</a>
+      <a href="CMS-Jadwal.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Jadwal Bongkar Muat</a>
+      <a href="CMS-List.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Cek Input Krani</a>
+      <a href="CMS-Master-Ruangan.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Master Warehouse &amp; Ruangan</a>
+      <a href="CMS-Master-Palet.dc.html" aria-current="page" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #2A2E34; color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 600">Master Palet</a>
+      <a href="CMS-Setup.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Setup</a>
+      <a href="Laporan-Menu.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Laporan</a>
+      <a href="CMS-Cetak-Label.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Cetak Label</a>
+    </nav>
+  </aside>
+
+  <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px; display: flex; flex-direction: column; gap: 20px">
+    <header style="display: flex; flex-direction: column; gap: 4px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #545B63">Master</span>
+      <h1 style="margin: 0; font-size: 28px; font-weight: 700">Palet</h1>
+      <p style="margin: 0; font-size: 14px; color: #545B63">Ukuran dan berat palet dipakai untuk beban ruangan dan dikurangkan dari timbangan bila palet ikut dimuat.</p>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+      <section aria-label="Daftar palet" style="flex: 999 1 560px; min-width: 0; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; overflow-x: auto">
+        <div style="min-width: 760px">
+          <div style="display: grid; grid-template-columns: 110px minmax(140px, 1fr) 90px 150px 100px 110px 90px 80px; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #DADDD6; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #545B63">
+            <span>Kode</span><span>Nama</span><span>Bahan</span><span>P × L × T (cm)</span><span>Berat</span><span>Beban maks</span><span>Sak/palet</span><span>Status</span>
+          </div>
+          <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+            <button type="button" onClick="{{r.pick}}" aria-pressed="{{r.on}}" style="{{r.style}}">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{r.code}}</span>
+              <span>{{r.name}}</span>
+              <span>{{r.bahan}}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace">{{r.dim}}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace">{{r.kg}} kg</span>
+              <span style="font-family: 'IBM Plex Mono', monospace">{{r.max}} kg</span>
+              <span style="font-family: 'IBM Plex Mono', monospace">{{r.sak}}</span>
+              <span style="{{r.stStyle}}">{{r.st}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+
+      <section aria-label="Edit palet" style="flex: 1 1 300px; min-width: 0; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px">
+        <h2 style="margin: 0; font-size: 17px; font-weight: 700">Edit <span style="font-family: 'IBM Plex Mono', monospace">{{sel.code}}</span></h2>
+        <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Nama
+          <input type="text" value="{{sel.name}}" style="height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: inherit; font-size: 14px; color: #16191D">
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Bahan
+          <select style="height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 14px; color: #16191D"><option>Kayu</option><option>Plastik</option><option>Besi</option></select>
+        </label>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+          <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600; min-width: 0">P (cm)<input type="number" value="{{sel.p}}" style="height: 40px; width: 100%; box-sizing: border-box; padding: 0 8px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #16191D"></label>
+          <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600; min-width: 0">L (cm)<input type="number" value="{{sel.l}}" style="height: 40px; width: 100%; box-sizing: border-box; padding: 0 8px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #16191D"></label>
+          <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600; min-width: 0">T (cm)<input type="number" value="{{sel.t}}" style="height: 40px; width: 100%; box-sizing: border-box; padding: 0 8px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #16191D"></label>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+          <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600; min-width: 0">Berat (kg)<input type="number" value="{{sel.kg}}" style="height: 40px; width: 100%; box-sizing: border-box; padding: 0 8px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #16191D"></label>
+          <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600; min-width: 0">Maks (kg)<input type="number" value="{{sel.maxN}}" style="height: 40px; width: 100%; box-sizing: border-box; padding: 0 8px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #16191D"></label>
+          <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600; min-width: 0">Sak/palet<input type="number" value="{{sel.sak}}" style="height: 40px; width: 100%; box-sizing: border-box; padding: 0 8px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #16191D"></label>
+        </div>
+        <label style="display: flex; align-items: center; gap: 10px; font-size: 14px"><input type="checkbox" checked="{{sel.active}}" style="width: 20px; height: 20px; accent-color: #0A57A8">Aktif (muncul di pilihan krani)</label>
+        <div style="display: flex; gap: 10px">
+          <button style="flex: 1; height: 42px; border-radius: 10px; border: none; background: #0A57A8; font-family: inherit; font-size: 14px; font-weight: 600; color: #FFFFFF">Simpan</button>
+          <button style="height: 42px; padding: 0 14px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 600; color: #16191D">+ Palet baru</button>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { sel: 0 };
+}
+renderVals() {
+const f = (n) => n.toLocaleString('id-ID');
+const data = [
+{ code: 'PLT-KY12', name: 'Kayu standar', bahan: 'Kayu', p: 120, l: 100, t: 15, kg: 25, maxN: 1500, sak: 25, active: true },
+{ code: 'PLT-PL12', name: 'Plastik heavy duty', bahan: 'Plastik', p: 120, l: 100, t: 15, kg: 18, maxN: 1500, sak: 25, active: true },
+{ code: 'PLT-KY11', name: 'Kayu ekspor', bahan: 'Kayu', p: 110, l: 110, t: 14, kg: 22, maxN: 1200, sak: 20, active: true },
+{ code: 'PLT-KY08', name: 'Kayu kecil', bahan: 'Kayu', p: 80, l: 120, t: 14, kg: 15, maxN: 1000, sak: 16, active: false }
+];
+const pill = (bg, fg) => 'justify-self: start; padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; background: ' + bg + '; color: ' + fg;
+const rows = data.map((d, i) => Object.assign({}, d, {
+on: i === this.state.sel,
+dim: d.p + ' × ' + d.l + ' × ' + d.t, kg: f(d.kg), max: f(d.maxN),
+st: d.active ? 'Aktif' : 'Nonaktif',
+stStyle: d.active ? pill('#E3F2E7', '#1F6B34') : pill('#ECEDE8', '#545B63'),
+style: 'width: 100%; display: grid; grid-template-columns: 110px minmax(140px, 1fr) 90px 150px 100px 110px 90px 80px; gap: 10px; align-items: center; padding: 12px 16px; border: none; border-bottom: 1px solid #ECEDE8; font-family: inherit; font-size: 13px; text-align: left; color: #16191D; cursor: pointer; background: ' + (i === this.state.sel ? '#E6EEF8' : '#FFFFFF'),
+pick: () => this.setState({ sel: i })
+}));
+return { rows, sel: data[this.state.sel] };
+}
+}
+</script>
+</body>
+</html>

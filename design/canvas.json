@@ -1,0 +1,395 @@
+{
+ "v": 3,
+ "attachments": {},
+ "boards": {
+  "CMS-Detail.dc.html": {
+   "expand": "fill",
+   "h": 1240,
+   "is_interactive": true,
+   "title": "CMS · Detail & Posting",
+   "w": 1440,
+   "x": 1990,
+   "y": 3792
+  },
+  "CMS-List.dc.html": {
+   "expand": "fill",
+   "h": 900,
+   "is_interactive": true,
+   "title": "CMS · Cek Input Krani",
+   "w": 1440,
+   "x": 470,
+   "y": 3792
+  },
+  "CMS-Master-Palet.dc.html": {
+   "expand": "fill",
+   "h": 900,
+   "is_interactive": true,
+   "title": "CMS · Master Palet",
+   "w": 1440,
+   "x": 3510,
+   "y": 6872
+  },
+  "CMS-Master-Ruangan.dc.html": {
+   "expand": "fill",
+   "h": 1200,
+   "is_interactive": true,
+   "title": "CMS · Master Warehouse, Timbangan & Ruangan",
+   "w": 1440,
+   "x": 1990,
+   "y": 6872
+  },
+  "CMS-Rencana.dc.html": {
+   "expand": "fill",
+   "h": 1400,
+   "is_interactive": true,
+   "title": "CMS · SPBB & SPMB + assign krani",
+   "w": 1440,
+   "x": 470,
+   "y": 6872
+  },
+  "Inbound-Header.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Inbound · 1 Dokumen SPBB",
+   "w": 390,
+   "x": 940,
+   "y": 0
+  },
+  "Inbound-List.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Inbound · Daftar",
+   "w": 390,
+   "x": 470,
+   "y": 0
+  },
+  "Inbound-Receive.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Inbound · 3 Ringkasan",
+   "w": 390,
+   "x": 1880,
+   "y": 0
+  },
+  "Inbound-Scan.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Inbound · 2 Input barang (SPBB)",
+   "w": 390,
+   "x": 1410,
+   "y": 0
+  },
+  "Kartu-Stok.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Laporan · Kartu Stok",
+   "w": 390,
+   "x": 940,
+   "y": 2528
+  },
+  "Kontainer-Yard.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Krani · Kontainer di yard",
+   "w": 390,
+   "x": 940,
+   "y": 5452
+  },
+  "Lap-Barang.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Laporan · Stock per Barang",
+   "w": 390,
+   "x": 1410,
+   "y": 2528
+  },
+  "Lap-Container.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Laporan · Stock per Container",
+   "w": 390,
+   "x": 1880,
+   "y": 2528
+  },
+  "Lap-KPI.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Laporan · KPI",
+   "w": 390,
+   "x": 2350,
+   "y": 2528
+  },
+  "Laporan-Menu.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Laporan · Menu",
+   "w": 390,
+   "x": 470,
+   "y": 2528
+  },
+  "Login.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Login",
+   "w": 390,
+   "x": -470,
+   "y": 0
+  },
+  "Main.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Beranda",
+   "w": 390,
+   "x": 0,
+   "y": 0
+  },
+  "Outbound-Add.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "KR/RP · Item Inbound",
+   "w": 390,
+   "x": 2350,
+   "y": 1264
+  },
+  "Outbound-Header.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Outbound · 1 Dokumen SPMB",
+   "w": 390,
+   "x": 940,
+   "y": 1264
+  },
+  "Outbound-List.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Outbound · Daftar",
+   "w": 390,
+   "x": 470,
+   "y": 1264
+  },
+  "Outbound-Pick.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Outbound · 2 Scan palet (SPMB)",
+   "w": 390,
+   "x": 1410,
+   "y": 1264
+  },
+  "Outbound-Print.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "KR/RP · Label tambahan Item Inbound",
+   "w": 390,
+   "x": 2820,
+   "y": 1264
+  },
+  "Outbound-Ship.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Outbound · 3 Ringkasan",
+   "w": 390,
+   "x": 1880,
+   "y": 1264
+  },
+  "Pos-Registrasi.dc.html": {
+   "expand": "fill",
+   "h": 1000,
+   "is_interactive": true,
+   "title": "Pos Timbang · Registrasi masuk + validasi",
+   "w": 1440,
+   "x": 1410,
+   "y": 5452
+  },
+  "Pos-Timbang-Keluar.dc.html": {
+   "expand": "fill",
+   "h": 1000,
+   "is_interactive": true,
+   "title": "Pos Timbang · Timbang keluar + validasi",
+   "w": 1440,
+   "x": 2930,
+   "y": 5452
+  },
+  "Print-QR.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Krani · Label tambahan & ganti brand",
+   "w": 390,
+   "x": 2350,
+   "y": 0
+  },
+  "Tugas-Krani.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Krani · Tugas SPBB/SPMB",
+   "w": 390,
+   "x": 470,
+   "y": 5452
+  },
+  "Kendaraan-Registrasi.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Krani · Registrasi kendaraan (tanpa timbangan)",
+   "w": 390,
+   "x": 4400,
+   "y": 5452
+  },
+  "CMS-Cetak-Label.dc.html": {
+   "expand": "fill",
+   "h": 1100,
+   "is_interactive": true,
+   "title": "CMS · Cetak label (Admin)",
+   "w": 1440,
+   "x": 5030,
+   "y": 6872
+  },
+  "Penyesuaian.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Krani · Penyesuaian & Susut",
+   "w": 390,
+   "x": 3290,
+   "y": 1264
+  },
+  "Repacking.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Krani · Repacking",
+   "w": 390,
+   "x": 3760,
+   "y": 1264
+  },
+  "CMS-Setup.dc.html": {
+   "expand": "fill",
+   "h": 1000,
+   "is_interactive": true,
+   "title": "CMS · Setup (toleransi & jenis container)",
+   "w": 1440,
+   "x": 5030,
+   "y": 6872
+  },
+  "CMS-Surat-Jalan.dc.html": {
+   "expand": "fill",
+   "h": 1100,
+   "is_interactive": true,
+   "title": "CMS · Surat Jalan dari SPMB",
+   "w": 1440,
+   "x": 6550,
+   "y": 6872
+  },
+  "CMS-Riwayat-Berat.dc.html": {
+   "expand": "fill",
+   "h": 1000,
+   "is_interactive": true,
+   "title": "CMS · Riwayat Berat mobil & kontainer kosong",
+   "w": 1440,
+   "x": 8070,
+   "y": 6872
+  },
+  "CMS-Jadwal.dc.html": {
+   "expand": "fill",
+   "h": 1250,
+   "is_interactive": true,
+   "title": "CMS · Jadwal bongkar muat (ETA kendaraan)",
+   "w": 1440,
+   "x": 9590,
+   "y": 6872
+  }
+ },
+ "createdOnFiles": {
+  "at": "2026-10-09T05:20:00Z",
+  "v": 1
+ },
+ "designSystems": [],
+ "launch": {
+  "view": "canvas"
+ },
+ "notes": {
+  "t1": {
+   "kind": "title1",
+   "maxW": 3210,
+   "text": "Login, Beranda & Inbound",
+   "w": 240,
+   "x": -470,
+   "y": -300
+  },
+  "t2": {
+   "kind": "title1",
+   "maxW": 3680,
+   "text": "Outbound · Penyesuaian (KR) · Repacking (RP)",
+   "w": 240,
+   "x": 470,
+   "y": 964
+  },
+  "t3": {
+   "kind": "title1",
+   "maxW": 2270,
+   "text": "Laporan (dari Kartu Stock Gudang Basah)",
+   "w": 240,
+   "x": 470,
+   "y": 2228
+  },
+  "t4": {
+   "kind": "title1",
+   "maxW": 2960,
+   "text": "CMS Admin · Cek input Krani & Posting",
+   "w": 240,
+   "x": 470,
+   "y": 3492
+  },
+  "t5": {
+   "kind": "title1",
+   "maxW": 4320,
+   "text": "Krani · Tugas & Yard  |  Pos Timbang · registrasi kendaraan (LAN)",
+   "w": 240,
+   "x": 470,
+   "y": 5152
+  },
+  "t6": {
+   "kind": "title1",
+   "maxW": 10560,
+   "text": "CMS Admin · SPBB & SPMB · Master · Setup · Surat Jalan · Riwayat Berat · Jadwal",
+   "w": 240,
+   "x": 470,
+   "y": 6572
+  }
+ },
+ "order": [
+  "Login.dc.html",
+  "Main.dc.html",
+  "Inbound-List.dc.html",
+  "Inbound-Header.dc.html",
+  "Inbound-Scan.dc.html",
+  "Inbound-Receive.dc.html",
+  "Print-QR.dc.html",
+  "Outbound-List.dc.html",
+  "Outbound-Header.dc.html",
+  "Outbound-Pick.dc.html",
+  "Outbound-Ship.dc.html",
+  "Outbound-Add.dc.html",
+  "Outbound-Print.dc.html",
+  "Penyesuaian.dc.html",
+  "Repacking.dc.html",
+  "Laporan-Menu.dc.html",
+  "Kartu-Stok.dc.html",
+  "Lap-Barang.dc.html",
+  "Lap-Container.dc.html",
+  "Lap-KPI.dc.html",
+  "CMS-List.dc.html",
+  "CMS-Detail.dc.html",
+  "Tugas-Krani.dc.html",
+  "Kontainer-Yard.dc.html",
+  "Pos-Registrasi.dc.html",
+  "Pos-Timbang-Keluar.dc.html",
+  "Kendaraan-Registrasi.dc.html",
+  "CMS-Rencana.dc.html",
+  "CMS-Master-Ruangan.dc.html",
+  "CMS-Master-Palet.dc.html",
+  "CMS-Setup.dc.html",
+  "CMS-Surat-Jalan.dc.html",
+  "CMS-Riwayat-Berat.dc.html",
+  "CMS-Jadwal.dc.html",
+  "CMS-Cetak-Label.dc.html"
+ ],
+ "pages": [],
+ "title": "Gudang ATM Mobile"
+}

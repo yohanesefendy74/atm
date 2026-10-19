@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>CMS Cetak Label</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F2F3EF}
+a{color:#0A57A8}a:hover{color:#063E7A}
+</style>
+</helmet>
+<div style="width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D">
+  <aside aria-label="Menu CMS" style="flex: 1 1 220px; max-width: 100%; box-sizing: border-box; background: #16191D; color: #FFFFFF; padding: 24px 16px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; flex-direction: column; gap: 2px; padding: 0 8px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #C5CAD1">Gudang ATM</span>
+      <span style="font-size: 20px; font-weight: 700">CMS Admin</span>
+    </div>
+    <nav style="display: flex; flex-direction: column; gap: 4px">
+      <a href="CMS-List.dc.html" style="display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #2A2E34; color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 600">Cek Input Krani <span style="padding: 2px 8px; border-radius: 10px; background: #F2A27E; color: #16191D; font-size: 12px; font-weight: 700">4</span></a>
+      <a href="#" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Stock &amp; Kartu Stok</a>
+      <a href="Laporan-Menu.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Laporan</a>
+      <a aria-current="page" href="CMS-Cetak-Label.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #2A2E34; color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 600">Cetak Label</a>
+      <a href="#" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Master Item</a>
+      <a href="#" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Business Partner (OCRD)</a>
+    </nav>
+  </aside>
+
+  <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px; display: flex; flex-direction: column; gap: 20px">
+    <header style="display: flex; flex-direction: column; gap: 4px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #545B63">Admin</span>
+      <h1 style="margin: 0; font-size: 28px; font-weight: 700">Cetak label QR</h1>
+      <p style="margin: 0; font-size: 14px; color: #545B63">Cetak label utama dilakukan Admin langsung dari dokumen <a href="CMS-Rencana.dc.html" style="font-weight: 600">SPBB</a>. Halaman ini untuk log dan cetak ulang; label tambahan dan ganti brand oleh krani juga tercatat di sini.</p>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+      <section aria-label="Dokumen" style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+        <h2 style="margin: 0; font-size: 14px; font-weight: 600; color: #545B63">Dokumen</h2>
+        <sc-for list="{{docs}}" as="x" hint-placeholder-count="4">
+          <button type="button" onClick="{{x.pick}}" aria-pressed="{{x.on}}" style="{{x.style}}">
+            <span style="display: flex; justify-content: space-between; align-items: center; gap: 8px"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600">{{x.no}}</span><span style="{{x.stStyle}}">{{x.st}}</span></span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #545B63">{{x.wh}} · {{x.cont}}</span>
+            <span style="font-size: 12px; color: #545B63">{{x.sub}}</span>
+          </button>
+        </sc-for>
+      </section>
+
+      <section aria-label="Cetak" style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; flex-wrap: wrap; gap: 20px; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 18px">
+          <div aria-label="Label palet" style="width: 300px; height: 210px; box-sizing: border-box; border: 1.5px solid #16191D; border-radius: 6px; padding: 10px 12px; display: flex; gap: 10px; background: #FFFFFF; color: #16191D; flex-shrink: 0">
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-transform: uppercase; font-size: 11px; font-weight: 600; line-height: 1.3">
+              <span style="font-size: 22px; font-weight: 700; line-height: 1.1; letter-spacing: 0.02em; margin-bottom: 6px">{{contDisp}}</span>
+              <span>09/10/2026</span>
+              <span>{{first.name}}</span>
+              <span>{{first.brand}}</span>
+              <span>@{{first.pack}}</span>
+              <span>{{ptName}}</span>
+              <span style="margin-top: auto; font-family: 'IBM Plex Mono', monospace; font-size: 8px; font-weight: 500; color: #545B63; text-transform: none; word-break: break-all">{{qr}}</span>
+            </div>
+            <div style="width: 78px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px">
+              <div aria-label="QR code" style="width: 78px; height: 78px; display: grid; grid-template-columns: repeat(21, minmax(0, 1fr))">
+                <sc-for list="{{cells}}" as="c" hint-placeholder-count="441"><div style="{{c.style}}"></div></sc-for>
+              </div>
+              <div style="height: 28px; border: 1.5px solid #16191D; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700">{{first.sak}} SAK</div>
+              <div style="height: 28px; border: 1.5px solid #16191D"></div>
+              <div style="height: 28px; border: 1.5px solid #16191D"></div>
+            </div>
+          </div>
+          <div style="flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+            <span style="font-size: 13px; font-weight: 600">Label per item (= Qty Palet)</span>
+            <sc-for list="{{items}}" as="it" hint-placeholder-count="3">
+              <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 13px"><span style="display: flex; flex-direction: column"><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{it.code}}</span><span style="font-size: 12px; color: #545B63">{{it.name}} · {{it.brand}}</span></span><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{it.palet}} label</span></div>
+            </sc-for>
+            <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 1.5px solid #16191D; font-size: 14px; font-weight: 700"><span>Total</span><span style="font-family: 'IBM Plex Mono', monospace">{{total}} label</span></div>
+            <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+              <sc-for list="{{sizes}}" as="s" hint-placeholder-count="3"><button type="button" onClick="{{s.pick}}" style="{{s.style}}">{{s.label}}</button></sc-for>
+            </div>
+            <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #545B63">Printer
+              <select style="height: 40px; padding: 0 8px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 14px; color: #16191D"><option>[Nama Printer] · TSC · LAN</option><option>[Nama Printer 2] · Xprinter · USB</option></select>
+            </label>
+          </div>
+        </div>
+
+        <sc-if value="{{noPt}}" hint-placeholder-val="{{ false }}">
+          <p style="margin: 0; padding: 10px 12px; border-radius: 10px; background: #FDEBE8; color: #7A1616; font-size: 13px; font-weight: 600">✕ PT belum diisi. Isi PT di <a href="CMS-Detail.dc.html" style="color: #7A1616">Detail &amp; Posting</a> lebih dulu, label tidak bisa dicetak tanpa PT.</p>
+        </sc-if>
+        <sc-if value="{{printedBefore}}" hint-placeholder-val="{{ false }}">
+          <label style="display: flex; flex-direction: column; gap: 5px; padding: 12px 16px; border-radius: 14px; background: #FFF4D6; border: 1px solid #C98A00; font-size: 13px; font-weight: 600; color: #5C3F00">Label utama sudah pernah dicetak · cetak ulang butuh alasan
+            <select onChange="{{setAlasan}}" style="height: 40px; padding: 0 8px; border-radius: 10px; border: {{alasanBorder}}; background: #FFFFFF; font-family: inherit; font-size: 14px; color: #16191D; max-width: 320px"><option value="" selected="{{a0}}">Pilih alasan</option><option value="rusak" selected="{{a1}}">Label rusak massal</option><option value="pt" selected="{{a2}}">PT diganti</option><option value="brand" selected="{{a3}}">Brand dikoreksi</option></select>
+          </label>
+        </sc-if>
+
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px">
+          <span style="{{statusStyle}}">{{statusText}}</span>
+          <div style="display: flex; gap: 10px">
+            <button type="button" style="height: 48px; padding: 0 18px; border-radius: 12px; border: 1.5px solid #16191D; background: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 600; color: #16191D">Simpan PDF</button>
+            <button type="button" onClick="{{print}}" aria-disabled="{{blocked}}" style="{{printStyle}}">{{printLabel}}</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section aria-label="Log cetak" style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; overflow-x: auto">
+      <div style="min-width: 900px">
+        <div style="padding: 14px 16px; border-bottom: 1px solid #DADDD6; display: flex; justify-content: space-between; align-items: baseline"><h2 style="margin: 0; font-size: 16px; font-weight: 700">Log cetak · {{no}}</h2><span style="font-size: 12px; color: #545B63">Label tambahan dan perubahan brand oleh krani ditandai oranye</span></div>
+        <div style="display: grid; grid-template-columns: 110px 120px 90px minmax(160px, 1fr) 70px minmax(180px, 1fr) minmax(140px, 1fr); gap: 10px; padding: 10px 16px; border-bottom: 1px solid #ECEDE8; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #545B63">
+          <span>Waktu</span><span>Oleh</span><span>Jenis</span><span>Item</span><span style="text-align: right">Label</span><span>Brand</span><span>Alasan</span>
+        </div>
+        <sc-for list="{{log}}" as="g" hint-placeholder-count="3">
+          <div style="{{g.rowStyle}}">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #545B63">{{g.waktu}}</span>
+            <span style="font-weight: 600">{{g.oleh}}</span>
+            <span style="{{g.jenisStyle}}">{{g.jenis}}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace">{{g.item}}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; text-align: right; font-weight: 600">{{g.qty}}</span>
+            <span style="{{g.brandStyle}}">{{g.brand}}</span>
+            <span style="color: #545B63">{{g.alasan}}</span>
+          </div>
+        </sc-for>
+        <sc-if value="{{emptyLog}}" hint-placeholder-val="{{ false }}"><div style="padding: 16px; font-size: 13px; color: #545B63">Belum ada pencetakan untuk dokumen ini.</div></sc-if>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { doc: 0, size: 2, printed: { 1: true, 3: false }, alasan: '', tried: false, now: {} };
+}
+renderVals() {
+const S = this.state, di = S.doc, N = 21;
+const D = [
+{ no: '261000000145', wh: 'WH-JKT01', cont: 'TGHU8812348', pt: 'ATM', ptName: 'PT ATM', items: [['GLA-001', 'Gula Pasir Kristal Putih', 'BRAND-A', 20, 50, 25], ['BRS-010', 'Beras Medium', 'BRAND-B', 8, 50, 25], ['TPG-003', 'Tepung Terigu', 'BRAND-C', 8, 25, 25]], log: [] },
+{ no: '261000000144', wh: 'WH-JKT02', cont: 'MSKU4410272', pt: 'PHS', ptName: 'PT PHS', items: [['GLA-001', 'Gula Pasir Kristal Putih', 'BRAND-A', 20, 50, 25], ['BRS-010', 'Beras Medium', 'BRAND-B', 8, 50, 25], ['TPG-003', 'Tepung Terigu', 'BRAND-C', 8, 25, 25]], log: [
+['09/10 11:05', 'Admin Rina', 'Utama', 'Semua item', 36, 'sesuai dokumen', '—', false],
+['09/10 13:42', 'ANDIKA (krani)', 'Tambahan', 'GLA-001', 2, 'BRAND-A', 'Label rusak', true],
+['09/10 13:55', 'ANDIKA (krani)', 'Tambahan', 'TPG-003', 2, 'BRAND-C → BRAND-D', 'Koreksi brand', true]] },
+{ no: '261000000143', wh: 'WH-JKT02', cont: '—', pt: '', ptName: '[Nama PT]', items: [['BNZ-KCL', 'Bombay NZ Kecil', 'CAMBRIDGE FARMS', 11, 25, 25]], log: [] },
+{ no: '261000000092', wh: 'WH-JKT01', cont: 'TGHU8812348', pt: 'ACA', ptName: 'PT ACA', items: [['GLA-025', 'Gula Pasir Kemasan 25 kg', 'BRAND-A', 7, 25, 40]], log: [] }
+];
+const d = D[di];
+const isPrinted = !!S.printed[di];
+const kinds = ['KR/RP', ''];
+const noPt = !d.pt;
+const total = d.items.reduce((s, x) => s + x[3], 0);
+const reasonNeeded = isPrinted;
+const reasonOK = !reasonNeeded || !!S.alasan;
+const blocked = noPt || !reasonOK;
+let seed = 11 + di * 17;
+const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+const fin = (r, c) => { const cs = [[0, 0], [0, N - 7], [N - 7, 0]]; for (const [fr, fc] of cs) { const y = r - fr, x = c - fc; if (y >= 0 && y < 7 && x >= 0 && x < 7) { const ring = Math.min(y, x, 6 - y, 6 - x); return ring === 0 || ring >= 2 ? 1 : 0; } if (y >= -1 && y <= 7 && x >= -1 && x <= 7) return 0; } return -1; };
+const cells = [];
+for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) { const f = fin(r, c); const on = f === -1 ? (r === 6 || c === 6 ? (r + c) % 2 === 0 : rnd() > 0.52) : f === 1; cells.push({ style: 'aspect-ratio: 1; background: ' + (on ? '#16191D' : '#FFFFFF') }); }
+const pill = (bg, fg) => 'padding: 2px 8px; border-radius: 8px; font-size: 12px; font-weight: 700; background: ' + bg + '; color: ' + fg;
+const docs = D.map((x, i) => {
+const pr = !!S.printed[i];
+const st = !x.pt ? ['Menunggu PT', '#FFF4D6', '#5C3F00'] : (pr ? ['Sudah dicetak', '#E3F2E7', '#1F6B34'] : ['Siap cetak', '#E6EEF8', '#0A57A8']);
+return { no: x.no, wh: x.wh, cont: x.cont, st: st[0], stStyle: pill(st[1], st[2]), sub: !x.pt ? 'PT belum diisi Admin' : (x.items.reduce((s, y) => s + y[3], 0) + ' label · PT ' + x.pt),
+on: i === di,
+style: 'display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 12px; font-family: inherit; text-align: left; color: #16191D; background: #FFFFFF; cursor: pointer; ' + (i === di ? 'border: 2px solid #16191D;' : 'border: 1px solid #DADDD6;'),
+pick: () => this.setState({ doc: i, alasan: '', tried: false }) };
+});
+const labels = ['50 × 30 mm', '80 × 50 mm', '100 × 70 mm'];
+const sizes = labels.map((l, i) => ({ label: l, style: 'height: 40px; border-radius: 10px; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; ' + (S.size === i ? 'border: 2px solid #16191D; background: #16191D; color: #FFFFFF;' : 'border: 1px solid #DADDD6; background: #FFFFFF; color: #16191D;'), pick: () => this.setState({ size: i }) }));
+const logAll = d.log.concat((S.now[di] || []));
+const log = logAll.map((g) => ({ waktu: g[0], oleh: g[1], jenis: g[2], item: g[3], qty: g[4], brand: g[5], alasan: g[6],
+rowStyle: 'display: grid; grid-template-columns: 110px 120px 90px minmax(160px, 1fr) 70px minmax(180px, 1fr) minmax(140px, 1fr); gap: 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid #ECEDE8; font-size: 13px;' + (g[7] ? ' background: #FFF8F3;' : ''),
+jenisStyle: 'justify-self: start; ' + (g[2] === 'Utama' ? pill('#E6EEF8', '#0A57A8') : pill('#FBEDE5', '#B93E0B')),
+brandStyle: 'font-family: \'IBM Plex Mono\', monospace; font-size: 12px;' + (String(g[5]).indexOf('→') >= 0 ? ' font-weight: 700; color: #B93E0B' : '') }));
+const f0 = d.items[0];
+return {
+no: d.no, docs, sizes, cells, noPt, total, log, emptyLog: log.length === 0,
+contDisp: d.cont === '—' ? '—' : d.cont.slice(0, 4) + ' ' + d.cont.slice(4),
+first: { name: f0[1], brand: f0[2], pack: f0[4], sak: f0[5] }, ptName: d.ptName,
+qr: '261009-' + f0[0] + '-' + d.cont,
+items: d.items.map((x) => ({ code: x[0], name: x[1], brand: x[2], palet: x[3] })),
+printedBefore: isPrinted && !noPt, setAlasan: (e) => this.setState({ alasan: e.target.value }),
+alasanBorder: S.tried && !reasonOK ? '2px solid #A32020' : '1px solid #C9CDC5',
+a0: !S.alasan, a1: S.alasan === 'rusak', a2: S.alasan === 'pt', a3: S.alasan === 'brand',
+statusText: noPt ? 'Menunggu PT · belum bisa dicetak' : (isPrinted ? 'Label utama sudah dicetak' : 'Siap dicetak'),
+statusStyle: 'padding: 6px 12px; border-radius: 10px; font-size: 13px; font-weight: 700; ' + (noPt ? 'background: #FFF4D6; color: #5C3F00' : (isPrinted ? 'background: #E3F2E7; color: #1F6B34' : 'background: #E6EEF8; color: #0A57A8')),
+blocked,
+printLabel: noPt ? 'PT belum diisi' : (isPrinted ? (reasonOK ? 'Cetak ulang ' + total + ' label' : 'Pilih alasan cetak ulang') : 'Cetak ' + total + ' label utama'),
+printStyle: 'height: 48px; padding: 0 22px; border-radius: 12px; border: none; font-family: inherit; font-size: 15px; font-weight: 600; ' + (blocked ? 'background: #C9CDC5; color: #545B63; cursor: not-allowed' : 'background: #16191D; color: #FFFFFF; cursor: pointer'),
+print: () => {
+if (blocked) { this.setState({ tried: true }); return; }
+const al = { rusak: 'Label rusak massal', pt: 'PT diganti', brand: 'Brand dikoreksi' }[S.alasan] || '—';
+const row = ['13/10 ' + '10:58', 'Admin Rina', isPrinted ? 'Utama' : 'Utama', 'Semua item', total, 'sesuai dokumen', isPrinted ? 'Cetak ulang · ' + al : '—', false];
+this.setState({ printed: Object.assign({}, S.printed, { [di]: true }), now: Object.assign({}, S.now, { [di]: (S.now[di] || []).concat([row]) }), alasan: '', tried: false });
+}
+};
+}
+}
+</script>
+</body>
+</html>

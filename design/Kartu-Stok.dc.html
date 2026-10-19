@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Kartu Stok</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A57A8}a:hover{color:#063E7A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D; overflow: hidden">
+  <header style="padding: 20px 20px 12px; display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border-bottom: 1px solid #DADDD6">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <a href="Laporan-Menu.dc.html" aria-label="Kembali" style="width: 44px; height: 44px; margin-left: -10px; display: flex; align-items: center; justify-content: center; color: #16191D"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></a>
+      <div style="flex: 1; display: flex; flex-direction: column">
+        <span style="font-size: 12px; font-weight: 600; color: #545B63; letter-spacing: 0.06em; text-transform: uppercase">Laporan</span>
+        <h1 style="margin: 0; font-size: 20px; font-weight: 700">Kartu Stok</h1>
+      </div>
+      <button style="height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid #16191D; background: #FFFFFF; font-family: inherit; font-size: 13px; font-weight: 600; color: #16191D; display: inline-flex; align-items: center; gap: 6px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"></path><path d="M14 3v5h5M9 12l5 5M14 12l-5 5"></path></svg>Excel</button>
+    </div>
+    <button aria-label="Ganti container" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid #C9CDC5; background: #F2F3EF; font-family: inherit; color: #16191D; text-align: left; cursor: pointer">
+      <span style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600">MNBU3565534</span>
+        <span style="font-size: 12px; color: #545B63">BOMBAY NZ KECIL · ACA · CAMBRIDGE FARMS · 20 KG · E5</span>
+      </span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#545B63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+    </button>
+  </header>
+
+  <main style="flex: 1; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px">
+    <section aria-label="Ringkasan" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+      <div style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; font-weight: 600; color: #0A57A8">MASUK</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">1.577 sak</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #545B63">31.540 KG</span></div>
+      <div style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; font-weight: 600; color: #B93E0B">KELUAR</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">1.577 sak</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #545B63">31.540 KG</span></div>
+      <div style="background: #16191D; color: #FFFFFF; border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; font-weight: 600; color: #C5CAD1">SALDO</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">0 sak</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #C5CAD1">HABIS</span></div>
+    </section>
+    <span style="font-size: 12px; color: #545B63">Masuk = inbound 1.299 + retur 269 + penyesuaian 9 · batch <span style="font-family: 'IBM Plex Mono', monospace">04/09/2026-MNBU3565534-ACA</span></span>
+
+    <div style="display: flex; justify-content: space-between; align-items: baseline">
+      <h2 style="margin: 0; font-size: 14px; font-weight: 600">Transaksi · terbaru di atas</h2>
+      <span style="font-size: 12px; color: #545B63">18 transaksi</span>
+    </div>
+    <section aria-label="Daftar transaksi" style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 0 14px">
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="7">
+        <div style="{{r.rowStyle}}">
+          <span style="width: 40px; flex-shrink: 0; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #545B63; padding-top: 2px">{{r.tgl}}</span>
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0">
+            <span style="display: flex; align-items: center; gap: 6px"><span style="{{r.badge}}">{{r.tr}}</span><span style="font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.ket}}</span></span>
+            <span style="font-size: 11px; color: #545B63; font-family: 'IBM Plex Mono', monospace">{{r.sj}} · {{r.krani}}</span>
+          </span>
+          <span style="display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0">
+            <span style="{{r.qtyStyle}}">{{r.qty}}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #545B63">saldo {{r.saldo}}</span>
+          </span>
+        </div>
+      </sc-for>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+const data = [
+['05/10', 'OUTBOUND', 'OPIK SENEN', 'SJ005958', 'ADIT', -9, 0],
+['03/10', 'RETUR', 'RET PT MEGA SAKTI JAYA', 'RET SJ005941', 'CHESYA', 9, 9],
+['03/10', 'OUTBOUND', 'PT MEGA SAKTI JAYA', 'SJ005941', 'CHESYA', -9, 0],
+['25/09', 'PENYESUAIAN', 'PENYESUAIAN STOCK', 'SJ005617', 'ANDIKA', 9, 9],
+['21/09', 'OUTBOUND', 'PT SANGKAYA MAKMUR ABADI', 'SJ005617', 'ANDIKA', -331, 0],
+['21/09', 'OUTBOUND', 'ARIS MAHMUDIN / H. ADRI', 'SJ005611', 'ANDIKA', -28, 331],
+['21/09', 'RETUR', 'RET TAMBUNAN SENEN', 'RET SJ005575', 'ELLY', 10, 359],
+['19/09', 'OUTBOUND', 'PT SANGKAYA MAKMUR ABADI', 'SJ005579', 'CHESYA', -405, 349]
+];
+const colors = {
+INBOUND: ['#E6EEF8', '#0A57A8'], OUTBOUND: ['#FBEDE5', '#8A2E08'], RETUR: ['#EFE8F7', '#5B3A8C'],
+PENYESUAIAN: ['#ECEDE8', '#3D4349'], REPACKING: ['#E3F2E7', '#1F6B34'], SUSUT: ['#FFF4D6', '#5C3F00']
+};
+const f = (n) => n.toLocaleString('id-ID');
+const rows = data.map((d, i) => {
+const c = colors[d[1]];
+const plus = d[5] > 0;
+return {
+tgl: d[0], tr: d[1], ket: d[2], sj: d[3], krani: d[4],
+qty: (plus ? '+' : '−') + f(Math.abs(d[5])) + ' sak · ' + f(Math.abs(d[5]) * 20) + ' KG',
+saldo: f(d[6]),
+badge: 'flex-shrink: 0; padding: 2px 6px; border-radius: 5px; font-size: 10px; font-weight: 700; letter-spacing: 0.03em; background: ' + c[0] + '; color: ' + c[1],
+qtyStyle: 'font-family: \'IBM Plex Mono\', monospace; font-size: 13px; font-weight: 600; color: ' + (plus ? '#0A57A8' : '#8A2E08'),
+rowStyle: 'display: flex; gap: 10px; align-items: flex-start; padding: 10px 0;' + (i ? ' border-top: 1px solid #ECEDE8;' : '')
+};
+});
+return { rows };
+}
+}
+</script>
+</body>
+</html>

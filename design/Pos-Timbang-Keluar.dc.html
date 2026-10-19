@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Pos Timbang Keluar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F2F3EF}
+a{color:#0A57A8}a:hover{color:#063E7A}
+</style>
+</helmet>
+<div style="width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D">
+  <aside aria-label="Menu Pos Timbang" style="flex: 1 1 220px; max-width: 100%; box-sizing: border-box; background: #16191D; color: #FFFFFF; padding: 24px 16px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; flex-direction: column; gap: 2px; padding: 0 8px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #C5CAD1">Gudang ATM · WH-JKT01</span>
+      <span style="font-size: 20px; font-weight: 700">Pos Timbang</span>
+    </div>
+    <nav style="display: flex; flex-direction: column; gap: 4px">
+      <a href="Pos-Registrasi.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Registrasi &amp; timbang masuk</a>
+      <a href="Pos-Timbang-Keluar.dc.html" aria-current="page" style="display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #2A2E34; color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 600">Timbang keluar <span style="padding: 2px 8px; border-radius: 10px; background: #F2A27E; color: #16191D; font-size: 12px; font-weight: 700">3</span></a>
+      <a href="Kontainer-Yard.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Kontainer di yard</a>
+      <a href="#" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Riwayat tiket timbang</a>
+    </nav>
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 4px; padding: 12px; border-radius: 12px; background: #2A2E34; font-size: 12px">
+      <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #8FD6A5"><span style="width: 8px; height: 8px; border-radius: 4px; background: #4CC36F"></span>Indikator TB-01 terhubung</span>
+      <span style="font-family: 'IBM Plex Mono', monospace; color: #C5CAD1">LAN 192.168.10.21:4001</span>
+    </div>
+  </aside>
+
+  <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px; display: flex; flex-direction: column; gap: 20px">
+    <header style="display: flex; flex-direction: column; gap: 4px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #545B63">Operator timbangan</span>
+      <h1 style="margin: 0; font-size: 28px; font-weight: 700">Timbang keluar</h1>
+      <p style="margin: 0; font-size: 14px; color: #545B63">Hanya kendaraan yang sudah ditandai selesai oleh krani yang bisa ditimbang keluar.</p>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+      <section aria-label="Siap keluar" style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+        <h2 style="margin: 0; font-size: 14px; font-weight: 600; color: #545B63">Kendaraan di dalam gudang</h2>
+        <sc-for list="{{vehicles}}" as="v" hint-placeholder-count="4">
+          <button type="button" onClick="{{v.pick}}" aria-pressed="{{v.on}}" aria-disabled="{{v.off}}" style="{{v.style}}">
+            <span style="display: flex; justify-content: space-between; gap: 8px"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">{{v.plat}}</span><span style="{{v.tagStyle}}">{{v.tag}}</span></span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #545B63">{{v.doc}} · {{v.cont}}</span>
+            <span style="{{v.noteStyle}}">{{v.note}}</span>
+          </button>
+        </sc-for>
+      </section>
+
+      <section aria-label="Timbang keluar kendaraan terpilih" style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+        <div style="background: #16191D; color: #FFFFFF; border-radius: 16px; padding: 16px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px">
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 220px">
+            <span style="font-size: 12px; color: #C5CAD1">Di timbangan · {{onScale}}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 48px; font-weight: 600; line-height: 1.05">{{reading}} <span style="font-size: 18px; color: #C5CAD1">kg</span></span>
+            <span style="{{wm.style}}">{{wm.text}}</span>
+          </span>
+          <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px">
+            <span style="{{indBadge}}">{{indText}}</span>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #C5CAD1">Simulasi (demo)
+              <select onChange="{{setInd}}" style="height: 32px; border-radius: 8px; border: 1px solid #545B63; background: #2A2E34; color: #FFFFFF; font-family: inherit; font-size: 12px"><option value="0" selected="{{ind0}}">Normal</option><option value="1" selected="{{ind1}}">Bergoyang</option><option value="2" selected="{{ind2}}">LAN putus</option><option value="3" selected="{{ind3}}">Selisih kecil</option><option value="4" selected="{{ind4}}">Selisih besar</option></select>
+            </label>
+          </span>
+        </div>
+
+        <sc-if value="{{hasModes}}" hint-placeholder-val="{{ true }}">
+          <div role="radiogroup" aria-label="Yang keluar" style="display: flex; flex-direction: column; gap: 6px">
+            <span style="font-size: 13px; font-weight: 600">{{modeTitle}}</span>
+            <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 4px; border-radius: 12px; background: #ECEDE8">
+              <sc-for list="{{modes}}" as="m" hint-placeholder-count="2">
+                <button type="button" role="radio" aria-checked="{{m.on}}" onClick="{{m.pick}}" style="{{m.style}}">{{m.label}}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{showLeave}}" hint-placeholder-val="{{ false }}">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; padding: 14px 16px; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px">
+            <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Kondisi kontainer
+              <select onChange="{{pickKondisi}}" style="height: 40px; padding: 0 8px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 14px; color: #16191D"><option value="0" selected="{{kosong}}">Kosong (sudah dibongkar)</option><option value="1" selected="{{berisi}}">Masih berisi</option></select>
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Area yard
+              <input type="search" list="yard-list" value="{{yard}}" onChange="{{setYard}}" autocapitalize="characters" style="{{ym.input}}">
+              <datalist id="yard-list"><option value="YARD-A01">kosong</option><option value="YARD-B03">kosong</option><option value="YARD-A02">terisi</option></datalist>
+              <span style="{{ym.style}}">{{ym.text}}</span>
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Tara kontainer (plat CSC)
+              <input type="number" value="{{tara}}" onChange="{{setTara}}" style="{{tm.input}} text-align: right;">
+              <span style="{{tm.style}}">{{tm.text}}</span>
+            </label>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{showPalet}}" hint-placeholder-val="{{ false }}">
+          <label style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px">
+            <input type="checkbox" checked="{{paletIkut}}" onChange="{{togglePalet}}" style="width: 20px; height: 20px; accent-color: #B93E0B">
+            <span style="display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 600">Palet ikut dimuat</span><span style="font-size: 12px; color: #545B63">20 × PLT-KY12 · 25 kg/palet (master palet)</span></span>
+          </label>
+        </sc-if>
+
+        <div style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 14px 18px; display: flex; flex-direction: column; gap: 6px">
+          <sc-for list="{{calc}}" as="c" hint-placeholder-count="3">
+            <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px"><span style="color: #545B63">{{c.label}}</span><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{c.val}}</span></div>
+          </sc-for>
+          <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-top: 8px; border-top: 1.5px solid #16191D">
+            <strong style="font-size: 16px">{{netLabel}}</strong>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600">{{net}} kg</span>
+          </div>
+          <span style="{{diffStyle}}">{{diffText}}</span>
+          <sc-if value="{{provisional}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #545B63">{{provText}}</span></sc-if>
+        </div>
+
+        <sc-if value="{{needAdmin}}" hint-placeholder-val="{{ false }}">
+          <label style="display: flex; flex-direction: column; gap: 5px; padding: 12px 16px; border-radius: 14px; background: #FDEBE8; border: 1px solid #A32020; font-size: 13px; font-weight: 600; color: #7A1616">Selisih di atas 2% · butuh kode persetujuan Admin
+            <input type="text" inputmode="numeric" value="{{adm}}" onChange="{{setAdm}}" placeholder="6 digit" style="{{am.input}} max-width: 200px;">
+            <span style="{{am.style}}">{{am.text}}</span>
+          </label>
+        </sc-if>
+
+        <div style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 13px; font-weight: 600">Pemeriksaan sebelum simpan</span>
+          <sc-for list="{{checks}}" as="c" hint-placeholder-count="5">
+            <div style="display: flex; gap: 8px; font-size: 13px; align-items: baseline"><span style="{{c.iconStyle}}">{{c.icon}}</span><span>{{c.label}}</span></div>
+          </sc-for>
+          <sc-if value="{{hasWarn}}" hint-placeholder-val="{{ false }}">
+            <label style="display: flex; gap: 10px; align-items: flex-start; margin-top: 6px; padding: 10px 12px; border-radius: 10px; background: #FFF4D6; font-size: 13px; color: #5C3F00">
+              <input type="checkbox" checked="{{ack}}" onChange="{{toggleAck}}" style="width: 20px; height: 20px; accent-color: #5C3F00; flex-shrink: 0">
+              <span>Saya sudah memeriksa peringatan. Tiket ditandai untuk ditinjau Admin.</span>
+            </label>
+          </sc-if>
+          <button type="button" onClick="{{toggleF1}}" style="{{f1Style}}">{{f1Label}}</button>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px">
+          <sc-if value="{{captured}}" hint-placeholder-val="{{ false }}"><span style="align-self: center; font-size: 13px; font-weight: 600; color: #1F6B34">Tiket keluar tercetak · palang dibuka</span></sc-if>
+          <button type="button" onClick="{{capture}}" aria-disabled="{{blocked}}" style="{{saveStyle}}">{{saveLabel}}</button>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { v: 0, mode: 1, kondisi: 0, palet: false, ind: 0, f1: false, ack: false, adm: '', yard: 'YARD-A01', tara: 3800, captured: false, tried: false };
+}
+renderVals() {
+const S = this.state, v = S.v, mode = S.mode;
+const f = (n) => (n < 0 ? '−' : '') + Math.abs(n).toLocaleString('id-ID');
+const pc = (x) => x.toFixed(2).replace('.', ',') + '%';
+// batas dari CMS · Setup
+const SETUP = { mb: 52000, mt: 20000, td: 2, tn: 0.5, ta: 2 };
+const TARA_CSC = 3800, MAXG = SETUP.mb, TOL = SETUP.tn, TOL_ADM = SETUP.ta;
+const E = (text) => ({ k: 'err', text }), W = (text) => ({ k: 'warn', text }), OK = (text) => ({ k: 'ok', text }), H = (text) => ({ k: 'hint', text });
+const list = [
+{ plat: 'B 9123 KXT', doc: 'SPBB/2610/0012', cont: 'TGHU8812348', tag: 'Bongkar', note: 'Bruto masuk 38.420 kg · krani: selesai bongkar', accent: '#0A57A8', tint: '#E6EEF8', ready: true },
+{ plat: 'B 9555 KLA', doc: 'SPMB/2610/0021', cont: 'ambil TGHU8812348', tag: 'Muat', note: 'Tara masuk 9.120 kg · krani: selesai muat', accent: '#B93E0B', tint: '#FBEDE5', ready: true },
+{ plat: 'B 9310 KLM', doc: 'ambil kontainer', cont: 'TCNU5523988', tag: 'Kontainer', note: 'Tara masuk 9.050 kg · kontainer kosong', accent: '#16191D', tint: '#ECEDE8', ready: true },
+{ plat: 'B 9447 TQS', doc: 'SPBB/2610/0011', cont: 'SEGU9913680', tag: 'Bongkar', note: 'Belum bisa keluar · krani belum menandai selesai', accent: '#0A57A8', tint: '#E6EEF8', ready: false }
+];
+const vehicles = list.map((x, i) => ({
+plat: x.plat, doc: x.doc, cont: x.cont, tag: x.tag, note: x.note, on: i === v, off: !x.ready,
+noteStyle: 'font-size: 12px; color: ' + (x.ready ? '#545B63' : '#A32020') + '; font-weight: ' + (x.ready ? 400 : 600),
+tagStyle: 'padding: 2px 8px; border-radius: 8px; font-size: 12px; font-weight: 700; background: ' + x.tint + '; color: ' + x.accent,
+style: 'display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 12px; font-family: inherit; text-align: left; color: #16191D; ' + (x.ready ? 'cursor: pointer; ' : 'cursor: not-allowed; opacity: 0.6; ') + (i === v ? 'border: 2px solid ' + x.accent + '; background: #FFFFFF;' : 'border: 1px solid #DADDD6; background: #FFFFFF;'),
+pick: () => { if (x.ready) this.setState({ v: i, mode: i === 0 ? 1 : 0, kondisi: 0, palet: false, ind: 0, f1: false, ack: false, adm: '', yard: 'YARD-A01', tara: 3800, captured: false, tried: false }); }
+}));
+
+const ind = S.ind, off = ind === 3 ? 250 : (ind === 4 ? 1250 : 0);
+let reading, onScale, calc, net, input = null, modes = [], modeTitle = '', provisional = false, provText = '', netLabel = 'Net barang', gross = 0;
+const taraK = (v === 0 && mode === 1) ? (Number(S.tara) || 0) : TARA_CSC;
+const pk = (v === 1 && S.palet) ? 500 : 0;
+if (v === 0) {
+modeTitle = 'Yang keluar dari gudang'; modes = ['Mobil + kontainer', 'Kontainer ditinggal di yard'];
+const bruto = 38420; input = 25000;
+if (mode === 0) { reading = 13380 + off; onScale = 'mobil + kontainer kosong'; net = bruto - reading; calc = [{ label: 'Bruto masuk', val: f(bruto) }, { label: 'Tara keluar (mobil + kontainer)', val: '− ' + f(reading) }]; }
+else {
+reading = 9580 + off; onScale = 'mobil saja'; net = bruto - reading - taraK;
+calc = [{ label: 'Bruto masuk', val: f(bruto) }, { label: 'Tara mobil keluar', val: '− ' + f(reading) }, { label: 'Tara kontainer (plat CSC)', val: '− ' + f(taraK) }];
+provisional = true;
+provText = S.kondisi === 0 ? 'Sementara · final saat kontainer kosong ditimbang keluar bersama mobil lain.' : 'Kontainer masih berisi · SPBB berstatus Menunggu bongkar.';
+}
+} else if (v === 1) {
+modeTitle = 'Kontainer pengangkut'; modes = ['Ambil kontainer yard', 'Kontainer bawaan'];
+input = 25000;
+if (mode === 0) { reading = 37970 + pk + off; gross = reading; onScale = 'mobil + kontainer yard + barang'; net = reading - 9120 - TARA_CSC - pk; calc = [{ label: 'Bruto keluar', val: f(reading) }, { label: 'Tara mobil masuk', val: '− ' + f(9120) }, { label: 'Tara kontainer TGHU8812348', val: '− ' + f(TARA_CSC) }]; }
+else { reading = 37990 + pk + off; gross = reading; onScale = 'mobil + kontainer + barang'; net = reading - 12940 - pk; calc = [{ label: 'Bruto keluar', val: f(reading) }, { label: 'Tara masuk (mobil + kontainer)', val: '− ' + f(12940) }]; }
+if (S.palet) calc.push({ label: 'Palet ikut (20 × 25)', val: '− ' + f(pk) });
+} else {
+reading = 12840 + off; onScale = 'mobil + kontainer kosong'; net = reading - 9050; netLabel = 'Tara kontainer final';
+calc = [{ label: 'Berat keluar', val: f(reading) }, { label: 'Tara mobil masuk', val: '− ' + f(9050) }];
+}
+let wm, readOK = false;
+if (ind === 2) { reading = 0; wm = E('Indikator tidak terhubung (LAN) · periksa kabel/switch'); }
+else if (ind === 1) wm = E('Berat belum stabil · tunggu lencana STABIL');
+else if (gross > MAXG) wm = E('Bruto melebihi batas ' + f(MAXG) + ' kg · kendaraan overload');
+else if (v === 2 ? false : net <= 0) wm = E('Net barang ≤ 0 · cek pilihan "yang keluar"');
+else { wm = OK('Berat stabil'); readOK = true; }
+const wmf = { text: wm.text, style: 'font-size: 12px; font-weight: 600; color: ' + ({ err: '#FFB4A8', ok: '#8FD6A5' })[wm.k] };
+
+// selisih terhadap krani / plat CSC
+let diff = { k: 'hint', text: '' }, pct = 0, warn = false, needAdmin = false, diffOK = readOK;
+if (!readOK) diff = E('Net belum bisa dihitung karena berat tidak valid');
+else if (input !== null) {
+const d = net - input; pct = Math.abs(d) / input * 100;
+const base = (v === 1 ? 'Hasil scan krani ' : 'Input krani ') + f(input) + ' kg · selisih ' + (d > 0 ? '+' : '') + f(d) + ' kg (' + pc(pct) + ')';
+if (pct <= TOL) diff = OK(base + ' · dalam toleransi ' + String(TOL).replace('.', ',') + '%');
+else if (pct <= TOL_ADM) { diff = W(base + ' · di atas toleransi, ditandai untuk Admin'); warn = true; }
+else { diff = E(base + ' · melebihi ' + TOL_ADM + '% · tidak bisa dilepas tanpa Admin'); needAdmin = true; }
+} else {
+const d = net - TARA_CSC; pct = Math.abs(d) / TARA_CSC * 100;
+const base = 'Tara final ' + f(net) + ' kg · plat CSC ' + f(TARA_CSC) + ' kg (' + (d > 0 ? '+' : '') + f(d) + ')';
+if (pct <= 5) diff = OK(base + ' · net SPBB/2610/0004 dihitung ulang otomatis');
+else if (pct <= 25) { diff = W(base + ' · beda lebih dari 5%'); warn = true; }
+else { diff = E(base + ' · kontainer kemungkinan masih berisi atau salah kontainer'); }
+}
+
+// kondisi tinggal di yard
+const yard = String(S.yard || '').toUpperCase().trim();
+const YARDS = { 'YARD-A01': '', 'YARD-B03': '', 'YARD-A02': 'MSKU4410272', 'YARD-A03': 'TGHU8812348', 'YARD-B01': 'TCNU5523988', 'YARD-B02': 'CSQU3054383' };
+let ymv = OK('Area kosong'), tmv = OK('Sesuai plat CSC');
+const showLeave = v === 0 && mode === 1;
+if (showLeave) {
+if (!yard) ymv = S.tried ? E('Area yard wajib diisi') : H('Pilih area yang kosong');
+else if (!/^YARD-[A-C]\d{2}$/.test(yard)) ymv = E('Format area salah · contoh YARD-A01');
+else if (!(yard in YARDS)) ymv = E('Area tidak ada di master yard');
+else if (YARDS[yard]) ymv = E('Area terisi ' + YARDS[yard]);
+const tr = Number(S.tara);
+if (!tr || tr < 1500 || tr > 6000) tmv = E('Tara kontainer harus 1.500–6.000 kg');
+else if (Math.abs(tr - TARA_CSC) / TARA_CSC > 0.05) tmv = W('Beda dari data plat CSC kontainer (3.800 kg)');
+}
+
+// kode admin
+const adm = String(S.adm || '').trim();
+const amv = !needAdmin ? OK('') : (!adm ? (S.tried ? E('Kode persetujuan wajib') : H('Minta kode ke Admin (6 digit)')) : (/^\d{6}$/.test(adm) ? OK('Kode diterima · dicatat di audit') : E('Kode harus 6 digit angka')));
+
+const hasWarn = warn || (showLeave && tmv.k === 'warn');
+const items = [
+{ label: 'Kendaraan ditandai selesai oleh krani', st: 'ok' },
+{ label: 'Berat stabil dan wajar', st: wm.k },
+{ label: 'Net dibanding ' + (v === 2 ? 'plat CSC' : 'input krani'), st: !readOK ? 'pending' : (diff.k === 'err' ? (needAdmin ? (amv.k === 'ok' ? 'ok' : 'err') : 'err') : 'ok') },
+...(showLeave ? [{ label: 'Area yard & tara kontainer', st: (ymv.k === 'ok' && tmv.k !== 'err') ? 'ok' : (ymv.k === 'hint' ? 'pending' : 'err') }] : []),
+{ label: 'Foto kendaraan keluar', st: S.f1 ? 'ok' : (S.tried ? 'err' : 'pending') },
+...(hasWarn ? [{ label: 'Peringatan dikonfirmasi', st: S.ack ? 'ok' : 'pending' }] : [])
+];
+const bad = items.filter((x) => x.st !== 'ok').length;
+const blocked = bad > 0 || S.captured;
+const tone = { err: ['#A32020', '✕'], warn: ['#8A5A00', '!'], ok: ['#1F6B34', '✓'], hint: ['#545B63', ''] };
+const fm = (m) => ({ text: m.text ? (m.k === 'hint' ? '' : tone[m.k][1] + ' ') + m.text : '', style: 'font-size: 12px; font-weight: ' + (m.k === 'hint' ? 400 : 600) + '; color: ' + tone[m.k][0], input: 'height: 40px; padding: 0 10px; border-radius: 10px; font-family: ' + "'IBM Plex Mono', monospace" + '; font-size: 14px; color: #16191D; border: ' + (m.k === 'err' ? '2px solid #A32020' : (m.k === 'warn' ? '2px solid #C98A00' : '1px solid #C9CDC5')) + ';' });
+const dtone = { err: ['#FDEBE8', '#7A1616'], warn: ['#FFF4D6', '#5C3F00'], ok: ['#E3F2E7', '#1F6B34'], hint: ['#ECEDE8', '#16191D'] }[diff.k];
+const photo = S.f1 ? 'border: 1.5px solid #1F7A3A; background: #E3F2E7; color: #1F6B34' : 'border: 1px dashed #8A9098; background: transparent; color: #16191D';
+return {
+vehicles, reading: ind === 2 ? '—' : f(reading), onScale, wm: wmf, calc, net: readOK ? f(net) : '—', netLabel,
+diffText: diff.text, diffStyle: 'padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; background: ' + dtone[0] + '; color: ' + dtone[1],
+provisional, provText,
+indBadge: 'padding: 3px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; background: ' + (ind === 2 ? '#A32020' : (ind === 1 ? '#C98A00' : '#1F7A3A')),
+indText: ind === 2 ? 'PUTUS' : (ind === 1 ? 'BERGOYANG' : 'STABIL'),
+setInd: (e) => this.setState({ ind: Number(e.target.value), ack: false, adm: '' }),
+ind0: ind === 0, ind1: ind === 1, ind2: ind === 2, ind3: ind === 3, ind4: ind === 4,
+hasModes: modes.length > 0, modeTitle,
+modes: modes.map((l, i) => ({ label: l, on: i === mode, style: 'min-height: 44px; border-radius: 9px; border: none; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; ' + (i === mode ? 'background: #16191D; color: #FFFFFF;' : 'background: transparent; color: #16191D;'), pick: () => this.setState({ mode: i, captured: false, ack: false, adm: '' }) })),
+showLeave, kosong: S.kondisi === 0, berisi: S.kondisi === 1,
+yard: S.yard, tara: S.tara, ym: fm(ymv), tm: fm(tmv),
+setYard: (e) => this.setState({ yard: e.target.value }), setTara: (e) => this.setState({ tara: e.target.value, ack: false }),
+pickKondisi: (e) => this.setState({ kondisi: Number(e.target.value) }),
+showPalet: v === 1, paletIkut: S.palet, togglePalet: () => this.setState({ palet: !S.palet, ack: false, adm: '' }),
+needAdmin, adm: S.adm, am: fm(amv), setAdm: (e) => this.setState({ adm: e.target.value }),
+checks: items.map((x) => ({ label: x.label, icon: x.st === 'ok' ? '✓' : (x.st === 'err' ? '✕' : '○'), iconStyle: 'width: 14px; font-weight: 700; color: ' + (x.st === 'ok' ? '#1F6B34' : (x.st === 'err' ? '#A32020' : '#8A9098')) })),
+hasWarn, ack: S.ack, toggleAck: () => this.setState({ ack: !S.ack }),
+f1Style: 'align-self: flex-start; height: 38px; padding: 0 14px; border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 4px; ' + photo,
+f1Label: S.f1 ? '✓ Foto kendaraan keluar terambil' : 'Foto kendaraan keluar (kamera pos) · wajib',
+toggleF1: () => this.setState({ f1: !S.f1 }),
+blocked, captured: S.captured,
+saveLabel: S.captured ? 'Sudah dicetak' : (bad > 0 ? 'Lengkapi ' + bad + ' pemeriksaan untuk menyimpan' : (needAdmin ? 'Simpan dengan persetujuan Admin & cetak tiket' : 'Simpan timbang keluar & cetak tiket')),
+saveStyle: 'height: 52px; padding: 0 22px; border-radius: 12px; border: none; font-family: inherit; font-size: 15px; font-weight: 600; ' + (blocked ? 'background: #C9CDC5; color: #545B63; cursor: not-allowed' : 'background: #16191D; color: #FFFFFF; cursor: pointer'),
+capture: () => { if (blocked) this.setState({ tried: true }); else this.setState({ captured: true }); }
+};
+}
+}
+</script>
+</body>
+</html>

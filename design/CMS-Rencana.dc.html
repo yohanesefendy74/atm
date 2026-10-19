@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>CMS SPBB dan SPMB</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F2F3EF}
+a{color:#0A57A8}a:hover{color:#063E7A}
+</style>
+</helmet>
+<div style="width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D">
+  <aside aria-label="Menu CMS" style="flex: 1 1 220px; max-width: 100%; box-sizing: border-box; background: #16191D; color: #FFFFFF; padding: 24px 16px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; flex-direction: column; gap: 2px; padding: 0 8px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #C5CAD1">Gudang ATM</span>
+      <span style="font-size: 20px; font-weight: 700">CMS Admin</span>
+    </div>
+    <nav style="display: flex; flex-direction: column; gap: 4px">
+      <a href="CMS-Rencana.dc.html" aria-current="page" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #2A2E34; color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 600">SPBB &amp; SPMB</a>
+      <a href="CMS-Surat-Jalan.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Surat Jalan</a>
+      <a href="CMS-Riwayat-Berat.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Riwayat Berat</a>
+      <a href="CMS-Jadwal.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Jadwal Bongkar Muat</a>
+      <a href="CMS-List.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Cek Input Krani</a>
+      <a href="CMS-Master-Ruangan.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Master Warehouse &amp; Ruangan</a>
+      <a href="CMS-Master-Palet.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Master Palet</a>
+      <a href="CMS-Setup.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Setup</a>
+      <a href="Laporan-Menu.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Laporan</a>
+      <a href="CMS-Cetak-Label.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Cetak Label</a>
+    </nav>
+  </aside>
+
+  <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px; display: flex; flex-direction: column; gap: 20px">
+    <header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #545B63">Langkah 0 · Penyiapan dokumen</span>
+        <h1 style="margin: 0; font-size: 28px; font-weight: 700">SPBB &amp; SPMB</h1>
+        <p style="margin: 0; font-size: 14px; color: #545B63">SPBB = rencana barang masuk, SPMB = rencana barang keluar (dari Sales Order SAP). Assign krani, lalu krani mengerjakan dari HP.</p>
+      </div>
+      <div role="tablist" aria-label="Jenis dokumen" style="display: flex; gap: 8px">
+        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+          <button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+        </sc-for>
+      </div>
+    </header>
+
+    <section aria-label="Daftar dokumen" style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; overflow-x: auto">
+      <div style="min-width: 1220px">
+        <div style="display: grid; grid-template-columns: 150px 110px 100px minmax(180px, 1fr) 150px 170px 150px 130px 130px; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #DADDD6; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #545B63">
+          <span>No. dokumen</span><span>Rencana</span><span>Warehouse</span><span>{{bpHead}}</span><span>Mobil / kontainer</span><span>Qty rencana</span><span>Krani</span><span>Status</span><span>Label QR</span>
+        </div>
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+          <div style="display: grid; grid-template-columns: 150px 110px 100px minmax(180px, 1fr) 150px 170px 150px 130px 130px; gap: 10px; align-items: center; padding: 12px 16px; border-bottom: 1px solid #ECEDE8; font-size: 13px">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{r.no}}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; color: #545B63">{{r.tgl}}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace">{{r.wh}}</span>
+            <span>{{r.bp}}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px">{{r.mobil}}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace">{{r.qty}}</span>
+            <span>{{r.krani}}</span>
+            <span style="{{r.stStyle}}">{{r.st}}</span>
+            <button type="button" onClick="{{r.openLabel}}" aria-disabled="{{r.labelOff}}" style="{{r.labelStyle}}">{{r.labelText}}</button>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <sc-if value="{{showPartial}}" hint-placeholder-val="{{ true }}">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-radius: 14px; background: #FFF4D6; border: 1px solid #C98A00; color: #5C3F00; font-size: 13px">
+      <span><strong>Partial:</strong> SPBB/2610/0012 masih punya outstanding <strong style="font-family: 'IBM Plex Mono', monospace">GLA-001 · 5.000 KG</strong>. Krani bisa menerima sisanya di penerimaan berikutnya; tiap penerimaan menjadi dokumen Cek Input sendiri.</span>
+      <button type="button" onClick="{{closeSisa}}" style="height: 38px; padding: 0 14px; border-radius: 10px; border: 1.5px solid #5C3F00; background: #FFFFFF; font-family: inherit; font-size: 13px; font-weight: 600; color: #5C3F00; cursor: pointer">Tutup sisa (selesai kurang)</button>
+    </div>
+    </sc-if>
+    <sc-if value="{{showPanel}}" hint-placeholder-val="{{ false }}">
+    <section aria-label="Cetak label SPBB" style="background: #FFFFFF; border: 2px solid #0A57A8; border-radius: 14px; padding: 20px 22px; display: flex; flex-direction: column; gap: 16px">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 700">Cetak label QR <span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 500; color: #545B63">{{lp.no}}</span></h2>
+        <span style="display: flex; align-items: center; gap: 14px"><a href="CMS-Cetak-Label.dc.html" style="font-size: 13px; font-weight: 600">Log &amp; cetak ulang</a><button type="button" onClick="{{closePanel}}" aria-label="Tutup" style="width: 36px; height: 36px; border-radius: 8px; border: 1px solid #DADDD6; background: #FFFFFF; color: #545B63; font-size: 16px">✕</button></span>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: #545B63">Label dicetak per palet dari rencana SPBB (jumlah label = Palet). Bila di lapangan palet lebih banyak, krani mencetak label tambahan; bila brand beda, krani menggantinya.</p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px">
+        <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">PT (OPRC) <span style="color: #B93E0B">*</span>
+          <input type="search" list="pt-list" value="{{lp.pt}}" onChange="{{setPt}}" autocapitalize="characters" style="{{ptm.input}}">
+          <span style="{{ptm.style}}">{{ptm.text}}</span>
+        </label>
+        <div style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">No. kontainer (dari SPBB)
+          <span style="{{cm.input}} display: flex; align-items: center; background: #F2F3EF;">{{lp.cont}}</span>
+          <span style="{{cm.style}}">{{cm.text}}</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 20px">
+        <div aria-label="Label palet" style="width: 300px; height: 210px; box-sizing: border-box; border: 1.5px solid #16191D; border-radius: 6px; padding: 10px 12px; display: flex; gap: 10px; background: #FFFFFF; color: #16191D; flex-shrink: 0">
+          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-transform: uppercase; font-size: 11px; font-weight: 600; line-height: 1.3">
+            <span style="font-size: 22px; font-weight: 700; line-height: 1.1; letter-spacing: 0.02em; margin-bottom: 6px">{{contDisp}}</span>
+            <span>{{lp.tgl}}</span>
+            <span>{{first.name}}</span>
+            <span>{{first.brand}}</span>
+            <span>@{{first.pack}}</span>
+            <span>{{ptName}}</span>
+            <span style="margin-top: auto; font-family: 'IBM Plex Mono', monospace; font-size: 8px; font-weight: 500; color: #545B63; text-transform: none; word-break: break-all">{{qr}}</span>
+          </div>
+          <div style="width: 78px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px">
+            <div aria-label="QR code" style="width: 78px; height: 78px; display: grid; grid-template-columns: repeat(21, minmax(0, 1fr))">
+              <sc-for list="{{cells}}" as="c" hint-placeholder-count="441"><div style="{{c.style}}"></div></sc-for>
+            </div>
+            <div style="height: 28px; border: 1.5px solid #16191D; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700">{{first.sak}} SAK</div>
+            <div style="height: 28px; border: 1.5px solid #16191D"></div>
+            <div style="height: 28px; border: 1.5px solid #16191D"></div>
+          </div>
+        </div>
+        <div style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+          <div style="display: grid; grid-template-columns: minmax(150px, 1fr) 150px 90px; gap: 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #545B63"><span>Item</span><span>Brand</span><span style="text-align: right">Label</span></div>
+          <sc-for list="{{pl}}" as="x" hint-placeholder-count="2">
+            <div style="display: grid; grid-template-columns: minmax(150px, 1fr) 150px 90px; gap: 10px; align-items: start">
+              <span style="display: flex; flex-direction: column; font-size: 13px"><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{x.code}}</span><span style="font-size: 12px; color: #545B63">{{x.name}}</span></span>
+              <span style="display: flex; flex-direction: column; gap: 3px"><input type="search" list="brand-list" value="{{x.brand}}" onChange="{{x.setBrand}}" aria-label="Brand" style="{{x.bm.input}}"><span style="{{x.bm.style}}">{{x.bm.text}}</span></span>
+              <span style="display: flex; flex-direction: column; gap: 3px"><input type="number" value="{{x.palet}}" onChange="{{x.setPalet}}" aria-label="Jumlah label" style="{{x.qm.input}} text-align: right;"><span style="{{x.qm.style}}">{{x.qm.text}}</span></span>
+            </div>
+          </sc-for>
+          <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 1.5px solid #16191D; font-size: 14px; font-weight: 700"><span>Total</span><span style="font-family: 'IBM Plex Mono', monospace">{{ptotal}} label</span></div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px">
+        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #545B63">Ukuran
+          <span style="display: flex; gap: 6px"><sc-for list="{{sizes}}" as="z" hint-placeholder-count="3"><button type="button" onClick="{{z.pick}}" style="{{z.style}}">{{z.label}}</button></sc-for></span>
+        </div>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #545B63">Printer
+          <select style="height: 40px; padding: 0 8px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 14px; color: #16191D"><option>[Nama Printer] · TSC · LAN</option><option>[Nama Printer 2] · Xprinter · USB</option></select>
+        </label>
+        <sc-if value="{{reprint}}" hint-placeholder-val="{{ false }}">
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #5C3F00">Alasan cetak ulang
+            <select onChange="{{setAlasan}}" style="height: 40px; padding: 0 8px; border-radius: 10px; border: {{alasanBorder}}; background: #FFF4D6; font-family: inherit; font-size: 14px; color: #16191D"><option value="" selected="{{a0}}">Pilih alasan</option><option value="rusak" selected="{{a1}}">Label rusak massal</option><option value="pt" selected="{{a2}}">PT diganti</option><option value="cont" selected="{{a3}}">Kontainer berubah</option><option value="brand" selected="{{a4}}">Brand dikoreksi</option></select>
+          </label>
+        </sc-if>
+        <span style="flex: 1"></span>
+        <span style="{{stStyle2}}">{{stText2}}</span>
+        <button type="button" onClick="{{printNow}}" aria-disabled="{{blocked}}" style="{{printStyle}}">{{printLabel}}</button>
+      </div>
+      <sc-if value="{{doneMsg}}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; font-weight: 600; color: #1F6B34">{{doneMsg}}</span></sc-if>
+    </section>
+    </sc-if>
+
+    <datalist id="pt-list"><option value="ATM">PT ATM</option><option value="PHS">PT PHS</option><option value="ACA">PT ACA</option></datalist>
+    <datalist id="brand-list"><option value="BRAND-A"></option><option value="BRAND-B"></option><option value="BRAND-C"></option><option value="BRAND-D"></option><option value="CAMBRIDGE FARMS"></option><option value="INTEGROW"></option><option value="NO BRAND"></option></datalist>
+    <section aria-label="Form dokumen baru" style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 20px 22px; display: flex; flex-direction: column; gap: 18px">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 700">{{formTitle}} <span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 500; color: #545B63">{{newNo}}</span></h2>
+        <span style="font-size: 12px; color: #545B63">Nomor otomatis saat diterbitkan</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px">
+        <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Tanggal rencana
+          <input type="date" value="2026-10-14" style="height: 42px; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: inherit; font-size: 14px; color: #16191D">
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Perkiraan datang kendaraan (ETA)
+          <input type="text" inputmode="numeric" value="{{etaV}}" onChange="{{setEta}}" placeholder="JJ:MM, contoh 08:30" aria-label="Perkiraan datang kendaraan" style="{{etaStyle}}">
+          <span style="{{etaM.style}}">{{etaM.text}}</span>
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Warehouse
+          <input type="search" list="wh-list" value="{{whV}}" onChange="{{setWh}}" aria-label="Warehouse" placeholder="Cari warehouse" style="{{whStyle}}">
+          <span style="{{whM.style}}">{{whM.text}}</span>
+          <datalist id="wh-list"><option value="WH-JKT01">[Nama Warehouse 1] · titipan</option><option value="WH-JKT02">[Nama Warehouse 2]</option></datalist>
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Ruangan <span style="color: #B93E0B">*</span>
+          <input type="search" list="room-list" value="{{roomV}}" onChange="{{setRoom}}" aria-label="Ruangan" placeholder="Cari kode / nama ruangan" style="{{roomStyle}}">
+          <datalist id="room-list"><sc-for list="{{roomOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}"></option></sc-for></datalist>
+          <span style="{{roomM.style}}">{{roomM.text}}</span>
+        </label>
+        <sc-if value="{{isTit}}" hint-placeholder-val="{{ false }}">
+        <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Kode customer titipan <span style="color: #B93E0B">*</span>
+          <input type="search" list="cust-list" value="{{titV}}" onChange="{{setTit}}" aria-label="Kode customer titipan" placeholder="Cari kode / nama customer" style="{{titStyle}}">
+          <datalist id="cust-list"><sc-for list="{{custOpts}}" as="c" hint-placeholder-count="3"><option value="{{c.value}}"></option></sc-for></datalist>
+          <span style="{{titM.style}}">{{titM.text}}</span>
+        </label>
+        </sc-if>
+        <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">No. mobil rencana
+          <input type="text" placeholder="boleh kosong" style="height: 42px; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #16191D">
+        </label>
+        <sc-if value="{{isOut}}" hint-placeholder-val="{{ false }}">
+        <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">{{contLabel}}
+          <input type="search" list="cont-list" value="{{contVal}}" style="height: 42px; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #16191D">
+          <datalist id="cont-list"><option value="TGHU8812348">yard · kosong</option><option value="TCNU5523988">yard · kosong</option></datalist>
+        </label>
+        </sc-if>
+        </div>
+
+      <sc-if value="{{isOut}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: 12px; background: #FBEDE5; border: 1px solid #F2A27E">
+        <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px">
+          <span style="font-size: 14px; font-weight: 700; color: #8A2E08">Dasar SPMB: Sales Order SAP (ORDR)</span>
+          <span style="font-size: 12px; color: #8A2E08">Hanya SO terbuka: tidak batal, DocType Item, DocDate sampai hari ini · item dari RDR1 yang masih outstanding (OpenQty &gt; 0)</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px">
+            <span style="font-size: 13px; font-weight: 600">Pilih Sales Order <span style="color: #B93E0B">*</span> <span style="font-weight: 400; color: #8A2E08">· centang satu atau lebih · 1 SPMB = 1 customer · beberapa SO dari customer yang sama boleh dimuat dalam satu container</span></span>
+            <input type="search" value="{{lq}}" onChange="{{setLq}}" placeholder="Cari DocNum / customer / No. DO" aria-label="Cari Sales Order" style="height: 38px; width: 260px; max-width: 100%; box-sizing: border-box; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: inherit; font-size: 13px; color: #16191D">
+          </div>
+          <div style="border: 1px solid #DADDD6; border-radius: 12px; overflow-x: auto; background: #FFFFFF">
+            <div style="min-width: 760px">
+              <div style="display: grid; grid-template-columns: 44px 110px minmax(200px, 1fr) 150px 100px 70px; gap: 10px; padding: 10px 14px; background: #F2F3EF; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #545B63"><span>Pilih</span><span>DocNum</span><span>Customer (CardName)</span><span>NumAtCard</span><span>DocDate</span><span style="text-align: right">Item</span></div>
+              <sc-for list="{{soDocs}}" as="d" hint-placeholder-count="3">
+                <label style="{{d.rowStyle}}">
+                  <input type="checkbox" checked="{{d.on}}" disabled="{{d.dis}}" onChange="{{d.toggle}}" aria-label="Pilih dokumen" style="width: 20px; height: 20px; accent-color: #B93E0B">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{d.docNum}}</span><span>{{d.card}}<sc-if value="{{d.locked}}" hint-placeholder-val="{{ false }}"> <span style="margin-left: 6px; padding: 1px 6px; border-radius: 5px; background: #F3E3E3; color: #A32020; font-size: 11px; font-weight: 700">{{d.lockTxt}}</span></sc-if></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px">{{d.numAtCard}}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px">{{d.date}}</span><span style="font-family: 'IBM Plex Mono', monospace; text-align: right">{{d.items}}</span>
+                </label>
+              </sc-for>
+              <sc-if value="{{soEmpty}}" hint-placeholder-val="{{ false }}"><div style="padding: 14px; font-size: 13px; color: #545B63">Tidak ada Sales Order terbuka yang cocok.</div></sc-if>
+            </div>
+          </div>
+          <span style="{{som.style}}">{{som.text}}</span>
+          <div style="padding: 8px 12px; border-radius: 10px; background: #FFFFFF; border: 1px dashed #F2A27E; font-size: 12px; color: #8A2E08">Setelah SPMB selesai dimuat, <b>Admin membuat Surat Jalan</b> dari SPMB pada mobil yang sama. Karena itu satu SPMB hanya boleh berisi satu customer; SO customer lain otomatis dinonaktifkan setelah SO pertama dicentang.</div>
+        </div>
+        <sc-if value="{{hasSo}}" hint-placeholder-val="{{ false }}">
+        <div style="border: 1px solid #DADDD6; border-radius: 12px; overflow-x: auto; background: #FFFFFF">
+          <div style="min-width: 1080px">
+            <div style="display: grid; grid-template-columns: 44px minmax(200px, 1fr) 90px 100px 100px 100px 130px 150px minmax(120px, 0.8fr); gap: 10px; padding: 10px 14px; background: #F2F3EF; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #545B63">
+              <span>Pakai</span><span>Item (RDR1)</span><span style="text-align: right">Qty SO</span><span style="text-align: right">Outstanding</span><span style="text-align: right">SPMB lain</span><span style="text-align: right">Tersedia</span><span>Qty SPMB (KG)</span><span>Ambil dari container</span><span>Catatan (FreeTxt)</span>
+            </div>
+            <sc-for list="{{soLines}}" as="l" hint-placeholder-count="2">
+              <div style="display: grid; grid-template-columns: 44px minmax(200px, 1fr) 90px 100px 100px 100px 130px 150px minmax(120px, 0.8fr); gap: 10px; align-items: start; padding: 10px 14px; border-top: 1px solid #ECEDE8; font-size: 13px">
+                <input type="checkbox" checked="{{l.on}}" onChange="{{l.toggle}}" aria-label="Pakai baris" style="width: 20px; height: 20px; margin-top: 10px; accent-color: #B93E0B">
+                <span style="display: flex; flex-direction: column; padding-top: 4px"><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{l.code}}</span><span style="font-size: 12px; color: #545B63">{{l.name}} · @{{l.pack}} kg/sak · SO {{l.doc}}</span></span>
+                <span style="font-family: 'IBM Plex Mono', monospace; text-align: right; padding-top: 10px">{{l.qty}}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; text-align: right; padding-top: 10px; font-weight: 600">{{l.open}}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; text-align: right; padding-top: 10px; color: #545B63">{{l.alloc}}</span>
+                <span style="{{l.availStyle}}">{{l.avail}}</span>
+                <span style="display: flex; flex-direction: column; gap: 3px"><input type="number" value="{{l.q}}" onChange="{{l.setQ}}" aria-label="Qty SPMB" style="{{l.qm.input}} text-align: right;"><span style="{{l.qm.style}}">{{l.qm.text}}</span></span>
+                <input type="search" list="cont-list" value="{{l.cont}}" onChange="{{l.setCont}}" aria-label="Container" style="height: 38px; padding: 0 10px; border-radius: 8px; border: 1px solid #C9CDC5; font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #16191D">
+                <span style="font-size: 12px; color: #545B63; padding-top: 10px">{{l.note}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <sc-if value="{{hasSo}}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 12px; background: #FFFFFF; border: 1px solid #DADDD6">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px">
+            <span style="font-size: 13px; font-weight: 700">Total muatan dokumen terpilih</span>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600">Batas muatan
+              <input type="text" list="jc-list" value="{{ctText}}" onChange="{{setCt}}" aria-label="Jenis container" placeholder="Ketik / pilih jenis" style="{{ctStyle}}">
+              <datalist id="jc-list"><sc-for list="{{jcOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}"></option></sc-for></datalist>
+            </label>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 700">{{tot.kg}} KG</span><span style="font-size: 13px; color: #545B63">{{tot.ton}} t dari batas {{tot.limit}} KG · {{tot.pct}}%</span></div>
+          <div style="height: 10px; border-radius: 5px; background: #ECEDE8; overflow: hidden"><div style="{{tot.barStyle}}"></div></div>
+          <span style="{{tot.m.style}}">{{tot.m.text}}</span>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px"><sc-for list="{{tot.parts}}" as="b" hint-placeholder-count="2"><span style="padding: 4px 10px; border-radius: 12px; background: #F2F3EF; font-size: 12px"><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">SO {{b.doc}}</span> · {{b.kg}} KG</span></sc-for></div>
+        </div>
+        </sc-if>
+        </sc-if>
+        <p style="margin: 0; font-size: 12px; color: #8A2E08">Qty SPMB tidak boleh melebihi Tersedia (Outstanding SO dikurangi SPMB aktif lain). Setelah krani selesai, Admin membuat delivery di SAP berdasarkan SO ini, sehingga OpenQty berkurang.</p>
+      </div>
+      </sc-if>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span style="font-size: 13px; font-weight: 600">Assign krani <span style="font-weight: 400; color: #545B63">· boleh lebih dari satu, hanya krani dengan akses warehouse ini</span></span>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <sc-for list="{{kranis}}" as="k" hint-placeholder-count="5">
+            <button type="button" aria-pressed="{{k.on}}" onClick="{{k.pick}}" style="{{k.style}}">{{k.mark}} {{k.name}}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <sc-if value="{{isIn}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: 12px; background: #E6EEF8; border: 1px solid #9DBCE3">
+        <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px">
+          <span style="font-size: 14px; font-weight: 700; color: #063E7A">Dasar SPBB: BL atau Delivery Order SAP</span>
+          <span style="font-size: 12px; color: #063E7A">Hanya dokumen terbuka (tidak batal, DocType Item, DocDate sampai hari ini) · item yang masih outstanding (OpenQty &gt; 0)</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; align-items: end">
+          <div style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Sumber
+            <div role="radiogroup" aria-label="Sumber" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 4px; border-radius: 12px; background: #FFFFFF">
+              <sc-for list="{{srcOpts}}" as="x" hint-placeholder-count="2"><button type="button" role="radio" aria-checked="{{x.on}}" onClick="{{x.pick}}" style="{{x.style}}">{{x.label}}</button></sc-for>
+            </div>
+          </div>
+          <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">PT (U_IDU_KODE_PT)
+            <input type="search" list="pt-list" value="{{pt2}}" onChange="{{setPt2}}" autocapitalize="characters" style="{{ptm2.input}}">
+            <span style="{{ptm2.style}}">{{ptm2.text}}</span>
+          </label>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px">
+            <span style="font-size: 13px; font-weight: 600">{{srcDocLabel}} <span style="color: #B93E0B">*</span> <span style="font-weight: 400; color: #063E7A">· centang satu · 1 SPBB = 1 dokumen, container per item</span></span>
+            <input type="search" value="{{lq}}" onChange="{{setLq}}" placeholder="Cari DocNum / supplier / NumAtCard" aria-label="Cari dokumen" style="height: 38px; width: 260px; max-width: 100%; box-sizing: border-box; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: inherit; font-size: 13px; color: #16191D">
+          </div>
+          <div style="border: 1px solid #DADDD6; border-radius: 12px; overflow-x: auto; background: #FFFFFF">
+            <div style="min-width: 860px">
+              <div style="display: grid; grid-template-columns: 44px 110px minmax(180px, 1fr) 130px 90px 170px 60px 60px; gap: 10px; padding: 10px 14px; background: #F2F3EF; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #545B63"><span>Pilih</span><span>DocNum</span><span>Supplier (CardName)</span><span>NumAtCard</span><span>DocDate</span><span>Container</span><span>PT</span><span style="text-align: right">Item</span></div>
+              <sc-for list="{{srcDocs}}" as="d" hint-placeholder-count="3">
+                <label style="{{d.rowStyle}}">
+                  <input type="checkbox" checked="{{d.on}}" onChange="{{d.toggle}}" aria-label="Pilih dokumen" style="width: 20px; height: 20px; accent-color: #0A57A8">
+                  <span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{d.docNum}}</span><span>{{d.card}}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px">{{d.numAtCard}}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px">{{d.date}}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px">{{d.cont}}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px">{{d.pt}}</span><span style="font-family: 'IBM Plex Mono', monospace; text-align: right">{{d.items}}</span>
+                </label>
+              </sc-for>
+              <sc-if value="{{srcEmpty}}" hint-placeholder-val="{{ false }}"><div style="padding: 14px; font-size: 13px; color: #545B63">Tidak ada dokumen terbuka yang cocok.</div></sc-if>
+            </div>
+          </div>
+          <span style="{{sdm.style}}">{{sdm.text}}</span>
+        </div>
+        <sc-if value="{{hasSrc}}" hint-placeholder-val="{{ false }}">
+        <span style="{{cm3.style}}">{{cm3.text}}</span>
+        <div style="border: 1px solid #DADDD6; border-radius: 12px; overflow-x: auto; background: #FFFFFF">
+          <div style="min-width: 1680px">
+            <div style="display: grid; grid-template-columns: 44px minmax(190px, 1fr) 150px 110px 80px 90px 70px 90px 90px 100px 130px 90px 140px 170px 70px; gap: 10px; padding: 10px 14px; background: #F2F3EF; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #545B63">
+              <span>Pakai</span><span>Item</span><span>Container</span><span>Brand</span><span>Size</span><span>Type</span><span>Crop</span><span style="text-align: right">Outstanding</span><span style="text-align: right">SPBB lain</span><span style="text-align: right">Tersedia</span><span>Qty SPBB (KG)</span><span style="text-align: right">Karung</span><span>Ruangan</span><span>Jenis palet</span><span>Palet</span>
+            </div>
+            <sc-for list="{{srcLines}}" as="l" hint-placeholder-count="2">
+              <div style="display: grid; grid-template-columns: 44px minmax(190px, 1fr) 110px 80px 90px 70px 90px 90px 100px 130px 90px 140px 170px 70px; gap: 10px; align-items: start; padding: 10px 14px; border-top: 1px solid #ECEDE8; font-size: 13px">
+                <input type="checkbox" checked="{{l.on}}" onChange="{{l.toggle}}" aria-label="Pakai baris" style="width: 20px; height: 20px; margin-top: 10px; accent-color: #0A57A8">
+                <span style="display: flex; flex-direction: column; padding-top: 4px"><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{l.code}}</span><span style="font-size: 12px; color: #545B63">{{l.name}}</span></span>
+                <span style="display: flex; flex-direction: column; gap: 3px">
+                  <sc-if value="{{isDo}}" hint-placeholder-val="{{ false }}"><input type="search" value="{{l.cont}}" onChange="{{l.setCont}}" placeholder="opsional" aria-label="Container" autocapitalize="characters" style="{{l.cm.input}}"></sc-if>
+                  <sc-if value="{{isBl}}" hint-placeholder-val="{{ true }}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; padding-top: 10px">{{l.cont}}</span></sc-if>
+                  <span style="{{l.cm.style}}">{{l.cm.text}}</span>
+                </span>
+                <span style="padding-top: 10px; font-size: 12px; font-weight: 600">{{l.brand}}</span>
+                <span style="padding-top: 10px; font-size: 12px">{{l.size}}</span>
+                <span style="padding-top: 10px; font-size: 12px">{{l.type}}</span>
+                <span style="padding-top: 10px; font-size: 12px">{{l.crop}}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; text-align: right; padding-top: 10px; font-weight: 600">{{l.open}}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; text-align: right; padding-top: 10px; color: #545B63">{{l.alloc}}</span>
+                <span style="{{l.availStyle}}">{{l.avail}}</span>
+                <span style="display: flex; flex-direction: column; gap: 3px"><input type="number" value="{{l.q}}" onChange="{{l.setQ}}" aria-label="Qty SPBB" style="{{l.qm.input}} text-align: right;"><span style="{{l.qm.style}}">{{l.qm.text}}</span></span>
+                <span style="font-family: 'IBM Plex Mono', monospace; text-align: right; padding-top: 10px">{{l.krg}}</span>
+                <span style="display: flex; flex-direction: column; gap: 3px"><input type="search" list="bin-list2" value="{{l.room}}" onChange="{{l.setRoom}}" aria-label="Ruangan" style="{{l.rm.input}}"><span style="{{l.rm.style}}">{{l.rm.text}}</span></span>
+                <span style="display: flex; flex-direction: column; gap: 3px"><input type="search" list="pallet-list" value="{{l.jp}}" onChange="{{l.setJp}}" aria-label="Jenis palet" style="{{l.jpm.input}}"><span style="{{l.jpm.style}}">{{l.jpm.text}}</span></span>
+                <input type="number" value="{{l.plt}}" onChange="{{l.setPlt}}" aria-label="Palet" style="height: 38px; padding: 0 8px; box-sizing: border-box; border-radius: 8px; border: 1px solid #C9CDC5; font-family: 'IBM Plex Mono', monospace; font-size: 13px; text-align: right; color: #16191D">
+              </div>
+            </sc-for>
+            <datalist id="pallet-list"><sc-for list="{{palOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}">{{o.label}}</option></sc-for></datalist>
+            <datalist id="bin-list2"><option value="R-A01">sisa 17,6 t</option><option value="R-A02">sisa 90 t</option><option value="R-B01">sisa 2,5 t</option></datalist>
+          </div>
+        </div>
+        </sc-if>
+        <p style="margin: 0; font-size: 12px; color: #063E7A">Container, brand, size, type, dan crop dibaca dari baris BL (ShipToCode, StgDesc, SerialNum, BaseAtCard, BlockNum). Satu SPBB = satu BL/DO; container melekat per item, jadi satu SPBB boleh berisi banyak container (krani menerima per container). Over kapasitas ruangan hanya peringatan.</p>
+      </div>
+      </sc-if>
+
+      <div style="display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px">
+        <button style="height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 600; color: #16191D">Simpan draft</button>
+        <span style="align-self: center; font-size: 12px; font-weight: 600; color: #A32020">{{pubMsg}}</span>
+        <button type="button" onClick="{{publish}}" aria-disabled="{{pubBlocked}}" style="{{publishStyle}}">Terbitkan &amp; kirim ke krani</button>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1400}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { tab: 'SPBB', picked: ['ELLY', 'ANDIKA'], pdoc: '', closed: false, src: 'BL', sels: [], lq: '', spt: undefined, dc: {}, iQ: {}, iOff: {}, iRoom: {}, iPlt: {}, iJp: {}, soSels: [], ctype: '20', soQ: {}, soOff: {}, soC: {}, pubDone: '', size: 2, printed: { 'SPBB/2610/0013': true }, ptv: {}, brands: {}, pals: {}, alasan: '', tried: false, done: '' };
+}
+renderVals() {
+const isIn = this.state.tab === 'SPBB';
+const accent = isIn ? '#0A57A8' : '#B93E0B';
+const data = {
+SPBB: [
+['SPBB/2610/0012', '13/10 08:00', 'WH-JKT01', 'SHANDONG GOODFARMER', 'B 9123 KXT · TGHU8812348', '45.000 KG · sisa 5.000', 'ELLY, ANDIKA', 'Partial'],
+['SPBB/2610/0013', '13/10 13:00', 'WH-JKT02', 'JIANGSU TRI-LAND', '— · MSKU4410272', '27.000 KG', 'ANDIKA', 'Ditugaskan'],
+['SPBB/2610/0009', '12/10 15:30', 'WH-JKT01', 'SHANDONG GOODFARMER', 'kontainer di YARD-A02', '26.000 KG', 'ANDIKA, ELLY', 'Menunggu bongkar'],
+['SPBB/2610/0014', '14/10 08:00', 'WH-JKT01', 'JIANGSU TRI-LAND', '—', '20.000 KG', 'belum', 'Draft']
+],
+SPMB: [
+['SPMB/2610/0021', '13/10 09:00', 'WH-JKT01', 'PT SANGKAYA MAKMUR ABADI', 'B 9555 KLA · ambil TGHU8812348', '25.000 KG', 'CHESYA, ANDIKA', 'Dikerjakan'],
+['SPMB/2610/0022', '13/10 14:00', 'WH-JKT02', 'PT MEGA SAKTI JAYA', '— · tanpa kontainer', '10.000 KG', 'ANDIKA', 'Ditugaskan'],
+['SPMB/2610/0019', '12/10 10:00', 'WH-JKT01', 'OPIK SENEN', 'B 9071 UAB · bawa sendiri', '12.500 KG', 'RINDI', 'Selesai']
+]
+};
+const stc = { 'Dikerjakan': ['#E6EEF8', '#0A57A8'], 'Partial': ['#FFF4D6', '#7A5300'], 'Selesai kurang': ['#FBEDE5', '#8A2E08'], 'Ditugaskan': ['#ECEDE8', '#16191D'], 'Menunggu bongkar': ['#FFF4D6', '#5C3F00'], 'Draft': ['#FFFFFF', '#545B63'], 'Selesai': ['#E3F2E7', '#1F6B34'] };
+const pill = (s) => 'justify-self: start; padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; border: 1px solid #DADDD6; background: ' + stc[s][0] + '; color: ' + stc[s][1];
+const S = this.state;
+const LB = {
+'SPBB/2610/0012': { pt: 'ATM', cont: 'TGHU8812348', tgl: '13/10/2026', lines: [['GLA-001', 'Gula Pasir Kristal Putih', 'BRAND-A', 20, 50, 25], ['BRS-010', 'Beras Medium', 'BRAND-B', 8, 50, 25]] },
+'SPBB/2610/0013': { pt: 'PHS', cont: 'MSKU4410272', tgl: '13/10/2026', lines: [['TPG-003', 'Tepung Terigu', 'BRAND-C', 8, 25, 25]] },
+'SPBB/2610/0009': { pt: '', cont: 'MSKU4410272', tgl: '12/10/2026', lines: [['GLA-001', 'Gula Pasir Kristal Putih', 'BRAND-A', 10, 50, 25]] }
+};
+if (S.closed) { data.SPBB[0][5] = '45.000 KG · kurang 5.000'; data.SPBB[0][7] = 'Selesai kurang'; }
+const rows = data[S.tab].map((d) => {
+const isDoc = S.tab === 'SPBB';
+const lb = LB[d[0]];
+const can = isDoc && !!lb && d[7] !== 'Draft';
+const pr = !!S.printed[d[0]];
+return { no: d[0], tgl: d[1], wh: d[2], bp: d[3], mobil: d[4], qty: d[5], krani: d[6], st: d[7], stStyle: pill(d[7]),
+labelText: !isDoc ? '—' : (d[7] === 'Draft' ? 'Terbitkan dulu' : (pr ? '✓ Dicetak' : 'Cetak label')),
+labelOff: !can,
+labelStyle: 'justify-self: start; height: 34px; padding: 0 12px; border-radius: 10px; font-family: inherit; font-size: 12px; font-weight: 600; ' + (!can ? 'border: none; background: transparent; color: #8A9098; cursor: default' : (pr ? 'border: 1px solid #1F7A3A; background: #E3F2E7; color: #1F6B34; cursor: pointer' : 'border: none; background: #0A57A8; color: #FFFFFF; cursor: pointer')),
+openLabel: () => { if (can) this.setState({ pdoc: d[0], alasan: '', tried: false, done: '' }); } };
+});
+const base = 'height: 40px; padding: 0 16px; border-radius: 20px; font-family: inherit; font-size: 14px; cursor: pointer;';
+const tabs = ['SPBB', 'SPMB'].map((k) => ({
+label: (k === 'SPBB' ? 'SPBB · Inbound ' : 'SPMB · Outbound ') + data[k].length,
+on: this.state.tab === k,
+style: base + (this.state.tab === k ? ' border: none; background: #16191D; color: #FFFFFF; font-weight: 600;' : ' border: 1px solid #DADDD6; background: #FFFFFF; color: #16191D; font-weight: 500;'),
+pick: () => this.setState({ tab: k, lq: '' })
+}));
+const kranis = ['ELLY', 'ANDIKA', 'CHESYA', 'RINDI', 'ADIT'].map((n) => {
+const on = this.state.picked.indexOf(n) >= 0;
+return {
+name: n, on, mark: on ? '✓' : '+',
+style: 'height: 38px; padding: 0 14px; border-radius: 19px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; ' + (on ? 'border: 1.5px solid ' + accent + '; background: ' + (isIn ? '#E6EEF8' : '#FBEDE5') + '; color: ' + accent : 'border: 1px solid #C9CDC5; background: #FFFFFF; color: #16191D'),
+pick: () => this.setState({ picked: on ? this.state.picked.filter((x) => x !== n) : this.state.picked.concat([n]) })
+};
+});
+const capOk = 'font-size: 11px; color: #545B63', capWarn = 'font-size: 11px; font-weight: 600; color: #7A5300';
+const lines = isIn
+? [{ item: 'GLA-001 · Gula Pasir Kristal Putih', kg: 20000, krg: 400, brand: 'BRAND-A', palet: 16, room: 'R-A01', cap: 'sisa 17,6 t · rencana 20,4 t → over 2,8 t', capStyle: capWarn },
+{ item: 'BRS-010 · Beras Medium', kg: 0, krg: 0, brand: 'BRAND-B', palet: 0, room: 'R-A02', cap: 'sisa 90 t dari 150 t', capStyle: capOk }]
+: [{ item: 'GLA-001 · Gula Pasir Kristal Putih', kg: 20000, krg: 400, room: 'TGHU8812348', cap: 'stok 25.000 KG di container ini', capStyle: capOk },
+{ item: 'BRS-010 · Beras Medium', kg: 5000, krg: 100, room: 'MSKU4410272', cap: 'stok 10.000 KG', capStyle: capOk }];
+
+const MASTER = ['BRAND-A', 'BRAND-B', 'BRAND-C', 'BRAND-D', 'CAMBRIDGE FARMS', 'INTEGROW', 'NO BRAND'];
+const PTS = { ATM: 'PT ATM', PHS: 'PT PHS', ACA: 'PT ACA' };
+const E = (text) => ({ k: 'err', text }), W = (text) => ({ k: 'warn', text }), OK = (text) => ({ k: 'ok', text }), H = (text) => ({ k: 'hint', text });
+const tone = { err: ['#A32020', '✕'], ok: ['#1F6B34', '✓'], hint: ['#545B63', ''], warn: ['#8A5A00', '!'] };
+const fm = (m, mono) => ({ text: (m.k === 'hint' ? '' : tone[m.k][1] + ' ') + m.text, style: 'font-size: 12px; font-weight: ' + (m.k === 'hint' ? 400 : 600) + '; color: ' + tone[m.k][0], input: 'height: 40px; padding: 0 10px; box-sizing: border-box; border-radius: 10px; font-family: ' + (mono ? "'IBM Plex Mono', monospace" : 'inherit') + '; font-size: 14px; color: #16191D; width: 100%; border: ' + (m.k === 'err' ? '2px solid #A32020' : (m.k === 'warn' ? '2px solid #C98A00' : '1px solid #C9CDC5')) + ';' });
+const LV = {}; let nn = 10; 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach((L) => { if (nn % 11 === 0) nn++; LV[L] = nn++; });
+const iso = (c) => { if (!/^[A-Z]{3}[UJZ]\d{7}$/.test(c)) return 'fmt'; let t = 0; for (let i = 0; i < 10; i++) t += (i < 4 ? LV[c[i]] : +c[i]) * Math.pow(2, i); return (t % 11) % 10 === +c[10] ? 'ok' : 'cd'; };
+const pd = S.pdoc, L0 = LB[pd];
+const showPanel = isIn && !!L0;
+let panel = {};
+if (showPanel) {
+const ptRaw = (S.ptv[pd] !== undefined ? S.ptv[pd] : L0.pt);
+const ptU = String(ptRaw || '').toUpperCase().trim();
+const ptmv = !ptU ? E('PT wajib diisi · label tidak bisa dicetak tanpa PT') : (PTS[ptU] ? OK(PTS[ptU]) : E('PT tidak ada di OPRC · pilih dari daftar'));
+const cc = L0.cont; const ci = !cc ? 'none' : iso(cc);
+const cmv = ci === 'ok' ? OK('Digit pemeriksa ISO 6346 benar') : (ci === 'none' ? E('Isi no. kontainer di SPBB lebih dulu') : E('Nomor kontainer tidak valid · koreksi di SPBB'));
+const plines = L0.lines.map((x, i) => {
+const k = pd + '|' + i;
+const bTyped = S.brands[k] !== undefined ? S.brands[k] : x[2];
+const bu = String(bTyped || '').toUpperCase().trim();
+const bmv = !bu ? E('Wajib') : (MASTER.indexOf(bu) < 0 ? E('Bukan master brand') : H(''));
+const qv = S.pals[k] !== undefined ? S.pals[k] : x[3];
+const qn = Number(qv);
+const qmv = (!Number.isInteger(qn) || qn < 1 || qn > 99) ? E('1–99') : H('');
+return { code: x[0], name: x[1], brand: bTyped, palet: qv, brandU: bu, qn, pack: x[4], sak: x[5], bad: bmv.k === 'err' || qmv.k === 'err', bm: fm(bmv, false), qm: fm(qmv, true),
+setBrand: (e) => this.setState({ brands: Object.assign({}, S.brands, { [k]: e.target.value }), done: '' }),
+setPalet: (e) => this.setState({ pals: Object.assign({}, S.pals, { [k]: e.target.value }), done: '' }) };
+});
+const ptotal = plines.reduce((a, x) => a + (x.bad ? 0 : x.qn), 0);
+const reprint = !!S.printed[pd];
+const reasonOK = !reprint || !!S.alasan;
+const bad = (ptmv.k === 'err' ? 1 : 0) + (ci !== 'ok' ? 1 : 0) + (plines.some((x) => x.bad) ? 1 : 0) + (reasonOK ? 0 : 1);
+const blocked = bad > 0;
+const l1 = plines[0] || { code: '', name: '', brand: '', pack: 0, sak: 0 };
+const sizes = ['50 × 30', '80 × 50', '100 × 70'].map((l, i) => ({ label: l, style: 'height: 40px; padding: 0 12px; border-radius: 10px; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; ' + (S.size === i ? 'border: 2px solid #16191D; background: #16191D; color: #FFFFFF;' : 'border: 1px solid #DADDD6; background: #FFFFFF; color: #16191D;'), pick: () => this.setState({ size: i }) }));
+let seed = 11 + pd.length * 13 + parseInt(pd.slice(-2), 10);
+const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+const Nq = 21; const fin = (r, c) => { const cs = [[0, 0], [0, Nq - 7], [Nq - 7, 0]]; for (const [fr, fc] of cs) { const y = r - fr, x = c - fc; if (y >= 0 && y < 7 && x >= 0 && x < 7) { const ring = Math.min(y, x, 6 - y, 6 - x); return ring === 0 || ring >= 2 ? 1 : 0; } if (y >= -1 && y <= 7 && x >= -1 && x <= 7) return 0; } return -1; };
+const cells = [];
+for (let r = 0; r < Nq; r++) for (let c = 0; c < Nq; c++) { const f = fin(r, c); const on = f === -1 ? (r === 6 || c === 6 ? (r + c) % 2 === 0 : rnd() > 0.52) : f === 1; cells.push({ style: 'aspect-ratio: 1; background: ' + (on ? '#16191D' : '#FFFFFF') }); }
+const alasanLbl = { rusak: 'Label rusak massal', pt: 'PT diganti', cont: 'Kontainer berubah', brand: 'Brand dikoreksi' };
+panel = {
+lp: { no: pd, pt: ptRaw, cont: L0.cont || '—', tgl: L0.tgl },
+ptm: fm(ptmv, true), cm: fm(cmv, true), setPt: (e) => this.setState({ ptv: Object.assign({}, S.ptv, { [pd]: e.target.value }), done: '' }),
+contDisp: cc ? cc.slice(0, 4) + ' ' + cc.slice(4) : '—', first: l1, ptName: PTS[ptU] || '[Nama PT]', qr: '261013-' + l1.code + '-' + (cc || ''),
+cells, pl: plines, ptotal, sizes, reprint,
+setAlasan: (e) => this.setState({ alasan: e.target.value }),
+alasanBorder: S.tried && !reasonOK ? '2px solid #A32020' : '1px solid #C9CDC5',
+a0: !S.alasan, a1: S.alasan === 'rusak', a2: S.alasan === 'pt', a3: S.alasan === 'cont', a4: S.alasan === 'brand',
+stText2: reprint ? 'Label sudah pernah dicetak' : 'Belum dicetak',
+stStyle2: 'padding: 6px 12px; border-radius: 10px; font-size: 13px; font-weight: 700; ' + (reprint ? 'background: #E3F2E7; color: #1F6B34' : 'background: #E6EEF8; color: #0A57A8'),
+blocked, doneMsg: S.done,
+printLabel: blocked ? 'Lengkapi ' + bad + ' isian' : (reprint ? 'Cetak ulang ' + ptotal + ' label' : 'Cetak ' + ptotal + ' label'),
+printStyle: 'height: 48px; padding: 0 22px; border-radius: 12px; border: none; font-family: inherit; font-size: 15px; font-weight: 600; ' + (blocked ? 'background: #C9CDC5; color: #545B63; cursor: not-allowed' : 'background: #16191D; color: #FFFFFF; cursor: pointer'),
+printNow: () => { if (blocked) { this.setState({ tried: true }); return; } this.setState({ printed: Object.assign({}, S.printed, { [pd]: true }), alasan: '', tried: false, done: ptotal + ' label dicetak untuk ' + pd + (reprint ? ' · cetak ulang: ' + alasanLbl[S.alasan] : '') + ' · tercatat di log' }); }
+};
+}
+
+const f = (n) => n.toLocaleString('id-ID');
+const iso2 = iso;
+const SO = [
+{ docNum: '26100234', card: 'PT SANGKAYA MAKMUR ABADI', date: '12/10/2026', numAtCard: 'PO-SMA-0457', lines: [
+['GLA-001', 'Gula Pasir Kristal Putih', 30000, 25000, 20000, 50, 'TGHU8812348', 'Kirim pagi'],
+['BRS-010', 'Beras Medium', 10000, 10000, 5000, 50, 'MSKU4410272', '']] },
+{ docNum: '26100245', card: 'PT SANGKAYA MAKMUR ABADI', date: '13/10/2026', numAtCard: 'PO-SMA-0462', lines: [
+['TPG-003', 'Tepung Terigu', 8000, 8000, 0, 25, 'TGHU8812348', '']] },
+{ docNum: '26100251', card: 'PT MEGA SAKTI JAYA', date: '13/10/2026', numAtCard: 'MSJ/1013', lines: [
+['TPG-003', 'Tepung Terigu', 10000, 10000, 0, 25, 'MNBU3565534', '']] },
+{ docNum: '26100260', card: 'OPIK SENEN', date: '13/10/2026', numAtCard: '—', lines: [
+['GLA-001', 'Gula Pasir Kristal Putih', 5000, 2000, 2000, 50, 'TCNU5523988', 'Ambil sendiri']] }
+];
+const soRecs = SO.filter((x) => S.soSels.indexOf(x.docNum) >= 0);
+const soCust = soRecs.length ? soRecs[0].card : '';
+const soMixed = soRecs.some((r) => r.card !== soCust);
+const somv = !soRecs.length ? H('Centang Sales Order yang masih terbuka') : (soMixed ? E('Satu SPMB hanya untuk satu customer · hapus centang SO customer lain') : OK(soCust + ' · ' + soRecs.length + ' SO dipilih · ' + soRecs.reduce((a, r) => a + r.lines.length, 0) + ' item outstanding'));
+const soLines = [].concat(...soRecs.map((soRec) => soRec.lines.map((x, i) => {
+const k = soRec.docNum + '|' + i;
+const avail = Math.max(0, x[3] - x[4]);
+const on = avail > 0 && !S.soOff[k];
+const qRaw = S.soQ[k] !== undefined ? S.soQ[k] : avail;
+const qn = Number(qRaw);
+let qmv;
+if (avail === 0) qmv = E('Habis dialokasikan di SPMB lain');
+else if (!on) qmv = H('Tidak dipakai');
+else if (!(qn > 0)) qmv = E('Isi qty lebih dari 0');
+else if (qn > avail) qmv = E('Melebihi tersedia ' + f(avail));
+else qmv = OK(f(Math.ceil(qn / x[5])) + ' sak');
+return { doc: soRec.docNum, code: x[0], name: x[1], pack: x[5], qty: f(x[2]), open: f(x[3]), alloc: x[4] ? f(x[4]) : '—', avail: f(avail), availStyle: 'font-family: \'IBM Plex Mono\', monospace; text-align: right; padding-top: 10px; font-weight: 600; color: ' + (avail > 0 ? '#1F6B34' : '#A32020'),
+on, q: qRaw, cont: S.soC[k] !== undefined ? S.soC[k] : x[6], note: x[7] || '—', qm: fm(qmv, true), bad: on && qmv.k === 'err', usedQty: on ? qn : 0, avail,
+toggle: () => avail > 0 && this.setState({ soOff: Object.assign({}, S.soOff, { [k]: on }) }),
+setQ: (e) => this.setState({ soQ: Object.assign({}, S.soQ, { [k]: e.target.value }) }),
+setCont: (e) => this.setState({ soC: Object.assign({}, S.soC, { [k]: e.target.value }) }) };
+})));
+const anyOn = soLines.some((l) => l.on);
+const outBad = soLines.some((l) => l.bad);
+const JC = [{ code: '20', name: 'Container 20 ft', kg: 28000, active: true }, { code: '40', name: 'Container 40 ft', kg: 26500, active: true }, { code: '40HC', name: 'Container 40 ft HC', kg: 26500, active: true }, { code: '45HC', name: 'Container 45 ft HC', kg: 27500, active: false }]; // master jenis container dari CMS · Setup
+const jcAct = JC.filter((c) => c.active);
+const jcLabel = (c) => c.code + ' · ' + c.name + ' · ' + f(c.kg) + ' KG';
+const ctText = S.ctText !== undefined ? S.ctText : jcLabel(jcAct[0]);
+const ctKey = String(ctText).split(' · ')[0].trim().toUpperCase();
+const ctRec = jcAct.filter((c) => c.code === ctKey)[0] || null;
+const ctSel = ctRec ? [ctRec.code, ctRec.kg] : ['', 0];
+const totKg = soLines.reduce((a, l) => a + l.usedQty, 0);
+const totPct = ctSel[1] ? Math.round(totKg / ctSel[1] * 1000) / 10 : 0;
+const totm = !ctRec ? W('Pilih jenis container dari master (Setup) untuk melihat batas muatan') : !totKg ? H('Belum ada qty terpilih') : (totKg > ctSel[1] ? W('Melebihi batas ' + f(totKg - ctSel[1]) + ' KG · peringatan saja, pertimbangkan pisah ke SPMB lain') : (totPct >= 90 ? W('Hampir penuh · sisa ' + f(ctSel[1] - totKg) + ' KG') : OK('Masih muat · sisa ' + f(ctSel[1] - totKg) + ' KG')));
+const tot = { kg: f(totKg), ton: (totKg / 1000).toFixed(1).replace('.', ','), limit: ctRec ? f(ctSel[1]) : '—', pct: String(totPct).replace('.', ','), m: fm(totm, true),
+barStyle: 'height: 100%; width: ' + Math.min(100, totPct) + '%; background: ' + (totPct >= 90 ? '#B7791F' : '#1F7A3A'),
+parts: soRecs.map((r) => ({ doc: r.docNum, kg: f(soLines.filter((l) => l.doc === r.docNum).reduce((a, l) => a + l.usedQty, 0)) })) };
+const etaV = S.eta === undefined ? '' : S.eta;
+const etaMin = (() => { const m = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(String(etaV).trim()); return m ? Number(m[1]) * 60 + Number(m[2]) : null; })();
+const ETA_WS = 8 * 60, ETA_WE = 17 * 60; // jam kerja dari Setup
+const etaMsg = String(etaV).trim() === '' ? H('Boleh kosong · bisa diisi/diubah di halaman Jadwal') : (etaMin === null ? E('Format JJ:MM, contoh 08:30') : (etaMin < ETA_WS || etaMin >= ETA_WE ? W('Di luar jam kerja (08:00–17:00) · kendaraan menunggu sampai jam mulai') : OK('Masuk antrean jadwal pukul ' + String(etaV).trim())));
+const etaBad = etaMsg.k === 'err';
+const WHS = { 'WH-JKT01': { name: '[Nama Warehouse 1]', rooms: [['WH-JKT01-R-A01', 'Ruang A1 · gula', false], ['WH-JKT01-R-A02', 'Ruang A2 · beras', false], ['WH-JKT01-R-B01', 'Ruang B1 · tepung', true], ['WH-JKT01-R-B02', 'Ruang B2', true]] }, 'WH-JKT02': { name: '[Nama Warehouse 2]', rooms: [['WH-JKT02-R-C01', 'Ruang C1', false], ['WH-JKT02-R-C02', 'Ruang C2', false]] } }; // dari Master Warehouse & Ruangan
+const CUST = [['C-0001', 'PT SANGKAYA MAKMUR ABADI'], ['C-0002', 'PT MEGA SAKTI JAYA'], ['C-0003', 'OPIK SENEN'], ['C-0004', 'PT TITIPAN LESTARI']]; // master customer SAP (OCRD)
+const whV = S.wh === undefined ? 'WH-JKT01' : S.wh;
+const whRec = WHS[String(whV).trim().toUpperCase()];
+const whM = String(whV).trim() === '' ? E('Pilih warehouse') : (!whRec ? E('Warehouse tidak ada di master') : OK(whRec.name));
+const roomLabel = (r) => r[0] + ' · ' + r[1] + (r[2] ? ' · titipan' : '');
+const roomOpts = whRec ? whRec.rooms.map((r) => ({ value: roomLabel(r) })) : [];
+const roomV = S.room === undefined ? '' : S.room;
+const roomKey = String(roomV).split(' · ')[0].trim().toUpperCase();
+const roomRec = whRec ? whRec.rooms.filter((r) => r[0] === roomKey)[0] : null;
+const roomM = !whRec ? H('') : (String(roomV).trim() === '' ? E('Pilih ruangan') : (!roomRec ? E('Ruangan tidak ada di warehouse ini') : (roomRec[2] ? OK('Ruangan titipan · transaksi BT · kode customer titipan wajib') : OK('Ruangan biasa'))));
+const isTit = !!(roomRec && roomRec[2]);
+const titV = S.tit === undefined ? '' : S.tit;
+const titKey = String(titV).split(' · ')[0].trim().toUpperCase();
+const titRec = CUST.filter((c) => c[0] === titKey)[0];
+const titM = !isTit ? H('') : (String(titV).trim() === '' ? E('Ruangan titipan wajib mengisi kode customer pemilik barang') : (!titRec ? E('Kode customer tidak ada di master') : OK(titRec[1])));
+const whBad = whM.k === 'err' || roomM.k === 'err' || titM.k === 'err';
+const whWhy = whM.k === 'err' ? 'Periksa warehouse' : (roomM.k === 'err' ? 'Periksa ruangan' : 'Isi kode customer titipan');
+let pubMsg = '', pubBlocked = false;
+if (!isIn) {
+pubBlocked = !soRecs.length || soMixed || !anyOn || outBad || etaBad || whBad;
+pubMsg = !soRecs.length ? 'Pilih Sales Order' : (soMixed ? 'SO beda customer' : (!anyOn ? 'Pilih minimal satu item' : (outBad ? 'Perbaiki qty yang merah' : (etaBad ? 'Perbaiki ETA' : (whBad ? whWhy : '')))));
+}
+
+const BL = [
+{ docNum: '26200017', card: 'SHANDONG GOODFARMER', date: '10/10/2026', numAtCard: 'SDGF-2610-88', pt: 'ATM', lines: [
+['TGHU8812348', 'GLA-001', 'Gula Pasir Kristal Putih', 25000, 25000, 500, 0, 'BRAND-A', '50 KG', 'WHITE', '2026', 'R-A01'],
+['MSKU4410272', 'BRS-010', 'Beras Medium', 10000, 10000, 200, 0, 'BRAND-B', 'MEDIUM', 'LONG', '2026', 'R-A02'],
+['MSKU4410272', 'TPG-003', 'Tepung Terigu', 5000, 5000, 200, 0, 'BRAND-C', '25 KG', 'PROTEIN 11', '2026', 'R-B01']] },
+{ docNum: '26200021', card: 'JIANGSU TRI-LAND', date: '12/10/2026', numAtCard: 'JTL-1012', pt: 'PHS', lines: [
+['MNBU3565534', 'GLA-001', 'Gula Pasir Kristal Putih', 20000, 12000, 400, 3000, 'BRAND-A', '50 KG', 'WHITE', '2026', 'R-A01']] },
+{ docNum: '26200030', card: 'SHANDONG GOODFARMER', date: '13/10/2026', numAtCard: 'SDGF-2613-02', pt: '', lines: [
+['TGHU8812345', 'BRS-010', 'Beras Medium', 8000, 8000, 160, 0, 'BRAND-B', 'MEDIUM', 'LONG', '2026', 'R-A02']] }
+];
+const DOS = [
+{ docNum: '26300045', card: 'PT SANGKAYA MAKMUR ABADI', date: '13/10/2026', numAtCard: 'SJ005617', pt: 'ACA', lines: [
+['', 'TPG-003', 'Tepung Terigu', 6000, 6000, 240, 0, 'BRAND-C', '25 KG', 'PROTEIN 11', '2026', 'R-B01']] }
+];
+const isDo = S.src === 'DO';
+const srcAll = isDo ? DOS : BL;
+const srcRecs = srcAll.filter((x) => S.sels.indexOf(x.docNum) >= 0);
+const sdmv = !srcRecs.length ? H('Centang ' + (isDo ? 'Delivery Order' : 'BL') + ' yang masih terbuka') : OK(srcRecs.length + ' dokumen dipilih · ' + srcRecs.reduce((a, r) => a + r.lines.length, 0) + ' item outstanding');
+const ptSet = srcRecs.map((r) => r.pt).filter((p, i, a) => a.indexOf(p) === i);
+const ptDefault = ptSet.length === 1 ? ptSet[0] : '';
+const ptTyped = S.spt !== undefined ? S.spt : ptDefault;
+const ptU2 = String(ptTyped || '').toUpperCase().trim();
+const PT2 = { ATM: 'PT ATM', PHS: 'PT PHS', ACA: 'PT ACA' };
+const ptmv2 = !srcRecs.length ? H('Otomatis dari dokumen') : (!ptU2 ? E(ptSet.length > 1 ? 'Dokumen terpilih punya PT berbeda (' + ptSet.map((p) => p || 'kosong').join(', ') + ') · pilih satu di sini' : 'PT kosong di dokumen · isi di SAP atau pilih di sini') : (PT2[ptU2] ? OK(PT2[ptU2]) : E('PT tidak ada di OPRC')));
+const PAL = { 'PLT-KY12': ['Kayu standar', 25, 25], 'PLT-PL12': ['Plastik heavy duty', 18, 25], 'PLT-KY11': ['Kayu ekspor', 22, 20] };
+const ROOM = { 'R-A01': 17.6, 'R-A02': 90, 'R-B01': 2.5 };
+const visLines = [].concat(...srcRecs.map((rec) => rec.lines.map((x, idx) => ({ x, idx, rec }))));
+const roomSum = {};
+const srcLinesRaw = visLines.map((o) => {
+const x = o.x, k = o.rec.docNum + '|' + o.idx;
+const avail = Math.max(0, x[4] - x[6]);
+const on = avail > 0 && !S.iOff[k];
+const qRaw = S.iQ[k] !== undefined ? S.iQ[k] : avail;
+const qn = Number(qRaw);
+let qmv;
+if (avail === 0) qmv = E('Habis dialokasikan');
+else if (!on) qmv = H('Tidak dipakai');
+else if (!(qn > 0)) qmv = E('Isi qty lebih dari 0');
+else if (qn > avail) qmv = E('Melebihi tersedia ' + f(avail));
+else qmv = OK('OK');
+const krg = Math.round(qn * x[5] / x[3]) || 0;
+const cRaw = isDo ? (S.dc[k] !== undefined ? S.dc[k] : '') : x[0];
+const cv = String(cRaw || '').toUpperCase().replace(/[\s-]/g, '');
+let cmv;
+if (!on) cmv = H('');
+else if (!cv) cmv = isDo ? H('opsional · bisa diisi di pos timbang') : E('Container kosong di BL');
+else if (iso2(cv) === 'ok') cmv = OK('ISO 6346 benar');
+else cmv = E(iso2(cv) === 'fmt' ? 'Format container salah' : 'Digit pemeriksa salah');
+const roomV = String(S.iRoom[k] !== undefined ? S.iRoom[k] : x[11]).toUpperCase().trim();
+const jpV = String(S.iJp[k] !== undefined ? S.iJp[k] : 'PLT-KY12').toUpperCase().trim();
+const pm = PAL[jpV];
+const pltV = S.iPlt[k] !== undefined ? S.iPlt[k] : Math.max(1, Math.ceil(krg / (pm ? pm[2] : 25)));
+let jpmv;
+if (!on) jpmv = H('');
+else if (!jpV) jpmv = E('Pilih jenis palet');
+else if (!pm) jpmv = E('Tidak ada di master palet aktif');
+else jpmv = OK(pm[0] + ' · ' + pm[1] + ' kg · ' + pm[2] + ' sak');
+if (on && qmv.k !== 'err' && ROOM[roomV] !== undefined) roomSum[roomV] = (roomSum[roomV] || 0) + (qn + Number(pltV) * (pm ? pm[1] : 25)) / 1000;
+return { o, x, k, cv, cmv, jpV, jpmv, avail, on, qRaw, qn, qmv, krg, roomV, pltV };
+});
+const srcLines = srcLinesRaw.map((r) => {
+const x = r.x, k = r.k;
+let rmv;
+if (!r.on) rmv = H('');
+else if (ROOM[r.roomV] === undefined) rmv = E('Ruangan tidak ada di master');
+else if ((roomSum[r.roomV] || 0) > ROOM[r.roomV]) rmv = W('Over ' + (Math.round(((roomSum[r.roomV] || 0) - ROOM[r.roomV]) * 10) / 10).toString().replace('.', ',') + ' t · peringatan saja');
+else rmv = OK('Muat');
+const pn = Number(r.pltV);
+return { doc: r.o.rec.docNum, cont: r.cv, cm: fm(r.cmv, true), setCont: (e) => this.setState({ dc: Object.assign({}, S.dc, { [k]: e.target.value }) }), code: x[1], name: x[2], brand: x[7], size: x[8], type: x[9], crop: x[10], open: f(x[4]), alloc: x[6] ? f(x[6]) : '—', avail: f(r.avail),
+availStyle: 'font-family: \'IBM Plex Mono\', monospace; text-align: right; padding-top: 10px; font-weight: 600; color: ' + (r.avail > 0 ? '#1F6B34' : '#A32020'),
+on: r.on, q: r.qRaw, qm: fm(r.qmv, true), krg: f(r.krg), room: r.roomV, rm: fm(rmv, true), plt: r.pltV, jp: r.jpV, jpm: fm(r.jpmv, true), setJp: (e) => this.setState({ iJp: Object.assign({}, S.iJp, { [k]: e.target.value }) }),
+bad: r.on && (r.cmv.k === 'err' || r.jpmv.k === 'err' || r.qmv.k === 'err' || rmv.k === 'err' || !(pn >= 1)),
+usedQty: r.on ? r.qn : 0,
+toggle: () => r.avail > 0 && this.setState({ iOff: Object.assign({}, S.iOff, { [k]: r.on }) }),
+setQ: (e) => this.setState({ iQ: Object.assign({}, S.iQ, { [k]: e.target.value }) }),
+setRoom: (e) => this.setState({ iRoom: Object.assign({}, S.iRoom, { [k]: e.target.value }) }),
+setPlt: (e) => this.setState({ iPlt: Object.assign({}, S.iPlt, { [k]: e.target.value }) }) };
+});
+const inAnyOn = srcLines.some((l) => l.on);
+const inBad = srcLines.some((l) => l.bad);
+const usedConts = srcLines.filter((l) => l.on && l.cont).map((l) => l.cont).filter((c, i, a) => a.indexOf(c) === i);
+const badCont = srcLines.filter((l) => l.on && l.cm.text.indexOf('✕') === 0).length;
+const cm3 = fm(!srcRecs.length ? H('') : (badCont ? E(badCont + ' item dengan container tidak valid · koreksi di SAP lebih dulu') : (usedConts.length ? OK(usedConts.length + ' container pada item terpilih · ' + usedConts.join(', ')) : H(isDo ? 'DO tanpa container' : ''))), true);
+if (isIn) {
+pubBlocked = !srcRecs.length || ptmv2.k === 'err' || !inAnyOn || inBad || etaBad || whBad;
+pubMsg = !srcRecs.length ? 'Pilih dokumen sumber' : (badCont ? 'Periksa container' : (ptmv2.k === 'err' ? 'PT belum valid' : (!inAnyOn ? 'Pilih minimal satu item' : (inBad ? 'Perbaiki isian yang merah' : (etaBad ? 'Perbaiki ETA' : (whBad ? whWhy : ''))))));
+}
+if (S.pubDone) pubMsg = S.pubDone;
+const lqv = String(S.lq || '').toLowerCase();
+const mkDocs = (arr, key, accent, withCont, multi, lockCard) => arr.filter((x) => !lqv || (x.docNum + ' ' + x.card + ' ' + x.numAtCard).toLowerCase().indexOf(lqv) >= 0).map((x) => {
+const on = S[key].indexOf(x.docNum) >= 0;
+const locked = !!lockCard && !on && x.card !== lockCard;
+const cs = x.lines.map((l) => l[0]).filter((c, i, a) => c && a.indexOf(c) === i);
+return { docNum: x.docNum, card: x.card, numAtCard: x.numAtCard, date: x.date, items: x.lines.length, pt: x.pt || '—', locked, dis: locked, lockTxt: 'Beda customer', cont: withCont ? (cs.length ? cs.join(', ') : 'tanpa container') : '', on,
+rowStyle: 'display: grid; grid-template-columns: ' + (withCont ? '44px 110px minmax(180px, 1fr) 130px 90px 170px 60px 60px' : '44px 110px minmax(200px, 1fr) 150px 100px 70px') + '; gap: 10px; align-items: center; padding: 10px 14px; border-top: 1px solid #ECEDE8; font-size: 13px; cursor: ' + (locked ? 'not-allowed; opacity: 0.45' : 'pointer') + '; ' + (on ? 'background: ' + accent : ''),
+toggle: () => !locked && this.setState({ [key]: on ? S[key].filter((d) => d !== x.docNum) : (multi ? S[key].concat([x.docNum]) : [x.docNum]), spt: undefined, pubDone: '' }) };
+});
+const srcDocs = mkDocs(srcAll, 'sels', '#EAF1FA', true);
+const soDocs = mkDocs(SO, 'soSels', '#FCEFE7', false, true, soCust);
+const lineCols = isIn ? 'minmax(200px, 1fr) 120px 100px 150px 100px 200px 44px' : 'minmax(220px, 1fr) 130px 110px 220px 44px';
+return Object.assign({
+srcOpts: [['BL', 'BL (OPBL)'], ['DO', 'Delivery Order (ODLN)']].map((o) => ({ label: o[1], on: S.src === o[0], style: 'min-height: 40px; border-radius: 9px; border: none; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; ' + (S.src === o[0] ? 'background: #16191D; color: #FFFFFF;' : 'background: transparent; color: #16191D;'), pick: () => this.setState({ src: o[0], sels: [], lq: '', spt: undefined, dc: {}, iQ: {}, iOff: {}, iRoom: {}, iPlt: {}, pubDone: '' }) })),
+srcDocLabel: isDo ? 'Delivery Order (ODLN)' : 'Bill of Lading (OPBL)', sdm: fm(sdmv, true), srcDocs, srcEmpty: !srcDocs.length, soDocs, soEmpty: !soDocs.length, lq: S.lq, setLq: (e) => this.setState({ lq: e.target.value }),
+pt2: ptTyped, ptm2: fm(ptmv2, true), setPt2: (e) => this.setState({ spt: e.target.value }),
+palOpts: Object.keys(PAL).map((c) => ({ value: c, label: PAL[c][0] + ' · ' + PAL[c][1] + ' kg' })), hasSrc: srcRecs.length > 0, isDo, isBl: !isDo, cm3, srcLines,
+isOut: !isIn, hasSo: soRecs.length > 0, som: fm(somv, true), soCust,
+soLines, tot, ctText, jcOpts: jcAct.map((c) => ({ value: jcLabel(c) })), ctStyle: 'height: 36px; width: 300px; max-width: 100%; box-sizing: border-box; padding: 0 10px; border-radius: 8px; font-family: inherit; font-size: 13px; color: #16191D; background: #FFFFFF; border: ' + (ctRec ? '1px solid #C9CDC5' : '2px solid #C98A00'), setCt: (e) => this.setState({ ctText: e.target.value }),
+whV, setWh: (e) => this.setState({ wh: e.target.value, room: '', tit: '' }), roomV, setRoom: (e) => this.setState({ room: e.target.value }), roomM: fm(roomM), roomOpts, roomStyle: 'height: 42px; padding: 0 10px; border-radius: 10px; border: ' + (roomM.k === 'err' ? '2px solid #A32020' : '1px solid #C9CDC5') + '; font-family: \'IBM Plex Mono\', monospace; font-size: 14px; color: #16191D', whM: fm(whM), whStyle: 'height: 42px; padding: 0 10px; border-radius: 10px; border: 1px solid ' + (whM.k === 'err' ? '#A32020' : '#C9CDC5') + '; font-family: \'IBM Plex Mono\', monospace; font-size: 14px; color: #16191D',
+isTit, titV, setTit: (e) => this.setState({ tit: e.target.value }), titM: fm(titM), custOpts: CUST.map((c) => ({ value: c[0] + ' · ' + c[1] })), titStyle: 'height: 42px; padding: 0 10px; border-radius: 10px; border: ' + (titM.k === 'err' ? '2px solid #A32020' : '1px solid #C9CDC5') + '; font-family: \'IBM Plex Mono\', monospace; font-size: 14px; color: #16191D',
+etaV, setEta: (e) => this.setState({ eta: e.target.value }), etaM: fm(etaMsg), etaStyle: 'height: 42px; padding: 0 10px; border-radius: 10px; border: 1px solid ' + (etaBad ? '#A32020' : '#C9CDC5') + '; font-family: \'IBM Plex Mono\', monospace; font-size: 14px; color: #16191D',
+pubMsg, pubBlocked,
+publish: () => { if (!pubBlocked) this.setState({ pubDone: isIn ? 'SPBB diterbitkan dari ' + (isDo ? 'DO ' : 'BL ') + srcRecs.map((r) => r.docNum).join(', ') + (usedConts.length ? ' · ' + usedConts.join(', ') : '') + ' · ' + f(srcLines.reduce((a, l) => a + l.usedQty, 0)) + ' KG' : 'SPMB diterbitkan dari SO ' + soRecs.map((r) => r.docNum).join(', ') + ' · ' + f(soLines.reduce((a, l) => a + l.usedQty, 0)) + ' KG' }); },
+showPartial: isIn && !S.closed, closeSisa: () => this.setState({ closed: true }),
+isIn, showPanel, closePanel: () => this.setState({ pdoc: '', done: '' }),
+lineMin: 'min-width: ' + (isIn ? 1000 : 820) + 'px',
+lineHeadStyle: 'display: grid; grid-template-columns: ' + lineCols + '; gap: 10px; padding: 10px 14px; background: #F2F3EF; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #545B63',
+lineRowStyle: 'display: grid; grid-template-columns: ' + lineCols + '; gap: 10px; align-items: center; padding: 8px 14px; border-top: 1px solid #ECEDE8',
+tabs, rows, kranis, lines,
+bpHead: isIn ? 'Supplier' : 'Customer',
+formTitle: isIn ? 'SPBB baru' : 'SPMB baru dari Sales Order',
+newNo: isIn ? 'SPBB/2610/0015' : 'SPMB/2610/0023',
+bpLabel: isIn ? 'Supplier' : 'Customer',
+bpVal: isIn ? 'JIANGSU TRI-LAND' : 'PT SANGKAYA MAKMUR ABADI',
+refLabel: isIn ? 'No. PO / BL' : 'No. DO / SO',
+refVal: isIn ? '[No PO]' : '[No DO]',
+contLabel: isIn ? 'No. kontainer datang' : 'Kontainer pengangkut (yard)',
+contVal: isIn ? 'MSKU4410272' : 'TGHU8812348',
+roomHead: isIn ? 'Ruangan tujuan' : 'Ambil dari container',
+publishStyle: 'height: 44px; padding: 0 18px; border-radius: 10px; border: none; background: ' + accent + '; font-family: inherit; font-size: 14px; font-weight: 600; color: #FFFFFF; cursor: pointer'
+}, panel);
+}
+}
+</script>
+</body>
+</html>

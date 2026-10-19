@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Setup</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F2F3EF}
+a{color:#0A57A8}a:hover{color:#063E7A}
+</style>
+</helmet>
+<div style="width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D">
+  <aside aria-label="Menu CMS" style="flex: 1 1 220px; max-width: 100%; box-sizing: border-box; background: #16191D; color: #FFFFFF; padding: 24px 16px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; flex-direction: column; gap: 2px; padding: 0 8px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #C5CAD1">Gudang ATM</span>
+      <span style="font-size: 20px; font-weight: 700">CMS Admin</span>
+    </div>
+    <nav style="display: flex; flex-direction: column; gap: 4px">
+      <a href="CMS-Rencana.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">SPBB &amp; SPMB</a>
+      <a href="CMS-Surat-Jalan.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Surat Jalan</a>
+      <a href="CMS-Riwayat-Berat.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Riwayat Berat</a>
+      <a href="CMS-Jadwal.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Jadwal Bongkar Muat</a>
+      <a href="CMS-List.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Cek Input Krani</a>
+      <a href="CMS-Master-Ruangan.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Master Warehouse &amp; Ruangan</a>
+      <a href="CMS-Master-Palet.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Master Palet</a>
+      <a href="Laporan-Menu.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Laporan</a>
+      <a href="CMS-Cetak-Label.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Cetak Label</a>
+          <a href="CMS-Setup.dc.html" aria-current="page" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #2A2E34; color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 600">Setup</a>
+    </nav>
+  </aside>
+
+  
+  <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px; display: flex; flex-direction: column; gap: 20px">
+    <header style="display: flex; flex-direction: column; gap: 4px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #545B63">Pengaturan</span>
+      <h1 style="margin: 0; font-size: 28px; font-weight: 700">Setup</h1>
+      <p style="margin: 0; font-size: 14px; color: #545B63">Batas toleransi Penyesuaian, Repacking, dan penimbangan mobil, serta master jenis container. Perubahan langsung dipakai aplikasi krani dan form SPMB.</p>
+    </header>
+
+    <section aria-label="Batas toleransi" style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 4px">
+      <h2 style="margin: 0 0 6px; font-size: 17px; font-weight: 700">Batas susut, koreksi, repacking &amp; penimbangan</h2>
+      <p style="margin: 0 0 8px; font-size: 13px; color: #545B63">Semua batas berupa persen dari stok / total sumber. Melewati batas peringatan hanya memberi tanda untuk Admin; melewati batas tolak menahan krani menyimpan.</p>
+      <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 120px minmax(200px, 1.4fr); gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid #ECEDE8">
+          <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">Susut (SS) · peringatan di atas</span><span style="font-size: 12px; color: #545B63">Susut dokumen Susut yang lebih besar dari ini ditandai untuk diperiksa Admin</span></div>
+          <div style="display: flex; align-items: center; gap: 6px"><input type="text" inputmode="decimal" value="{{ss.v}}" onChange="{{ss.set}}" aria-label="Susut (SS) · peringatan di atas" style="{{ss.style}}"><span style="font-size: 13px; color: #545B63">% dari stok</span></div>
+          <span style="{{ss.m.style}}">{{ss.m.text}}</span>
+        </div>
+      <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 120px minmax(200px, 1.4fr); gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid #ECEDE8">
+          <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">Koreksi kurang (KR) · peringatan di atas</span><span style="font-size: 12px; color: #545B63">Pengurangan stok lewat Penyesuaian yang lebih besar wajib catatan jelas</span></div>
+          <div style="display: flex; align-items: center; gap: 6px"><input type="text" inputmode="decimal" value="{{kr.v}}" onChange="{{kr.set}}" aria-label="Koreksi kurang (KR) · peringatan di atas" style="{{kr.style}}"><span style="font-size: 13px; color: #545B63">% dari stok</span></div>
+          <span style="{{kr.m.style}}">{{kr.m.text}}</span>
+        </div>
+      <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 120px minmax(200px, 1.4fr); gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid #ECEDE8">
+          <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">Repacking · susut wajar sampai</span><span style="font-size: 12px; color: #545B63">Selisih sumber − hasil sampai batas ini dianggap susut repacking wajar</span></div>
+          <div style="display: flex; align-items: center; gap: 6px"><input type="text" inputmode="decimal" value="{{rp1.v}}" onChange="{{rp1.set}}" aria-label="Repacking · susut wajar sampai" style="{{rp1.style}}"><span style="font-size: 13px; color: #545B63">% total sumber</span></div>
+          <span style="{{rp1.m.style}}">{{rp1.m.text}}</span>
+        </div>
+      <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 120px minmax(200px, 1.4fr); gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid #ECEDE8">
+          <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">Repacking · peringatan sampai</span><span style="font-size: 12px; color: #545B63">Di atas batas wajar sampai batas ini: dicatat dan diperiksa Admin</span></div>
+          <div style="display: flex; align-items: center; gap: 6px"><input type="text" inputmode="decimal" value="{{rp2.v}}" onChange="{{rp2.set}}" aria-label="Repacking · peringatan sampai" style="{{rp2.style}}"><span style="font-size: 13px; color: #545B63">% total sumber</span></div>
+          <span style="{{rp2.m.style}}">{{rp2.m.text}}</span>
+        </div>
+      <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 120px minmax(200px, 1.4fr); gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid #ECEDE8">
+          <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">Repacking · tolak di atas</span><span style="font-size: 12px; color: #545B63">Otomatis = batas peringatan. Lebih dari ini harus dipisah sebagai dokumen Susut</span></div>
+          <div style="display: flex; align-items: center; gap: 6px"><input type="text" inputmode="decimal" value="{{rp3.v}}" onChange="{{rp3.set}}" aria-label="Repacking · tolak di atas" style="{{rp3.style}}"><span style="font-size: 13px; color: #545B63">% total sumber</span></div>
+          <span style="{{rp3.m.style}}">{{rp3.m.text}}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 120px minmax(200px, 1.4fr); gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid #ECEDE8">
+          <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">Timbang tara · selisih dari rata-rata</span><span style="font-size: 12px; color: #545B63">Tara mobil / kontainer kosong yang menyimpang lebih dari ini dari rata-rata riwayat ditandai</span></div>
+          <div style="display: flex; align-items: center; gap: 6px"><input type="text" inputmode="decimal" value="{{td.v}}" onChange="{{td.set}}" aria-label="Timbang tara · selisih dari rata-rata" style="{{td.style}}"><span style="font-size: 13px; color: #545B63">% total sumber</span></div>
+          <span style="{{td.m.style}}">{{td.m.text}}</span>
+        </div>
+        <h3 style="margin: 18px 0 0; font-size: 15px; font-weight: 700">Batas penimbangan mobil</h3>
+        <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 120px minmax(200px, 1.4fr); gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid #ECEDE8">
+          <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">Bruto maksimum mobil</span><span style="font-size: 12px; color: #545B63">Bruto di atas ini ditolak di pos timbang masuk (overload)</span></div>
+          <div style="display: flex; align-items: center; gap: 6px"><input type="text" inputmode="decimal" value="{{mb.v}}" onChange="{{mb.set}}" aria-label="Bruto maksimum mobil" style="{{mb.style}}"><span style="font-size: 13px; color: #545B63">kg</span></div>
+          <span style="{{mb.m.style}}">{{mb.m.text}}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 120px minmax(200px, 1.4fr); gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid #ECEDE8">
+          <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">Tara maksimum mobil</span><span style="font-size: 12px; color: #545B63">Tara di atas ini dianggap tidak wajar (mobil masih bermuatan?)</span></div>
+          <div style="display: flex; align-items: center; gap: 6px"><input type="text" inputmode="decimal" value="{{mt.v}}" onChange="{{mt.set}}" aria-label="Tara maksimum mobil" style="{{mt.style}}"><span style="font-size: 13px; color: #545B63">kg</span></div>
+          <span style="{{mt.m.style}}">{{mt.m.text}}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 120px minmax(200px, 1.4fr); gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid #ECEDE8">
+          <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">Toleransi net timbang vs input krani</span><span style="font-size: 12px; color: #545B63">Selisih sampai batas ini dianggap wajar; di atasnya ditandai untuk Admin</span></div>
+          <div style="display: flex; align-items: center; gap: 6px"><input type="text" inputmode="decimal" value="{{tn.v}}" onChange="{{tn.set}}" aria-label="Toleransi net timbang vs input krani" style="{{tn.style}}"><span style="font-size: 13px; color: #545B63">% net</span></div>
+          <span style="{{tn.m.style}}">{{tn.m.text}}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 120px minmax(200px, 1.4fr); gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid #ECEDE8">
+          <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">Selisih butuh kode Admin</span><span style="font-size: 12px; color: #545B63">Selisih di atas ini baru bisa diselesaikan dengan kode Admin</span></div>
+          <div style="display: flex; align-items: center; gap: 6px"><input type="text" inputmode="decimal" value="{{ta.v}}" onChange="{{ta.set}}" aria-label="Selisih butuh kode Admin" style="{{ta.style}}"><span style="font-size: 13px; color: #545B63">% net</span></div>
+          <span style="{{ta.m.style}}">{{ta.m.text}}</span>
+        </div>
+        <div style="padding: 16px 0 4px; border-top: 2px solid #DADDD6; margin-top: 8px"><span style="font-size: 15px; font-weight: 700">Jadwal bongkar muat</span><span style="display:block; font-size: 12px; color: #545B63">Dipakai halaman Jadwal untuk menghitung lama bongkar/muat tiap kendaraan</span></div>
+        <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 120px minmax(200px, 1.4fr); gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid #ECEDE8">
+          <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">Kecepatan bongkar (inbound)</span><span style="font-size: 12px; color: #545B63">Qty SPBB dibagi kecepatan ini = lama bongkar per jalur</span></div>
+          <div style="display: flex; align-items: center; gap: 6px"><input type="text" inputmode="decimal" value="{{rb.v}}" onChange="{{rb.set}}" aria-label="Kecepatan bongkar (inbound)" style="{{rb.style}}"><span style="font-size: 13px; color: #545B63">KG/jam</span></div>
+          <span style="{{rb.m.style}}">{{rb.m.text}}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 120px minmax(200px, 1.4fr); gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid #ECEDE8">
+          <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">Kecepatan muat (outbound)</span><span style="font-size: 12px; color: #545B63">Qty SPMB dibagi kecepatan ini = lama muat per jalur</span></div>
+          <div style="display: flex; align-items: center; gap: 6px"><input type="text" inputmode="decimal" value="{{rm.v}}" onChange="{{rm.set}}" aria-label="Kecepatan muat (outbound)" style="{{rm.style}}"><span style="font-size: 13px; color: #545B63">KG/jam</span></div>
+          <span style="{{rm.m.style}}">{{rm.m.text}}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 120px minmax(200px, 1.4fr); gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid #ECEDE8">
+          <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">Waktu persiapan per kendaraan</span><span style="font-size: 12px; color: #545B63">Posisi sandar, buka pintu, cek segel</span></div>
+          <div style="display: flex; align-items: center; gap: 6px"><input type="text" inputmode="decimal" value="{{prep.v}}" onChange="{{prep.set}}" aria-label="Waktu persiapan per kendaraan" style="{{prep.style}}"><span style="font-size: 13px; color: #545B63">menit</span></div>
+          <span style="{{prep.m.style}}">{{prep.m.text}}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 120px minmax(200px, 1.4fr); gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid #ECEDE8">
+          <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">Jeda antar kendaraan</span><span style="font-size: 12px; color: #545B63">Ditambahkan sebelum kendaraan berikut memakai jalur yang sama</span></div>
+          <div style="display: flex; align-items: center; gap: 6px"><input type="text" inputmode="decimal" value="{{gap.v}}" onChange="{{gap.set}}" aria-label="Jeda antar kendaraan" style="{{gap.style}}"><span style="font-size: 13px; color: #545B63">menit</span></div>
+          <span style="{{gap.m.style}}">{{gap.m.text}}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 120px minmax(200px, 1.4fr); gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid #ECEDE8">
+          <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">Jam kerja mulai</span><span style="font-size: 12px; color: #545B63">Format 24 jam JJ:MM</span></div>
+          <div style="display: flex; align-items: center; gap: 6px"><input type="text" inputmode="decimal" value="{{ws.v}}" onChange="{{ws.set}}" aria-label="Jam kerja mulai" style="{{ws.style}}"><span style="font-size: 13px; color: #545B63">JJ:MM</span></div>
+          <span style="{{ws.m.style}}">{{ws.m.text}}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 120px minmax(200px, 1.4fr); gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid #ECEDE8">
+          <div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">Jam kerja selesai</span><span style="font-size: 12px; color: #545B63">Jadwal yang selesai lewat jam ini ditandai</span></div>
+          <div style="display: flex; align-items: center; gap: 6px"><input type="text" inputmode="decimal" value="{{we.v}}" onChange="{{we.set}}" aria-label="Jam kerja selesai" style="{{we.style}}"><span style="font-size: 13px; color: #545B63">JJ:MM</span></div>
+          <span style="{{we.m.style}}">{{we.m.text}}</span>
+        </div>
+      <div style="display: flex; align-items: center; gap: 12px; padding-top: 14px; border-top: 1px solid #ECEDE8">
+        <button type="button" onClick="{{saveTol}}" aria-disabled="{{tolBlocked}}" style="{{tolBtn}}">Simpan batas</button>
+        <span style="font-size: 13px; font-weight: 600; color: #1F6B34">{{tolDone}}</span><span style="font-size: 13px; font-weight: 600; color: #A32020">{{tolErr}}</span>
+      </div>
+    </section>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+      <section aria-label="Master jenis container" style="flex: 999 1 560px; min-width: 0; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; overflow-x: auto">
+        <div style="min-width: 560px">
+          <div style="padding: 14px 16px 6px"><h2 style="margin: 0; font-size: 17px; font-weight: 700">Master jenis container</h2><p style="margin: 4px 0 0; font-size: 12px; color: #545B63">Batas muatan dipakai form SPMB untuk peringatan total tonase. Tidak ada batas bawaan di aplikasi.</p></div>
+          <div style="display: grid; grid-template-columns: 90px minmax(160px, 1fr) 130px 90px; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #DADDD6; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #545B63"><span>Kode</span><span>Nama</span><span style="text-align: right">Batas muatan</span><span>Status</span></div>
+          <sc-for list="{{jc}}" as="r" hint-placeholder-count="3">
+            <button type="button" onClick="{{r.pick}}" aria-pressed="{{r.on}}" style="{{r.style}}">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{r.code}}</span><span>{{r.name}}</span><span style="font-family: 'IBM Plex Mono', monospace; text-align: right">{{r.kg}} KG</span><span style="{{r.stStyle}}">{{r.st}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+
+      <section aria-label="Edit jenis container" style="flex: 1 1 300px; min-width: 0; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px">
+        <h2 style="margin: 0; font-size: 17px; font-weight: 700">{{formTitle}}</h2>
+        <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Kode
+          <input type="text" value="{{f.code}}" onChange="{{setCode}}" style="{{codeStyle}}"><span style="{{cm.style}}">{{cm.text}}</span>
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Nama
+          <input type="text" value="{{f.name}}" onChange="{{setName}}" style="{{nameStyle}}"><span style="{{nm.style}}">{{nm.text}}</span>
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Batas muatan (KG)
+          <input type="text" inputmode="numeric" value="{{f.kg}}" onChange="{{setKg}}" style="{{kgStyle}}"><span style="{{km.style}}">{{km.text}}</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 10px; font-size: 14px"><input type="checkbox" checked="{{f.active}}" onChange="{{toggleActive}}" style="width: 20px; height: 20px; accent-color: #0A57A8">Aktif (muncul di pilihan SPMB)</label>
+        <div style="display: flex; gap: 10px">
+          <button type="button" onClick="{{saveJc}}" aria-disabled="{{jcBlocked}}" style="{{jcBtn}}">Simpan</button>
+          <button type="button" onClick="{{newJc}}" style="height: 42px; padding: 0 14px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 600; color: #16191D">+ Jenis baru</button>
+        </div>
+        <span style="font-size: 13px; font-weight: 600; color: #1F6B34">{{jcDone}}</span>
+      </section>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { tol: { ss: '1', kr: '5', rp1: '0,5', rp2: '2', td: '2', mb: '52000', mt: '20000', tn: '0,5', ta: '2', rb: '12000', rm: '15000', prep: '15', gap: '10', ws: '08:00', we: '17:00' }, jc: [
+{ code: '20', name: 'Container 20 ft', kg: 28000, active: true },
+{ code: '40', name: 'Container 40 ft', kg: 26500, active: true },
+{ code: '40HC', name: 'Container 40 ft HC', kg: 26500, active: true }], sel: 0, form: null, tolDone: '', jcDone: '', tolTried: false };
+}
+renderVals() {
+const S = this.state;
+const f = (n) => n.toLocaleString('id-ID');
+const tone = { err: ['#A32020', '✕'], warn: ['#8A5A00', '!'], ok: ['#1F6B34', '✓'], hint: ['#545B63', ''] };
+const E = (text) => ({ k: 'err', text }), W = (text) => ({ k: 'warn', text }), OK = (text) => ({ k: 'ok', text }), H = (text) => ({ k: 'hint', text });
+const fm = (m) => ({ text: (tone[m.k][1] ? tone[m.k][1] + ' ' : '') + m.text, style: 'font-size: 12px; font-weight: 600; color: ' + tone[m.k][0] });
+const bord = (k) => k === 'err' ? '2px solid #A32020' : (k === 'ok' ? '1px solid #1F6B34' : '1px solid #C9CDC5');
+const num = (v) => Number(String(v).replace(',', '.'));
+// ---- toleransi
+const T = S.tol;
+const pctM = (v, label) => { const n = num(v); if (String(v).trim() === '' || isNaN(n)) return E('Isi angka persen'); if (n <= 0) return E('Harus lebih dari 0'); if (n > 100) return E('Maksimal 100%'); return OK(label); };
+const kgM = (v, label) => { const n = num(v); if (String(v).trim() === '' || isNaN(n)) return E('Isi angka kg'); if (n < 1000) return E('Minimal 1.000 kg'); if (n > 200000) return E('Maksimal 200.000 kg'); return OK(label); };
+const rateM = (v, label) => { const n = num(v); if (String(v).trim() === '' || isNaN(n)) return E('Isi angka kg/jam'); if (n < 500) return E('Minimal 500 kg/jam'); if (n > 100000) return E('Maksimal 100.000 kg/jam'); return OK(label); };
+const minM = (v, label, lo) => { const n = num(v); if (String(v).trim() === '' || isNaN(n) || n !== Math.floor(n)) return E('Isi menit bulat'); if (n < lo) return E('Minimal ' + lo + ' menit'); if (n > 240) return E('Maksimal 240 menit'); return OK(label); };
+const hhmm = (v) => { const m = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(String(v).trim()); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+const hM = (v, label) => hhmm(v) === null ? E('Format JJ:MM, contoh 08:00') : OK(label);
+const ms = { rb: rateM(T.rb, 'Bongkar 20.000 KG ≈ ' + Math.round(20000 / Math.max(num(T.rb), 1) * 60) + ' menit di luar persiapan'), rm: rateM(T.rm, 'Muat 20.000 KG ≈ ' + Math.round(20000 / Math.max(num(T.rm), 1) * 60) + ' menit di luar persiapan'), prep: minM(T.prep, 'Persiapan ' + T.prep + ' menit', 0), gap: minM(T.gap, 'Jeda ' + T.gap + ' menit', 0), ws: hM(T.ws, 'Mulai ' + T.ws), we: hM(T.we, 'Selesai ' + T.we), ss: pctM(T.ss, 'Susut di atas ' + T.ss + '% ditandai'), kr: pctM(T.kr, 'Koreksi kurang di atas ' + T.kr + '% wajib catatan'), rp1: pctM(T.rp1, 'Wajar sampai ' + T.rp1 + '%'), rp2: pctM(T.rp2, 'Peringatan sampai ' + T.rp2 + '%'), td: pctM(T.td, 'Peringatan bila tara menyimpang lebih dari ' + T.td + '%'),
+mb: kgM(T.mb, 'Bruto > ' + f(num(T.mb)) + ' kg ditolak'), mt: kgM(T.mt, 'Tara > ' + f(num(T.mt)) + ' kg tidak wajar'), tn: pctM(T.tn, 'Wajar sampai ' + T.tn + '%'), ta: pctM(T.ta, 'Kode Admin di atas ' + T.ta + '%') };
+if (ms.ws.k === 'ok' && ms.we.k === 'ok' && hhmm(T.we) <= hhmm(T.ws)) ms.we = E('Harus setelah jam mulai');
+if (ms.mb.k === 'ok' && ms.mt.k === 'ok' && num(T.mt) >= num(T.mb)) ms.mt = E('Harus lebih kecil dari bruto maksimum');
+if (ms.tn.k === 'ok' && ms.ta.k === 'ok' && num(T.ta) <= num(T.tn)) ms.ta = E('Harus lebih besar dari toleransi (' + T.tn + '%)');
+if (ms.rp1.k === 'ok' && ms.rp2.k === 'ok' && num(T.rp2) <= num(T.rp1)) ms.rp2 = E('Harus lebih besar dari batas wajar (' + T.rp1 + '%)');
+const tf = (key) => ({ v: T[key] === undefined ? '' : T[key], set: (e) => this.setState({ tol: Object.assign({}, T, { [key]: e.target.value }), tolDone: '' }), m: fm(ms[key]), style: 'height: 40px; width: 100%; box-sizing: border-box; padding: 0 10px; border-radius: 10px; font-family: \'IBM Plex Mono\', monospace; font-size: 14px; color: #16191D; border: ' + bord(ms[key].k) });
+const tolBad = ['ss', 'kr', 'rp1', 'rp2', 'td', 'mb', 'mt', 'tn', 'ta', 'rb', 'rm', 'prep', 'gap', 'ws', 'we'].filter((k) => ms[k].k === 'err').length;
+const rp3 = { v: T.rp2, set: () => {}, m: fm(ms.rp2.k === 'err' ? H('Mengikuti batas peringatan') : OK('Tolak di atas ' + T.rp2 + '%')), style: 'height: 40px; width: 100%; box-sizing: border-box; padding: 0 10px; border-radius: 10px; font-family: \'IBM Plex Mono\', monospace; font-size: 14px; color: #545B63; background: #F2F3EF; border: 1px solid #C9CDC5' };
+// ---- jenis container
+const sel = S.form || S.jc[S.sel];
+const isNew = S.form && S.form.isNew;
+const code = String(sel.code || '').toUpperCase().trim();
+let cm;
+if (!code) cm = E('Kode wajib diisi');
+else if (!/^[A-Z0-9]{1,6}$/.test(code)) cm = E('Huruf/angka saja, maksimal 6');
+else if (isNew && S.jc.some((x) => x.code === code)) cm = E('Kode sudah ada');
+else cm = OK(isNew ? 'Kode baru' : 'Kode tidak bisa diubah');
+const nm = !String(sel.name || '').trim() ? E('Nama wajib diisi') : OK('OK');
+const kgN = num(sel.kg);
+let km;
+if (String(sel.kg).trim() === '' || isNaN(kgN)) km = E('Isi batas muatan');
+else if (kgN <= 0) km = E('Harus lebih dari 0');
+else if (kgN > 40000) km = W('Di atas 40.000 KG · pastikan angkanya benar');
+else km = OK(f(kgN) + ' KG');
+const jcBad = [cm, nm, km].some((m) => m.k === 'err');
+const upd = (o) => this.setState({ form: Object.assign({}, sel, o, { isNew: !!isNew }), jcDone: '' });
+const bst = (ok) => 'height: 42px; padding: 0 20px; border-radius: 10px; border: none; font-family: inherit; font-size: 14px; font-weight: 600; ' + (ok ? 'background: #0A57A8; color: #FFFFFF; cursor: pointer' : 'background: #C9CDC5; color: #545B63; cursor: not-allowed');
+const pill = (bg, fg) => 'justify-self: start; padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; background: ' + bg + '; color: ' + fg;
+return {
+ss: tf('ss'), kr: tf('kr'), rp1: tf('rp1'), rp2: tf('rp2'), td: tf('td'), mb: tf('mb'), mt: tf('mt'), tn: tf('tn'), ta: tf('ta'), rb: tf('rb'), rm: tf('rm'), prep: tf('prep'), gap: tf('gap'), ws: tf('ws'), we: tf('we'), rp3,
+tolBlocked: tolBad > 0, tolBtn: bst(tolBad === 0), tolDone: S.tolDone, tolErr: S.tolTried && tolBad > 0 ? 'Perbaiki ' + tolBad + ' isian yang merah' : '',
+saveTol: () => { if (tolBad > 0) { this.setState({ tolTried: true }); return; } this.setState({ tolDone: 'Batas tersimpan · dipakai Penyesuaian, Repacking & Jadwal', tolTried: false }); },
+jc: S.jc.map((x, i) => ({ code: x.code, name: x.name, kg: f(x.kg), on: !S.form && i === S.sel, st: x.active ? 'Aktif' : 'Nonaktif', stStyle: x.active ? pill('#E3F2E7', '#1F6B34') : pill('#ECEDE8', '#545B63'),
+style: 'width: 100%; display: grid; grid-template-columns: 90px minmax(160px, 1fr) 130px 90px; gap: 10px; align-items: center; padding: 12px 16px; border: none; border-bottom: 1px solid #ECEDE8; font-family: inherit; font-size: 13px; text-align: left; color: #16191D; cursor: pointer; background: ' + (!S.form && i === S.sel ? '#E6EEF8' : '#FFFFFF'),
+pick: () => this.setState({ sel: i, form: null, jcDone: '' }) })),
+formTitle: isNew ? 'Jenis container baru' : 'Edit ' + sel.code,
+f: { code: sel.code, name: sel.name, kg: sel.kg, active: sel.active },
+setCode: (e) => { if (isNew) upd({ code: e.target.value }); }, setName: (e) => upd({ name: e.target.value }), setKg: (e) => upd({ kg: e.target.value }), toggleActive: () => upd({ active: !sel.active }),
+codeStyle: 'height: 40px; padding: 0 10px; border-radius: 10px; font-family: \'IBM Plex Mono\', monospace; font-size: 14px; color: #16191D; border: ' + bord(cm.k === 'err' ? 'err' : 'x') + (isNew ? '' : '; background: #F2F3EF'),
+nameStyle: 'height: 40px; padding: 0 10px; border-radius: 10px; font-family: inherit; font-size: 14px; color: #16191D; border: ' + bord(nm.k),
+kgStyle: 'height: 40px; padding: 0 10px; border-radius: 10px; font-family: \'IBM Plex Mono\', monospace; font-size: 14px; color: #16191D; border: ' + bord(km.k === 'err' ? 'err' : 'x'),
+cm: fm(cm), nm: fm(nm), km: fm(km), jcBlocked: jcBad, jcBtn: bst(!jcBad), jcDone: S.jcDone,
+newJc: () => this.setState({ form: { code: '', name: '', kg: '', active: true, isNew: true }, jcDone: '' }),
+saveJc: () => { if (jcBad) return; const rec = { code, name: String(sel.name).trim(), kg: kgN, active: !!sel.active }; const list = isNew ? S.jc.concat([rec]) : S.jc.map((x, i) => (i === S.sel ? rec : x)); this.setState({ jc: list, sel: isNew ? list.length - 1 : S.sel, form: null, jcDone: 'Tersimpan · ' + rec.code + ' ' + f(rec.kg) + ' KG' }); }
+};
+}
+}
+</script>
+</body>
+</html>

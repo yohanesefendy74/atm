@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>CMS Cek Input Krani</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F2F3EF}
+a{color:#0A57A8}a:hover{color:#063E7A}
+</style>
+</helmet>
+<div style="width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D">
+  <aside aria-label="Menu CMS" style="flex: 1 1 220px; max-width: 100%; box-sizing: border-box; background: #16191D; color: #FFFFFF; padding: 24px 16px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; flex-direction: column; gap: 2px; padding: 0 8px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #C5CAD1">Gudang ATM</span>
+      <span style="font-size: 20px; font-weight: 700">CMS Admin</span>
+    </div>
+    <nav style="display: flex; flex-direction: column; gap: 4px">
+      <a href="CMS-Rencana.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">SPBB &amp; SPMB</a>
+      <a href="CMS-Surat-Jalan.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Surat Jalan</a>
+      <a href="CMS-Riwayat-Berat.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Riwayat Berat</a>
+      <a href="CMS-Jadwal.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Jadwal Bongkar Muat</a>
+      <a href="CMS-List.dc.html" aria-current="page" style="display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #2A2E34; color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 600">Cek Input Krani <span style="padding: 2px 8px; border-radius: 10px; background: #F2A27E; color: #16191D; font-size: 12px; font-weight: 700">4</span></a>
+      <a href="#" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Stock &amp; Kartu Stok</a>
+      <a href="Laporan-Menu.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Laporan</a>
+      <a href="CMS-Cetak-Label.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Cetak Label</a>
+      <a href="CMS-Master-Ruangan.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Master Warehouse &amp; Ruangan</a>
+      <a href="CMS-Master-Palet.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Master Palet</a>
+      <a href="CMS-Setup.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Setup</a>
+      <a href="#" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Master Item</a>
+      <a href="#" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Business Partner (OCRD)</a>
+    </nav>
+  </aside>
+
+  <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px; display: flex; flex-direction: column; gap: 20px">
+    <header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #545B63">Langkah 1 · Verifikasi</span>
+        <h1 style="margin: 0; font-size: 28px; font-weight: 700">Cek Hasil Input Krani</h1>
+        <p style="margin: 0; font-size: 14px; color: #545B63">Pilah TrxCode, lengkapi PT, CardCode, NumAtCard &amp; BL, koreksi qty, lalu posting ke stock.</p>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px">
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #545B63">Periode
+          <select style="height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 14px; color: #16191D"><option>01 – 09 Okt 2026</option></select>
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #545B63">Warehouse
+          <select style="height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 14px; color: #16191D"><option>Semua</option><option>WH-JKT01</option><option>WH-JKT02</option></select>
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #545B63">Cari
+          <input type="search" placeholder="No. dok / container / mobil" style="height: 40px; width: 220px; max-width: 100%; box-sizing: border-box; padding: 0 12px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 14px">
+        </label>
+      </div>
+    </header>
+
+    <section aria-label="Ringkasan" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px">
+      <div style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 12px; font-weight: 600; color: #7A5300">PERLU DICEK</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600">4</span><span style="font-size: 12px; color: #545B63">2 belum dipilah TrxCode</span></div>
+      <div style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 12px; font-weight: 600; color: #0A57A8">SIAP POSTING</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600">2</span><span style="font-size: 12px; color: #545B63">semua field wajib lengkap</span></div>
+      <div style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 12px; font-weight: 600; color: #8A2E08">QTY DIEDIT ADMIN</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600">3 baris</span><span style="font-size: 12px; color: #545B63">nilai krani tersimpan di *_scan</span></div>
+      <div style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 12px; font-weight: 600; color: #1F6B34">CLOSED</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600">2</span><span style="font-size: 12px; color: #545B63">sudah masuk stock</span></div>
+    </section>
+
+    <div role="tablist" aria-label="Jenis input krani" style="display: flex; flex-wrap: wrap; gap: 8px">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="5">
+        <button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+      </sc-for>
+    </div>
+
+    <section aria-label="Daftar transaksi" style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; overflow-x: auto">
+      <div style="min-width: 1180px">
+        <div style="display: grid; grid-template-columns: 130px 64px 110px 150px 120px 100px 64px minmax(170px, 1fr) 130px 96px 76px 96px 120px; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #DADDD6; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #545B63">
+          <span>No. Dok</span><span>Tgl</span><span>Input krani</span><span>TrxCode</span><span>Container</span><span>Mobil</span><span>PT</span><span>CardCode</span><span>NumAtCard / DO</span><span>No BL</span><span>Krani</span><span>Selisih</span><span>Status</span>
+        </div>
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="7">
+          <a href="CMS-Detail.dc.html" style="display: grid; grid-template-columns: 130px 64px 110px 150px 120px 100px 64px minmax(170px, 1fr) 130px 96px 76px 96px 120px; gap: 10px; align-items: center; padding: 12px 16px; border-bottom: 1px solid #ECEDE8; text-decoration: none; color: #16191D; font-size: 13px">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{r.no}}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; color: #545B63">{{r.tgl}}</span>
+            <span>{{r.input}}</span>
+            <span style="{{r.trxStyle}}">{{r.trx}}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace">{{r.cont}}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace">{{r.mobil}}</span>
+            <span style="font-weight: 600">{{r.pt}}</span>
+            <span style="{{r.bpStyle}}">{{r.bp}}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace">{{r.ref}}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace">{{r.bl}}</span>
+            <span>{{r.by}}</span>
+            <span style="{{r.diffStyle}}">{{r.diff}}</span>
+            <span style="{{r.stStyle}}">{{r.st}}</span>
+          </a>
+        </sc-for>
+      </div>
+    </section>
+    <p style="margin: 0; font-size: 12px; color: #545B63">Klik baris untuk membuka detail. Hanya transaksi berstatus Closed yang masuk ke stock dan laporan.</p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { tab: 'Semua' };
+}
+renderVals() {
+const data = [
+['261000000145', '09/10', 'Inbound', null, 'TGHU8812348', 'B 9123 KXT', '—', null, '—', '—', 'ELLY', '0', 'Perlu dicek'],
+['261000000144', '09/10', 'Inbound', 'IB · Inbound Supplier', 'MSKU4410272', 'B 9071 UAB', 'PHS', 'SHANDONG GOODFARMER', '014981', '[No BL]', 'ANDIKA', '−50 KG', 'Siap posting'],
+['261000000143', '08/10', 'Inbound', 'RC · Retur Customer', '—', 'B 9455 TQS', 'ACA', 'PT MEGA SAKTI JAYA', 'per detail', '—', 'CHESYA', '0', 'Perlu dicek'],
+['261000000091', '09/10', 'Outbound', 'OB · Outbound', 'TGHU8812348', 'B 9555 KLA', 'ATM', 'PT SANGKAYA MAKMUR ABADI', 'SJ005617', '—', 'CHESYA', '0', 'Perlu dicek'],
+['261000000012', '07/10', 'Penyesuaian', null, 'MNBU3565534', '—', 'ACA', null, '—', '—', 'ANDIKA', '−10 KG', 'Perlu dicek'],
+['261000000013', '07/10', 'Penyesuaian', 'RP · Repacking', 'SEGU9913680', '—', 'NKRI', null, '—', '—', 'RINDI', '0', 'Siap posting'],
+['261000000142', '06/10', 'Inbound', 'BT · Barang Titipan', 'TCNU5523988', 'B 9310 KLM', 'PHS', 'JIANGSU TRI-LAND', '015013', '[No BL]', 'ELLY', '0', 'Closed'],
+['261000000088', '05/10', 'Outbound', 'OB · Outbound', 'TCLU7710445', 'B 9555 KLA', 'ATM', 'OPIK SENEN', 'SJ005958', '—', 'ADIT', '0', 'Closed']
+];
+const st = { 'Perlu dicek': ['#FFF4D6', '#7A5300'], 'Siap posting': ['#E6EEF8', '#0A57A8'], 'Closed': ['#E3F2E7', '#1F6B34'] };
+const pill = (bg, fg) => 'justify-self: start; padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; background: ' + bg + '; color: ' + fg;
+const tabNames = ['Semua', 'Inbound', 'Outbound', 'Penyesuaian'];
+const base = 'height: 36px; padding: 0 14px; border-radius: 18px; font-family: inherit; font-size: 13px; cursor: pointer;';
+const tabs = tabNames.map((n) => ({
+label: n + ' · ' + (n === 'Semua' ? data.length : data.filter((d) => d[2] === n).length),
+on: this.state.tab === n,
+style: base + (this.state.tab === n ? ' border: none; background: #16191D; color: #FFFFFF; font-weight: 600;' : ' border: 1px solid #DADDD6; background: #FFFFFF; color: #16191D; font-weight: 500;'),
+pick: () => this.setState({ tab: n })
+}));
+const rows = data.filter((d) => this.state.tab === 'Semua' || d[2] === this.state.tab).map((d) => ({
+no: d[0], tgl: d[1], input: d[2],
+trx: d[3] || 'Belum dipilah',
+trxStyle: d[3] ? pill('#ECEDE8', '#16191D') : 'justify-self: start; padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; border: 1.5px dashed #B93E0B; color: #8A2E08',
+cont: d[4], mobil: d[5], pt: d[6],
+bp: d[7] || (d[2] === 'Penyesuaian' ? 'tidak perlu' : 'belum diisi'),
+bpStyle: d[7] ? 'font-weight: 500' : 'color: #545B63; font-style: italic',
+ref: d[8], bl: d[9], by: d[10], diff: d[11],
+diffStyle: 'font-family: \'IBM Plex Mono\', monospace; font-weight: 600; color: ' + (d[11] === '0' ? '#545B63' : '#8A2E08'),
+st: d[12], stStyle: pill(st[d[12]][0], st[d[12]][1])
+}));
+return { tabs, rows };
+}
+}
+</script>
+</body>
+</html>

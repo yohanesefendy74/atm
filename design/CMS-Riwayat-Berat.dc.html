@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Riwayat Berat</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F2F3EF}
+a{color:#0A57A8}a:hover{color:#063E7A}
+</style>
+</helmet>
+<div style="width: 100%; box-sizing: border-box; display: flex; flex-wrap: wrap; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D">
+  <aside aria-label="Menu CMS" style="flex: 1 1 220px; max-width: 100%; box-sizing: border-box; background: #16191D; color: #FFFFFF; padding: 24px 16px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; flex-direction: column; gap: 2px; padding: 0 8px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #C5CAD1">Gudang ATM</span>
+      <span style="font-size: 20px; font-weight: 700">CMS Admin</span>
+    </div>
+    <nav style="display: flex; flex-direction: column; gap: 4px">
+      <a href="CMS-Rencana.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">SPBB &amp; SPMB</a>
+      <a href="CMS-Surat-Jalan.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Surat Jalan</a>
+      <a href="CMS-Riwayat-Berat.dc.html" aria-current="page" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #2A2E34; color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 600">Riwayat Berat</a>
+      <a href="CMS-Jadwal.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Jadwal Bongkar Muat</a>
+      <a href="CMS-List.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Cek Input Krani</a>
+      <a href="CMS-Master-Ruangan.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Master Warehouse &amp; Ruangan</a>
+      <a href="CMS-Master-Palet.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Master Palet</a>
+      <a href="Laporan-Menu.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Laporan</a>
+      <a href="CMS-Cetak-Label.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: #C5CAD1; text-decoration: none; font-size: 14px">Cetak Label</a>
+          <a href="CMS-Setup.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; background: #2A2E34; color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 600">Setup</a>
+    </nav>
+  </aside>
+
+  
+  <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px; display: flex; flex-direction: column; gap: 20px">
+    <header style="display: flex; flex-direction: column; gap: 4px">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #545B63">Timbangan</span>
+      <h1 style="margin: 0; font-size: 28px; font-weight: 700">Riwayat Berat</h1>
+      <p style="margin: 0; font-size: 14px; color: #545B63">Setiap penimbangan tara mobil dan kontainer kosong tersimpan otomatis. Dipakai sebagai acuan saat timbang berikutnya: bila tara jauh dari rata-rata, krani dan operator mendapat peringatan.</p>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+      <div role="tablist" aria-label="Jenis riwayat" style="display: flex; gap: 8px">
+        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="2"><button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button></sc-for>
+      </div>
+      <input type="search" value="{{q}}" onChange="{{setQ}}" placeholder="{{ph}}" aria-label="Cari" style="height: 40px; width: 280px; max-width: 100%; box-sizing: border-box; padding: 0 12px; border-radius: 10px; border: 1px solid #C9CDC5; font-family: inherit; font-size: 14px; color: #16191D; background: #FFFFFF">
+    </div>
+
+    <section aria-label="Ringkasan" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px">
+      <sc-for list="{{kpis}}" as="k" hint-placeholder-count="3"><div style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 12px; font-weight: 600; color: #545B63; text-transform: uppercase">{{k.l}}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 24px; font-weight: 600">{{k.v}}</span><span style="font-size: 12px; color: #545B63">{{k.s}}</span></div></sc-for>
+    </section>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+      <section aria-label="Daftar" style="flex: 1 1 520px; min-width: 0; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; overflow-x: auto">
+        <div style="min-width: 640px">
+          <div style="display: grid; grid-template-columns: minmax(130px, 1fr) 90px 110px 110px 90px 110px; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #DADDD6; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #545B63"><span>{{colId}}</span><span style="text-align: right">Timbang</span><span style="text-align: right">Tara terakhir</span><span style="text-align: right">Rata-rata</span><span style="text-align: right">Selisih</span><span>Status</span></div>
+          <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+            <button type="button" onClick="{{r.pick}}" aria-pressed="{{r.on}}" style="{{r.style}}">
+              <span style="display: flex; flex-direction: column; text-align: left"><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{r.id}}</span><span style="font-size: 11px; color: #545B63">{{r.sub}}</span></span>
+              <span style="font-family: 'IBM Plex Mono', monospace; text-align: right">{{r.n}}×</span><span style="font-family: 'IBM Plex Mono', monospace; text-align: right; font-weight: 600">{{r.last}} kg</span><span style="font-family: 'IBM Plex Mono', monospace; text-align: right">{{r.avg}} kg</span><span style="{{r.dStyle}}">{{r.dev}}</span><span style="{{r.stStyle}}">{{r.st}}</span>
+            </button>
+          </sc-for>
+          <sc-if value="{{empty}}" hint-placeholder-val="{{ false }}"><div style="padding: 14px; font-size: 13px; color: #545B63">Tidak ada data yang cocok.</div></sc-if>
+        </div>
+      </section>
+
+      <section aria-label="Riwayat" style="flex: 1 1 380px; min-width: 0; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px">
+        <sc-if value="{{noSel}}" hint-placeholder-val="{{ false }}"><div style="padding: 24px 6px; text-align: center; font-size: 14px; color: #545B63">Pilih baris untuk melihat riwayat penimbangan.</div></sc-if>
+        <sc-if value="{{hasSel}}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; flex-direction: column; gap: 2px"><h2 style="margin: 0; font-size: 17px; font-weight: 700"><span style="font-family: 'IBM Plex Mono', monospace;">{{d.id}}</span></h2><span style="font-size: 12px; color: #545B63">{{d.sub}}</span></div>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+            <div style="padding: 8px 10px; border-radius: 10px; background: #F2F3EF; display: flex; flex-direction: column"><span style="font-size: 11px; color: #545B63">Terendah</span><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{d.min}}</span></div>
+            <div style="padding: 8px 10px; border-radius: 10px; background: #F2F3EF; display: flex; flex-direction: column"><span style="font-size: 11px; color: #545B63">Rata-rata</span><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{d.avg}}</span></div>
+            <div style="padding: 8px 10px; border-radius: 10px; background: #F2F3EF; display: flex; flex-direction: column"><span style="font-size: 11px; color: #545B63">Tertinggi</span><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600">{{d.max}}</span></div>
+          </div>
+          <span style="{{d.m.style}}">{{d.m.text}}</span>
+          <div style="display: flex; align-items: flex-end; gap: 4px; height: 56px" aria-label="Tren tara"><sc-for list="{{d.bars}}" as="b" hint-placeholder-count="5"><span style="{{b.style}}"></span></sc-for></div>
+          <div style="border: 1px solid #DADDD6; border-radius: 10px; overflow-x: auto">
+            <div style="min-width: 420px">
+              <div style="display: grid; grid-template-columns: 84px minmax(100px, 1fr) 86px 70px; gap: 8px; padding: 8px 12px; background: #F2F3EF; font-size: 11px; font-weight: 600; text-transform: uppercase; color: #545B63"><span>Tanggal</span><span>{{d.colExtra}}</span><span style="text-align: right">Tara (kg)</span><span>Sumber</span></div>
+              <sc-for list="{{d.hist}}" as="h" hint-placeholder-count="4">
+                <div style="display: grid; grid-template-columns: 84px minmax(100px, 1fr) 86px 70px; gap: 8px; align-items: center; padding: 8px 12px; border-top: 1px solid #ECEDE8; font-size: 12px"><span style="font-family: 'IBM Plex Mono', monospace;">{{h.tgl}}</span><span style="display: flex; flex-direction: column"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px">{{h.tiket}}</span><span style="color: #545B63">{{h.extra}}</span></span><span style="{{h.kgStyle}}">{{h.kg}}</span><span style="{{h.srcStyle}}">{{h.src}}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+      </section>
+    </div>
+    <p style="margin: 0; font-size: 12px; color: #545B63">Riwayat tidak bisa diedit atau dihapus. Penimbangan manual ditandai dan dibandingkan dengan riwayat LAN. Batas selisih peringatan: {{devPct}}% dari rata-rata (diatur di Setup).</p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { tab: 'mobil', q: '', sel: '' };
+}
+renderVals() {
+const S = this.state;
+const f = (n) => Math.round(n).toLocaleString('id-ID');
+const DEV = 2; // batas selisih tara (%), dari CMS · Setup
+const tone = { err: ['#A32020', '✕'], warn: ['#8A5A00', '!'], ok: ['#1F6B34', '✓'], hint: ['#545B63', ''] };
+const fm = (m) => ({ text: (tone[m.k][1] ? tone[m.k][1] + ' ' : '') + m.text, style: 'font-size: 12px; font-weight: 600; color: ' + tone[m.k][0] });
+const pill = (bg, fg) => 'justify-self: start; padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; background: ' + bg + '; color: ' + fg;
+// h: [tanggal, tiket, tara, sumber, extra]
+const MOBIL = [
+{ id: 'B 9555 KLA', sub: 'Truk trailer · WH-JKT01', h: [['14/10', 'TB-261014-0001', 8420, 'LAN', 'Sopir Hasan'], ['07/10', 'TB-261007-0012', 8390, 'LAN', 'Sopir Hasan'], ['30/09', 'TB-260930-0004', 8410, 'LAN', 'Sopir Hasan'], ['22/09', 'TB-260922-0020', 8400, 'LAN', 'Sopir Hasan']] },
+{ id: 'B 9123 KXT', sub: 'Truk box · WH-JKT01', h: [['13/10', 'TB-261013-0031', 9020, 'LAN', 'Sopir Rudi'], ['06/10', 'TB-261006-0009', 9040, 'LAN', 'Sopir Rudi'], ['29/09', 'TB-260929-0017', 9010, 'LAN', 'Sopir Rudi']] },
+{ id: 'B 9777 XYZ', sub: 'Pickup · WH-JKT02 (tanpa timbangan mobil)', h: [['14/10', 'TB-261014-0003', 2100, 'MANUAL', 'Sopir Ujang'], ['01/10', 'TB-261001-0006', 1850, 'MANUAL', 'Sopir Ujang']] },
+{ id: 'B 9390 STU', sub: 'Truk trailer · WH-JKT02', h: [['14/10', 'TB-261014-0005', 8950, 'LAN', 'Sopir Dedi'], ['08/10', 'TB-261008-0002', 8460, 'LAN', 'Sopir Dedi'], ['01/10', 'TB-261001-0011', 8470, 'LAN', 'Sopir Dedi']] }
+];
+const KONT = [
+{ id: 'TGHU8812348', sub: '40 ft · tara CSC 3.800 kg', h: [['14/10', 'TB-261014-0001', 3810, 'LAN', 'dibawa B 9555 KLA'], ['02/10', 'TB-261002-0008', 3805, 'LAN', 'dibawa B 9555 KLA'], ['20/09', 'TB-260920-0015', 3815, 'LAN', 'masuk yard YARD-A03']] },
+{ id: 'MSKU4410272', sub: '20 ft · tara CSC 2.230 kg', h: [['10/10', 'TB-261010-0006', 2240, 'LAN', 'dibawa B 9071 UAB'], ['25/09', 'TB-260925-0003', 2235, 'LAN', 'masuk yard YARD-B01']] },
+{ id: 'MNBU3565534', sub: '40 ft HC · tara CSC 3.940 kg', h: [['14/10', 'TB-261014-0007', 4180, 'LAN', 'ambil dari yard'], ['05/10', 'TB-261005-0010', 3950, 'LAN', 'masuk yard YARD-B01'], ['18/09', 'TB-260918-0002', 3945, 'LAN', 'masuk yard YARD-B01']] }
+];
+const data = S.tab === 'mobil' ? MOBIL : KONT;
+const calc = (x) => { const v = x.h.map((r) => r[2]); const avg = v.reduce((a, b) => a + b, 0) / v.length; const last = v[0]; const dev = (last - avg) / avg * 100; return { v, avg, last, dev, min: Math.min.apply(null, v), max: Math.max.apply(null, v), bad: x.h.length > 1 && Math.abs(dev) > DEV, manual: x.h.some((r) => r[3] === 'MANUAL') }; };
+const q = String(S.q || '').toLowerCase();
+const list = data.filter((x) => !q || (x.id + ' ' + x.sub).toLowerCase().indexOf(q) >= 0);
+const rows = list.map((x) => { const c = calc(x); const on = S.sel === x.id;
+return { id: x.id, sub: x.sub, n: x.h.length, last: f(c.last), avg: f(c.avg), dev: (c.dev > 0 ? '+' : '') + c.dev.toFixed(1).replace('.', ',') + '%', dStyle: 'font-family: \'IBM Plex Mono\', monospace; text-align: right; font-weight: 600; color: ' + (c.bad ? '#8A5A00' : '#545B63'),
+st: c.bad ? 'Periksa' : (c.manual ? 'Ada manual' : 'Normal'), stStyle: c.bad ? pill('#FFF4D6', '#5C3F00') : (c.manual ? pill('#ECEDE8', '#545B63') : pill('#E3F2E7', '#1F6B34')),
+style: 'width: 100%; display: grid; grid-template-columns: minmax(130px, 1fr) 90px 110px 110px 90px 110px; gap: 10px; align-items: center; padding: 11px 16px; border: none; border-bottom: 1px solid #ECEDE8; font-family: inherit; font-size: 13px; color: #16191D; cursor: pointer; background: ' + (on ? '#E6EEF8' : '#FFFFFF'),
+pick: () => this.setState({ sel: x.id }) }; });
+const all = data.map(calc);
+const kpis = [
+{ l: S.tab === 'mobil' ? 'Mobil tercatat' : 'Kontainer tercatat', v: data.length, s: data.reduce((a, x) => a + x.h.length, 0) + ' penimbangan tara' },
+{ l: 'Perlu diperiksa', v: all.filter((c) => c.bad).length, s: 'tara terakhir > ' + DEV + '% dari rata-rata' },
+{ l: 'Timbang manual', v: data.reduce((a, x) => a + x.h.filter((r) => r[3] === 'MANUAL').length, 0), s: 'bukan dari indikator LAN' }
+];
+const selRec = data.filter((x) => x.id === S.sel)[0] || null;
+let d = {};
+if (selRec) { const c = calc(selRec);
+const mm = selRec.h.length < 2 ? { k: 'hint', text: 'Baru satu penimbangan · jadi acuan berikutnya' } : (c.bad ? { k: 'warn', text: 'Tara terakhir ' + f(c.last) + ' kg berbeda ' + Math.abs(c.dev).toFixed(1).replace('.', ',') + '% dari rata-rata ' + f(c.avg) + ' kg · cek muatan sisa / timbangan' } : { k: 'ok', text: 'Tara terakhir konsisten dengan riwayat (rata-rata ' + f(c.avg) + ' kg)' });
+const ordered = selRec.h.slice().reverse(), span = Math.max(1, c.max - c.min);
+d = { id: selRec.id, sub: selRec.sub, min: f(c.min), avg: f(c.avg), max: f(c.max), m: fm(mm), colExtra: S.tab === 'mobil' ? 'Tiket · sopir' : 'Tiket · keterangan',
+bars: ordered.map((r, i) => ({ style: 'flex: 1; border-radius: 3px 3px 0 0; height: ' + (18 + Math.round((r[2] - c.min) / span * 34)) + 'px; background: ' + (i === ordered.length - 1 ? '#0A57A8' : '#C9CDC5') })),
+hist: selRec.h.map((r, i) => ({ tgl: r[0], tiket: r[1], extra: r[4], kg: f(r[2]), kgStyle: 'font-family: \'IBM Plex Mono\', monospace; text-align: right; font-weight: ' + (i === 0 ? '700' : '500'), src: r[3] === 'LAN' ? 'LAN' : 'Manual', srcStyle: pill(r[3] === 'LAN' ? '#E3F2E7' : '#FFF4D6', r[3] === 'LAN' ? '#1F6B34' : '#5C3F00') })) };
+}
+return {
+tabs: [['mobil', 'Berat mobil (tara)'], ['kontainer', 'Kontainer kosong']].map((t) => ({ label: t[1], on: S.tab === t[0], style: 'height: 38px; padding: 0 16px; border-radius: 19px; font-family: inherit; font-size: 13px; cursor: pointer; ' + (S.tab === t[0] ? 'border: none; background: #16191D; color: #FFFFFF; font-weight: 600' : 'border: 1px solid #DADDD6; background: #FFFFFF; color: #16191D; font-weight: 500'), pick: () => this.setState({ tab: t[0], sel: '', q: '' }) })),
+q: S.q, setQ: (e) => this.setState({ q: e.target.value }), ph: S.tab === 'mobil' ? 'Cari no. polisi' : 'Cari no. kontainer',
+colId: S.tab === 'mobil' ? 'No. polisi' : 'Kontainer', kpis, rows, empty: !rows.length, noSel: !selRec, hasSel: !!selRec, d, devPct: DEV
+};
+}
+}
+</script>
+</body>
+</html>

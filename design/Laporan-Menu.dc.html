@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Menu Laporan</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A57A8}a:hover{color:#063E7A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D; overflow: hidden">
+  <header style="padding: 24px 20px 14px; display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border-bottom: 1px solid #DADDD6">
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 12px; font-weight: 600; color: #545B63; letter-spacing: 0.06em; text-transform: uppercase">Gudang Basah</span>
+      <h1 style="margin: 0; font-size: 24px; font-weight: 700">Laporan</h1>
+    </div>
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px">
+      <label style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+        <span style="font-size: 12px; font-weight: 600; color: #545B63">Per tanggal</span>
+        <input type="date" value="2026-10-08" style="height: 44px; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 14px; color: #16191D">
+      </label>
+      <label style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+        <span style="font-size: 12px; font-weight: 600; color: #545B63">Gudang</span>
+        <select style="height: 44px; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 14px; color: #16191D"><option>Semua gudang</option><option>E11</option><option>E5</option></select>
+      </label>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow: hidden; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px">
+    <section aria-label="Ringkasan stok" style="background: #16191D; color: #FFFFFF; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 8px">
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #C5CAD1; font-weight: 600">Total stock</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 24px; font-weight: 600; line-height: 1.1">24.260 <span style="font-size: 14px">SAK</span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #C5CAD1">486.111,5 KG</span></span>
+        <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px"><span style="font-size: 12px; color: #C5CAD1; font-weight: 600">Umur stok rata-rata</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 600">49,3 <span style="font-size: 13px">hari</span></span></span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding-top: 12px; border-top: 1px solid #3A3F46; font-size: 12px; color: #C5CAD1">
+        <span><strong style="display: block; font-family: 'IBM Plex Mono', monospace; font-size: 16px; color: #FFFFFF">37</strong>container banyak</span>
+        <span><strong style="display: block; font-family: 'IBM Plex Mono', monospace; font-size: 16px; color: #FFFFFF">13</strong>sedikit (≤20 sak)</span>
+        <span><strong style="display: block; font-family: 'IBM Plex Mono', monospace; font-size: 16px; color: #FFFFFF">57</strong>habis</span>
+      </div>
+    </section>
+
+    <a href="Kartu-Stok.dc.html" style="display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; text-decoration: none; color: #16191D">
+      <span style="width: 44px; height: 44px; border-radius: 12px; background: #ECEDE8; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"></rect><path d="M8 8h8M8 12h8M8 16h5"></path></svg></span>
+      <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><strong style="font-size: 15px">Kartu Stok</strong><span style="font-size: 13px; color: #545B63">Riwayat transaksi &amp; saldo per container</span></span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#545B63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg>
+    </a>
+    <a href="Lap-Barang.dc.html" style="display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; text-decoration: none; color: #16191D">
+      <span style="width: 44px; height: 44px; border-radius: 12px; background: #ECEDE8; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10"></path></svg></span>
+      <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><strong style="font-size: 15px">Stock per Barang</strong><span style="font-size: 13px; color: #545B63">Awal, IN, OUT, sisa per barang · PT · merek</span></span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#545B63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg>
+    </a>
+    <a href="Lap-Container.dc.html" style="display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; text-decoration: none; color: #16191D">
+      <span style="width: 44px; height: 44px; border-radius: 12px; background: #ECEDE8; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="12" rx="1"></rect><path d="M6 10v6M10 10v6M14 10v6M18 10v6"></path></svg></span>
+      <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><strong style="font-size: 15px">Stock per Container</strong><span style="font-size: 13px; color: #545B63">Kode batch, umur stok, status, perputaran</span></span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#545B63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg>
+    </a>
+    <a href="Lap-KPI.dc.html" style="display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; text-decoration: none; color: #16191D">
+      <span style="width: 44px; height: 44px; border-radius: 12px; background: #ECEDE8; display: flex; align-items: center; justify-content: center; flex-shrink: 0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V11M12 20V5M19 20v-7M3 20h18"></path></svg></span>
+      <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><strong style="font-size: 15px">KPI</strong><span style="font-size: 13px; color: #545B63">IN · OUT · Retur per bulan, quartal, semester</span></span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#545B63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg>
+    </a>
+  </main>
+
+  <nav aria-label="Navigasi utama" style="height: 76px; background: #FFFFFF; border-top: 1px solid #DADDD6; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; padding: 0 8px; box-sizing: border-box; flex-shrink: 0">
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; text-decoration: none; color: #545B63; font-size: 11px; font-weight: 500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"></path></svg>Beranda</a>
+    <a href="Inbound-List.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; text-decoration: none; color: #545B63; font-size: 11px; font-weight: 500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0l-4-4m4 4l4-4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"></path></svg>Inbound</a>
+    <a href="Outbound-Pick.dc.html" aria-label="Scan QR" style="display: flex; justify-content: center; text-decoration: none"><span style="width: 56px; height: 56px; margin-top: -24px; border-radius: 18px; background: #16191D; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10"></path></svg></span></a>
+    <a href="Outbound-List.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; text-decoration: none; color: #545B63; font-size: 11px; font-weight: 500"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14V3m0 0L8 7m4-4l4 4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"></path></svg>Outbound</a>
+    <a href="Laporan-Menu.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 48px; text-decoration: none; color: #16191D; font-size: 11px; font-weight: 600"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V11M12 20V5M19 20v-7M3 20h18"></path></svg>Laporan</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

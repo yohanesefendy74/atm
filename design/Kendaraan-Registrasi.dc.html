@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Registrasi Kendaraan Gudang</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A57A8}a:hover{color:#063E7A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D; overflow: hidden">
+  <header style="padding: 20px 20px 12px; display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border-bottom: 1px solid #DADDD6">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <a href="Main.dc.html" aria-label="Kembali ke beranda" style="width: 44px; height: 44px; margin-left: -10px; display: flex; align-items: center; justify-content: center; color: #16191D"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+      <div style="flex: 1; display: flex; flex-direction: column">
+        <span style="font-size: 12px; font-weight: 600; color: #545B63; letter-spacing: 0.06em; text-transform: uppercase">WH-JKT02 · tanpa timbangan mobil</span>
+        <h1 style="margin: 0; font-size: 20px; font-weight: 700">Registrasi kendaraan</h1>
+      </div>
+    </div>
+    <div role="tablist" aria-label="Masuk atau keluar" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 4px; border-radius: 12px; background: #ECEDE8">
+      <sc-for list="{{tabs}}" as="x" hint-placeholder-count="2">
+        <button type="button" role="tab" aria-selected="{{x.on}}" onClick="{{x.pick}}" style="{{x.style}}">{{x.label}}</button>
+      </sc-for>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 14px 20px 20px; display: flex; flex-direction: column; gap: 14px">
+    <sc-if value="{{isMasuk}}" hint-placeholder-val="{{ true }}">
+      <div role="radiogroup" aria-label="Keperluan" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 4px; border-radius: 12px; background: #ECEDE8">
+        <sc-for list="{{tujuan}}" as="t" hint-placeholder-count="3">
+          <button type="button" role="radio" aria-checked="{{t.on}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+        </sc-for>
+      </div>
+      <sc-if value="{{needDoc}}" hint-placeholder-val="{{ true }}">
+        <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">{{docLabel}}
+          <input type="search" list="doc-list" value="{{doc}}" onChange="{{setDoc}}" autocapitalize="characters" style="{{dm.input}}">
+          <datalist id="doc-list"><option value="SPBB/2610/0016">WH-JKT02</option><option value="SPBB/2610/0014">WH-JKT01</option><option value="SPMB/2610/0023">WH-JKT02</option></datalist>
+          <span style="{{dm.style}}">{{dm.text}}</span>
+            <sc-if value="{{showCands}}" hint-placeholder-val="{{ false }}"><span style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{docCands}}" as="c" hint-placeholder-count="2"><button type="button" onClick="{{c.pick}}" style="height: 34px; padding: 0 12px; border-radius: 17px; border: 1.5px solid #0A57A8; background: #FFFFFF; color: #0A57A8; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; cursor: pointer">{{c.label}}</button></sc-for></span></sc-if>
+        </label>
+      </sc-if>
+      <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">No. polisi
+        <input type="text" value="{{plat}}" onChange="{{setPlat}}" autocapitalize="characters" style="{{pm.input}}">
+        <span style="{{pm.style}}">{{pm.text}}</span>
+      </label>
+      <sc-if value="{{planMismatch}}" hint-placeholder-val="{{ false }}">
+        <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Alasan plat berbeda dari rencana ({{planPlat}})
+          <select onChange="{{setAlasan}}" style="height: 44px; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 14px; color: #16191D"><option value="" selected="{{alasanNone}}">Pilih alasan</option><option value="ganti" selected="{{alasanGanti}}">Ganti unit kendaraan</option><option value="salah" selected="{{alasanSalah}}">Rencana Admin salah input</option><option value="titip" selected="{{alasanTitip}}">Dititipkan kendaraan lain</option></select>
+        </label>
+      </sc-if>
+      <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Nama sopir
+        <input type="text" value="{{sopir}}" onChange="{{setSopir}}" style="{{sm.input}}">
+        <span style="{{sm.style}}">{{sm.text}}</span>
+      </label>
+      <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">{{contLabel}}
+        <input type="search" list="yard-cont" value="{{cont}}" onChange="{{setCont}}" autocapitalize="characters" style="{{cm.input}}">
+        <datalist id="yard-cont"><option value="MNBU3565534">YARD-B01 · kosong</option><option value="TCKU3301879">YARD-A01 · masih berisi</option></datalist>
+        <span style="{{cm.style}}">{{cm.text}}</span>
+      </label>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px">
+        <button type="button" onClick="{{toggleF1}}" style="{{f1Style}}">{{f1Label}}</button>
+        <sc-if value="{{needSegel}}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{toggleF2}}" style="{{f2Style}}">{{f2Label}}</button></sc-if>
+      </div>
+      <div style="display: flex; gap: 10px; padding: 10px 14px; border-radius: 12px; background: #FFFFFF; border: 1px solid #DADDD6; font-size: 12px; color: #545B63">Gudang ini tidak punya timbangan mobil, jadi berat tidak diambil. Net barang = total timbangan palet atau input krani.</div>
+    </sc-if>
+
+    <sc-if value="{{isKeluar}}" hint-placeholder-val="{{ false }}">
+      <h2 style="margin: 0; font-size: 14px; font-weight: 600; color: #545B63">Kendaraan di dalam gudang</h2>
+      <sc-for list="{{vehicles}}" as="v" hint-placeholder-count="2">
+        <button type="button" onClick="{{v.pick}}" aria-pressed="{{v.on}}" aria-disabled="{{v.off}}" style="{{v.style}}">
+          <span style="display: flex; justify-content: space-between; gap: 8px"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">{{v.plat}}</span><span style="{{v.tagStyle}}">{{v.tag}}</span></span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #545B63">{{v.doc}} · {{v.cont}}</span>
+          <span style="{{v.noteStyle}}">{{v.note}}</span>
+        </button>
+      </sc-for>
+      <sc-if value="{{hasCont}}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px">
+          <label style="display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600">
+            <input type="checkbox" checked="{{tinggal}}" onChange="{{toggleTinggal}}" style="width: 20px; height: 20px; accent-color: #0A57A8">Kontainer ditinggal di yard
+          </label>
+          <sc-if value="{{tinggal}}" hint-placeholder-val="{{ true }}">
+            <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Kondisi kontainer
+              <select onChange="{{pickKondisi}}" style="height: 44px; padding: 0 10px; border-radius: 10px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 14px; color: #16191D"><option value="0" selected="{{kosong}}">Kosong (sudah dibongkar)</option><option value="1" selected="{{berisi}}">Masih berisi</option></select>
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600">Area yard
+              <input type="search" list="yard-list" value="{{yard}}" onChange="{{setYard}}" autocapitalize="characters" style="{{ym.input}}">
+              <datalist id="yard-list"><option value="YARD-A02">kosong</option><option value="YARD-B02">kosong</option><option value="YARD-B01">terisi</option></datalist>
+              <span style="{{ym.style}}">{{ym.text}}</span>
+            </label>
+          </sc-if>
+        </div>
+      </sc-if>
+      <button type="button" onClick="{{toggleF3}}" style="{{f3Style}}">{{f3Label}}</button>
+    </sc-if>
+
+    <div style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 14px; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px">
+      <span style="font-size: 13px; font-weight: 600">Pemeriksaan sebelum simpan</span>
+      <sc-for list="{{checks}}" as="c" hint-placeholder-count="5">
+        <div style="display: flex; gap: 8px; font-size: 13px; align-items: baseline"><span style="{{c.iconStyle}}">{{c.icon}}</span><span>{{c.label}}</span></div>
+      </sc-for>
+      <sc-if value="{{hasWarn}}" hint-placeholder-val="{{ false }}">
+        <label style="display: flex; gap: 10px; align-items: flex-start; margin-top: 6px; padding: 10px 12px; border-radius: 10px; background: #FFF4D6; font-size: 13px; color: #5C3F00">
+          <input type="checkbox" checked="{{ack}}" onChange="{{toggleAck}}" style="width: 20px; height: 20px; accent-color: #5C3F00; flex-shrink: 0">
+          <span>Saya sudah memeriksa peringatan. Tercatat untuk Admin.</span>
+        </label>
+      </sc-if>
+    </div>
+  </main>
+
+  <footer style="padding: 12px 20px 20px; background: #FFFFFF; border-top: 1px solid #DADDD6; display: flex; flex-direction: column; gap: 8px">
+    <sc-if value="{{captured}}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; font-weight: 600; color: #1F6B34">{{doneText}}</span></sc-if>
+    <button type="button" onClick="{{save}}" aria-disabled="{{blocked}}" style="{{saveStyle}}">{{saveLabel}}</button>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = Object.assign({ tab: 0, t: 0, f1: false, f2: false, f3: false, alasan: '', ack: false, captured: false, tried: false, kv: 0, tinggal: true, kondisi: 0, yard: 'YARD-A02' }, this.defaults(0));
+}
+defaults(t) {
+return [
+{ doc: '', plat: 'B 9100 AAA', sopir: 'Slamet Riyadi', cont: 'MNBU3565534' },
+{ doc: '', plat: 'B 9388 PQR', sopir: 'Slamet Riyadi', cont: '' },
+{ doc: '', plat: 'B 9801 XYZ', sopir: 'Slamet Riyadi', cont: 'MNBU3565534' }
+][t];
+}
+renderVals() {
+const S = this.state, t = S.t, tab = S.tab;
+const up = (s) => String(s || '').toUpperCase().replace(/\s+/g, ' ').trim();
+const E = (text) => ({ k: 'err', text }), W = (text) => ({ k: 'warn', text }), OK = (text) => ({ k: 'ok', text }), H = (text) => ({ k: 'hint', text });
+const DOCS = {
+'SPBB/2610/0014': { wh: 'WH-JKT01', tit: true, st: 'Siap', krani: 'Budi', plat: 'B 9071 UAB', conts: ['MSKU7712002'] },
+'SPBB/2610/0017': { wh: 'WH-JKT02', st: 'Partial', krani: 'Rina', plat: 'B 9444 PRT', conts: ['MSKU4410272'] },
+'SPBB/2610/0015': { wh: 'WH-JKT02', st: 'Selesai', krani: 'Rina', plat: 'B 9388 PQR', conts: ['SEGU9913680'] },
+'SPBB/2610/0016': { wh: 'WH-JKT02', st: 'Siap', krani: 'Rina', plat: 'B 9100 AAA', conts: ['MNBU3565534'] },
+'SPMB/2610/0023': { wh: 'WH-JKT02', st: 'Siap', krani: 'Rina', plat: 'B 9390 STU', conts: ['TCKU3301879'] },
+'SPMB/2610/0021': { wh: 'WH-JKT01', st: 'Siap', krani: 'Budi', plat: 'B 9555 KLA', conts: ['TGHU8812348'] }
+};
+const INSIDE = { 'B 9388 PQR': 1, 'B 9455 STU': 1 };
+const INSIDE_CONT = { 'SEGU9913680': 'B 9388 PQR' };
+const YARD = { 'MNBU3565534': { area: 'YARD-B01', kosong: true }, 'TCKU3301879': { area: 'YARD-A01', kosong: false } };
+const YARDS = { 'YARD-A02': '', 'YARD-B02': '', 'YARD-A01': 'TCKU3301879', 'YARD-B01': 'MNBU3565534' };
+const LV = {}; let n = 10; 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach((L) => { if (n % 11 === 0) n++; LV[L] = n++; });
+const iso = (c) => { if (!/^[A-Z]{3}[UJZ]\d{7}$/.test(c)) return 'fmt'; let s = 0; for (let i = 0; i < 10; i++) s += (i < 4 ? LV[c[i]] : +c[i]) * Math.pow(2, i); return (s % 11) % 10 === +c[10] ? 'ok' : 'cd'; };
+
+// ---- masuk
+const platKey = (() => { const m = up(S.plat).match(/^([A-Z]{1,2})\s?(\d{1,4})\s?([A-Z]{0,3})$/); return m ? m[1] + ' ' + m[2] + (m[3] ? ' ' + m[3] : '') : ''; })();
+const contKey = up(S.cont).replace(/[\s-]/g, '');
+const pfx = t === 0 ? 'SPBB' : 'SPMB';
+const pool = t === 2 ? [] : Object.keys(DOCS).filter((k) => k.slice(0, 4) === pfx && DOCS[k].wh === 'WH-JKT02' && DOCS[k].st === 'Siap');
+const byP = pool.filter((k) => !!platKey && DOCS[k].plat === platKey), byC = pool.filter((k) => contKey.length >= 11 && DOCS[k].conts.indexOf(contKey) >= 0);
+const byBoth = byP.filter((k) => byC.indexOf(k) >= 0);
+const cands = byBoth.length ? byBoth : (byP.length ? byP : byC);
+const manualDoc = up(S.doc);
+const partialHit = t === 2 ? '' : (Object.keys(DOCS).filter((k) => k.slice(0, 4) === pfx && DOCS[k].st === 'Partial' && ((!!platKey && DOCS[k].plat === platKey) || (contKey.length >= 11 && DOCS[k].conts.indexOf(contKey) >= 0)))[0] || '');
+const autoDoc = !manualDoc && cands.length === 1 ? cands[0] : '';
+const why = (k) => (DOCS[k].plat === platKey ? 'no. polisi ' + platKey : '') + (DOCS[k].plat === platKey && DOCS[k].conts.indexOf(contKey) >= 0 ? ' dan ' : '') + (DOCS[k].conts.indexOf(contKey) >= 0 ? 'container ' + contKey : '');
+const doc = manualDoc || autoDoc; const rec = DOCS[doc];
+let dmv;
+if (t === 2) dmv = OK('Tidak perlu dokumen');
+else if (!doc) dmv = cands.length > 1 ? W(cands.length + ' dokumen cocok dengan ' + (platKey && contKey.length >= 11 ? 'plat/container' : (platKey ? 'no. polisi' : 'container')) + ' · pilih salah satu' + (cands.some((k) => DOCS[k].tit) && cands.some((k) => !DOCS[k].tit) ? ' · titipan dan non-titipan tidak bisa digabung dalam satu kendaraan' : '')) : (S.tried ? E('Dokumen wajib diisi') : (partialHit ? W('Ada ' + partialHit + ' untuk no. polisi / container ini tetapi berstatus Partial · tidak bisa untuk registrasi masuk') : (platKey || contKey.length >= 11) ? H('Belum ada dokumen terbit untuk no. polisi / container ini · cari manual') : H('Isi no. polisi atau container, dokumen terisi otomatis')));
+else if (!/^SP(BB|MB)\/\d{4}\/\d{4}$/.test(doc)) dmv = E('Format salah · contoh SPBB/2610/0016');
+else if (doc.slice(0, 4) !== (t === 0 ? 'SPBB' : 'SPMB')) dmv = E(t === 0 ? 'Bongkar memakai SPBB, bukan SPMB' : 'Muat memakai SPMB, bukan SPBB');
+else if (!rec) dmv = E('Dokumen tidak ditemukan');
+else if (rec.wh !== 'WH-JKT02') dmv = E('Dokumen untuk ' + rec.wh + ', bukan gudang ini (WH-JKT02)');
+else if (rec.st === 'Partial') dmv = E('SPBB Partial (masih ada outstanding) tidak bisa untuk registrasi kendaraan masuk');
+else if (rec.st === 'Selesai') dmv = E('Dokumen sudah selesai');
+else if (!rec.krani) dmv = E('Belum ada krani ditugaskan');
+else dmv = OK((autoDoc ? 'Terisi otomatis dari ' + why(autoDoc) + ' · ' : '') + 'Dokumen siap' + (rec.tit ? ' · TITIPAN (transaksi BT)' : '') + ' · krani ' + rec.krani);
+const raw = up(S.plat), pmatch = raw.match(/^([A-Z]{1,2})\s?(\d{1,4})\s?([A-Z]{0,3})$/);
+const platN = pmatch ? (pmatch[1] + ' ' + pmatch[2] + (pmatch[3] ? ' ' + pmatch[3] : '')) : raw;
+let pmv, planMismatch = false;
+if (!raw) pmv = S.tried ? E('No. polisi wajib diisi') : H('Contoh B 1234 ABC');
+else if (!pmatch) pmv = E('Format plat tidak valid · contoh B 1234 ABC');
+else if (INSIDE[platN]) pmv = E(platN + ' masih di dalam gudang · catat keluar dulu');
+else { pmv = OK('Disimpan sebagai ' + platN); if (t < 2 && rec && dmv.k === 'ok' && rec.plat !== platN) { planMismatch = true; pmv = W('Berbeda dari rencana (' + rec.plat + ') · pilih alasan'); } }
+const sp = String(S.sopir || '').trim();
+const smv = !sp ? (S.tried ? E('Nama sopir wajib diisi') : H('Sesuai KTP / SIM')) : (sp.length < 3 || !/^[A-Za-z .'-]+$/.test(sp)) ? E('Minimal 3 huruf, tanpa angka') : OK('Sopir tercatat');
+const c = up(S.cont).replace(/[\s-]/g, ''), y = YARD[c];
+let cmv;
+if (t === 2) {
+if (!c) cmv = S.tried ? E('Pilih kontainer kosong dari yard') : H('Hanya kontainer kosong dari yard');
+else if (!y) cmv = E(iso(c) === 'fmt' ? 'Format salah · 4 huruf + 7 angka' : 'Kontainer tidak ada di yard');
+else if (!y.kosong) cmv = E('Kontainer masih berisi · tidak bisa diambil');
+else cmv = OK(c + ' · ' + y.area + ' · kosong');
+} else if (!c) cmv = H(t === 0 ? 'Kosongkan bila tanpa kontainer' : 'Kosongkan bila mobil saja');
+else if (iso(c) === 'fmt') cmv = E('Format salah · 4 huruf (akhiran U/J/Z) + 7 angka');
+else if (iso(c) === 'cd') cmv = E('Digit pemeriksa ISO 6346 tidak cocok · cek ulang nomor');
+else if (INSIDE_CONT[c]) cmv = E('Sedang di gudang di ' + INSIDE_CONT[c]);
+else if (t === 0 && y) cmv = E('Sudah tercatat di yard (' + y.area + ')');
+else if (t === 1 && y && !y.kosong) cmv = E('Kontainer yard masih berisi · tidak bisa dipakai memuat');
+else if (y) cmv = OK(c + ' · ' + y.area + ' · kosong');
+else cmv = OK(c + ' · digit pemeriksa benar');
+const needSegel = t === 0 && !!c;
+const fotoOK = S.f1 && (!needSegel || S.f2);
+const masukItems = [
+{ label: t === 2 ? 'Tanpa dokumen (ambil kontainer)' : 'Dokumen valid, gudang sesuai, krani ada', st: t === 2 ? 'ok' : dmv.k },
+{ label: 'No. polisi valid dan tidak ganda', st: pmv.k === 'hint' ? 'pending' : (pmv.k === 'warn' ? 'ok' : pmv.k) },
+{ label: 'Nama sopir', st: smv.k === 'hint' ? 'pending' : smv.k },
+{ label: 'Kontainer (ISO 6346 & status yard)', st: cmv.k === 'hint' ? (t === 2 ? 'pending' : 'ok') : cmv.k },
+{ label: needSegel ? 'Foto kendaraan & segel' : 'Foto kendaraan', st: fotoOK ? 'ok' : (S.tried ? 'err' : 'pending') },
+...(planMismatch ? [{ label: 'Alasan plat berbeda', st: S.alasan ? 'ok' : 'pending' }] : [])
+];
+
+// ---- keluar
+const VL = [
+{ plat: 'B 9388 PQR', doc: 'SPBB/2610/0015', cont: 'SEGU9913680', tag: 'Bongkar', note: 'Krani: selesai bongkar', ready: true, hasCont: true, accent: '#0A57A8', tint: '#E6EEF8' },
+{ plat: 'B 9455 STU', doc: 'SPMB/2610/0023', cont: 'tanpa kontainer', tag: 'Muat', note: 'Belum bisa keluar · krani belum menandai selesai', ready: false, hasCont: false, accent: '#B93E0B', tint: '#FBEDE5' }
+];
+const kv = VL[S.kv];
+const yard = up(S.yard);
+let ymv = OK('Area kosong');
+if (!yard) ymv = S.tried ? E('Area yard wajib diisi') : H('Pilih area yang kosong');
+else if (!/^YARD-[A-C]\d{2}$/.test(yard)) ymv = E('Format area salah · contoh YARD-A02');
+else if (!(yard in YARDS)) ymv = E('Area tidak ada di master yard');
+else if (YARDS[yard]) ymv = E('Area terisi ' + YARDS[yard]);
+const showYard = tab === 1 && kv.hasCont && S.tinggal;
+const keluarItems = [
+{ label: 'Kendaraan ditandai selesai oleh krani', st: kv.ready ? 'ok' : 'err' },
+...(showYard ? [{ label: 'Area yard kosong & valid', st: ymv.k === 'ok' ? 'ok' : (ymv.k === 'hint' ? 'pending' : 'err') }] : []),
+{ label: 'Foto kendaraan keluar', st: S.f3 ? 'ok' : (S.tried ? 'err' : 'pending') }
+];
+
+const items = tab === 0 ? masukItems : keluarItems;
+const bad = items.filter((x) => x.st !== 'ok').length;
+const hasWarn = tab === 0 && planMismatch;
+const bad2 = bad + (hasWarn && !S.ack ? 1 : 0);
+const blocked = bad2 > 0 || S.captured;
+const allItems = items.concat(hasWarn ? [{ label: 'Peringatan dikonfirmasi', st: S.ack ? 'ok' : 'pending' }] : []);
+const tone = { err: ['#A32020', '✕'], warn: ['#8A5A00', '!'], ok: ['#1F6B34', '✓'], hint: ['#545B63', ''] };
+const fm = (m) => ({ text: (m.k === 'hint' ? '' : tone[m.k][1] + ' ') + m.text, style: 'font-size: 12px; font-weight: ' + (m.k === 'hint' ? 400 : 600) + '; color: ' + tone[m.k][0], input: 'height: 44px; padding: 0 12px; border-radius: 10px; font-family: ' + "'IBM Plex Mono', monospace" + '; font-size: 16px; font-weight: 600; color: #16191D; border: ' + (m.k === 'err' ? '2px solid #A32020' : (m.k === 'warn' ? '2px solid #C98A00' : '1px solid #C9CDC5')) + ';' });
+const photo = (on) => 'height: 40px; padding: 0 14px; border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; ' + (on ? 'border: 1.5px solid #1F7A3A; background: #E3F2E7; color: #1F6B34' : 'border: 1px dashed #8A9098; background: transparent; color: #16191D');
+const reset = (nt, nTab) => this.setState(Object.assign({ tab: nTab, t: nt, f1: false, f2: false, f3: false, alasan: '', ack: false, captured: false, tried: false, kv: 0, tinggal: true, kondisi: 0, yard: 'YARD-A02' }, this.defaults(nt)));
+const set = (k) => (e) => this.setState({ [k]: e.target.value, ack: false });
+const opts = [{ label: 'Bongkar', lab: 'No. kontainer datang' }, { label: 'Muat', lab: 'Kontainer pengangkut' }, { label: 'Ambil kontainer', lab: 'Kontainer di yard (wajib)' }];
+const seg = (on) => 'min-height: 44px; border-radius: 9px; border: none; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; ' + (on ? 'background: #16191D; color: #FFFFFF;' : 'background: transparent; color: #16191D;');
+return {
+tabs: ['Masuk', 'Keluar'].map((l, i) => ({ label: l, on: i === tab, style: seg(i === tab), pick: () => reset(t, i) })),
+isMasuk: tab === 0, isKeluar: tab === 1,
+tujuan: opts.map((x, i) => ({ label: x.label, on: i === t, style: seg(i === t) + 'font-size: 13px;', pick: () => reset(i, 0) })),
+needDoc: t !== 2, docLabel: t === 0 ? 'Dokumen SPBB' : 'Dokumen SPMB',
+doc: S.doc || autoDoc, docCands: cands.length > 1 && !manualDoc ? cands.map((k) => ({ label: k + ' · ' + DOCS[k].plat, pick: () => this.setState({ doc: k }) })) : [], showCands: cands.length > 1 && !manualDoc, plat: S.plat, sopir: S.sopir, cont: S.cont, contLabel: opts[t].lab,
+dm: fm(dmv), pm: fm(pmv), sm: fm(smv), cm: fm(cmv),
+setDoc: set('doc'), setPlat: set('plat'), setSopir: set('sopir'), setCont: set('cont'),
+planMismatch, planPlat: rec ? rec.plat : '', setAlasan: (e) => this.setState({ alasan: e.target.value }),
+alasanNone: !S.alasan, alasanGanti: S.alasan === 'ganti', alasanSalah: S.alasan === 'salah', alasanTitip: S.alasan === 'titip',
+needSegel, f1Style: photo(S.f1), f2Style: photo(S.f2),
+f1Label: S.f1 ? '✓ Foto kendaraan' : 'Foto kendaraan · wajib', f2Label: S.f2 ? '✓ Foto segel' : 'Foto segel · wajib',
+toggleF1: () => this.setState({ f1: !S.f1 }), toggleF2: () => this.setState({ f2: !S.f2 }),
+vehicles: VL.map((x, i) => ({ plat: x.plat, doc: x.doc, cont: x.cont, tag: x.tag, note: x.note, on: i === S.kv, off: !x.ready,
+noteStyle: 'font-size: 12px; font-weight: ' + (x.ready ? 400 : 600) + '; color: ' + (x.ready ? '#545B63' : '#A32020'),
+tagStyle: 'padding: 2px 8px; border-radius: 8px; font-size: 12px; font-weight: 700; background: ' + x.tint + '; color: ' + x.accent,
+style: 'display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 12px; font-family: inherit; text-align: left; color: #16191D; background: #FFFFFF; cursor: pointer; ' + (x.ready ? '' : 'opacity: 0.7; ') + (i === S.kv ? 'border: 2px solid ' + x.accent + ';' : 'border: 1px solid #DADDD6;'),
+pick: () => this.setState({ kv: i, f3: false, ack: false, captured: false, tried: false }) })),
+hasCont: kv.hasCont, tinggal: S.tinggal, toggleTinggal: () => this.setState({ tinggal: !S.tinggal }),
+kosong: S.kondisi === 0, berisi: S.kondisi === 1, pickKondisi: (e) => this.setState({ kondisi: Number(e.target.value) }),
+yard: S.yard, ym: fm(ymv), setYard: (e) => this.setState({ yard: e.target.value }),
+f3Style: photo(S.f3) + '; align-self: flex-start', f3Label: S.f3 ? '✓ Foto kendaraan keluar' : 'Foto kendaraan keluar · wajib', toggleF3: () => this.setState({ f3: !S.f3 }),
+checks: allItems.map((x) => ({ label: x.label, icon: x.st === 'ok' ? '✓' : (x.st === 'err' ? '✕' : '○'), iconStyle: 'width: 14px; font-weight: 700; color: ' + (x.st === 'ok' ? '#1F6B34' : (x.st === 'err' ? '#A32020' : '#8A9098')) })),
+hasWarn, ack: S.ack, toggleAck: () => this.setState({ ack: !S.ack }),
+blocked, captured: S.captured,
+doneText: tab === 0 ? 'Masuk tercatat · ' + platN + ' muncul di tugas krani' : 'Keluar tercatat · ' + kv.plat + (showYard ? ' · kontainer di ' + yard : ''),
+saveLabel: S.captured ? 'Sudah tercatat' : (bad2 > 0 ? 'Lengkapi ' + bad2 + ' pemeriksaan' : (tab === 0 ? 'Catat kendaraan masuk' : 'Catat kendaraan keluar')),
+saveStyle: 'height: 52px; border-radius: 14px; border: none; font-family: inherit; font-size: 16px; font-weight: 600; ' + (blocked ? 'background: #C9CDC5; color: #545B63; cursor: not-allowed' : 'background: #0A57A8; color: #FFFFFF; cursor: pointer'),
+save: () => { if (blocked) this.setState({ tried: true }); else this.setState({ captured: true }); }
+};
+}
+}
+</script>
+</body>
+</html>

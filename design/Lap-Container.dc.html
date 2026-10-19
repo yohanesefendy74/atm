@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Stock per Container</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0A57A8}a:hover{color:#063E7A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D; overflow: hidden">
+  <header style="padding: 20px 20px 12px; display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border-bottom: 1px solid #DADDD6">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <a href="Laporan-Menu.dc.html" aria-label="Kembali" style="width: 44px; height: 44px; margin-left: -10px; display: flex; align-items: center; justify-content: center; color: #16191D"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></a>
+      <div style="flex: 1; display: flex; flex-direction: column">
+        <span style="font-size: 12px; font-weight: 600; color: #545B63; letter-spacing: 0.06em; text-transform: uppercase">Laporan · 08 Okt 2026</span>
+        <h1 style="margin: 0; font-size: 20px; font-weight: 700">Stock per Container</h1>
+      </div>
+      <button style="height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid #16191D; background: #FFFFFF; font-family: inherit; font-size: 13px; font-weight: 600; color: #16191D; display: inline-flex; align-items: center; gap: 6px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"></path><path d="M14 3v5h5M9 12l5 5M14 12l-5 5"></path></svg>Excel</button>
+    </div>
+    <div role="group" aria-label="Status stok" style="display: flex; gap: 6px">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+        <button onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+      </sc-for>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow: hidden; padding: 14px 20px; display: flex; flex-direction: column; gap: 10px">
+    <section aria-label="KPI umur stok" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+      <div style="background: #16191D; color: #FFFFFF; border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; color: #C5CAD1; font-weight: 600">Total jumlah stock</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">24.260 sak</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #C5CAD1">486.111,5 KG</span></div>
+      <div style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; color: #545B63; font-weight: 600">Perputaran barang</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">49,3 hari</span><span style="font-size: 11px; color: #545B63">umur rata-rata per sak</span></div>
+    </section>
+
+    <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+      <article style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600">{{r.cont}}</span>
+          <span style="{{r.badge}}">{{r.status}}</span>
+        </div>
+        <span style="font-size: 12px; color: #545B63">{{r.name}} · {{r.pt}} · {{r.merek}}</span>
+        <span style="display: flex; align-items: center; gap: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #3D4349"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><path d="M14 14h3v3M21 14v7h-7"></path></svg>{{r.batch}}</span>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding-top: 6px; border-top: 1px solid #ECEDE8">
+          <span style="display: flex; flex-direction: column"><span style="font-size: 10px; color: #545B63; font-weight: 600">UMUR</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600">{{r.umur}} hr</span></span>
+          <span style="display: flex; flex-direction: column"><span style="font-size: 10px; color: #545B63; font-weight: 600">OUT HARI INI</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600">{{r.out}}</span></span>
+          <span style="display: flex; flex-direction: column"><span style="font-size: 10px; color: #545B63; font-weight: 600">SISA SAK</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600">{{r.sak}}</span></span>
+          <span style="display: flex; flex-direction: column"><span style="font-size: 10px; color: #545B63; font-weight: 600">SISA KG</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600">{{r.kg}}</span></span>
+        </div>
+      </article>
+    </sc-for>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { st: 'SEMUA' };
+}
+renderVals() {
+const f = (n) => n.toLocaleString('id-ID', { maximumFractionDigits: 1 });
+const data = [
+['SEKU9188968', 'HENAN NC', 'CDSA', 'MAMAMIA MERAH', '20/08/2026-SEKU9188968-CDSA', 49, 0, 1, 20, 'SEDIKIT'],
+['CGMU5863183', 'HENAN NC', 'ATM', 'MATA ELANG', '26/08/2026-CGMU5863183-ATM', 43, 0, 0, 111, 'HABIS'],
+['SEKU9124393', 'HENAN NC', 'ATM', 'SULTAN', '27/08/2026-SEKU9124393-ATM', 42, 0, 1416, 28533, 'BANYAK'],
+['SZLU9872115', 'HENAN NC', 'PHS', 'SULTAN', '31/08/2026-SZLU9872115-PHS', 38, 0, 1469, 29518.5, 'BANYAK'],
+['TTNU8258221', 'HENAN NC', 'NKRI', 'SEGAR HARUM', '16/09/2026-TTNU8258221-NKRI', 22, 41, 1429, 29566.5, 'BANYAK'],
+['FBIU5221424', 'HENAN NC', 'NKRI', 'SEGAR HARUM', '17/09/2026-FBIU5221424-NKRI', 21, 114, 6, 2639.5, 'SEDIKIT']
+];
+const counts = { SEMUA: 107, BANYAK: 37, SEDIKIT: 13, HABIS: 57 };
+const colors = { BANYAK: ['#E3F2E7', '#1F6B34'], SEDIKIT: ['#FFF4D6', '#5C3F00'], HABIS: ['#ECEDE8', '#3D4349'] };
+const base = 'height: 36px; padding: 0 10px; border-radius: 18px; font-family: inherit; font-size: 12px; cursor: pointer; white-space: nowrap;';
+const tabs = ['SEMUA', 'BANYAK', 'SEDIKIT', 'HABIS'].map((k) => ({
+label: k.charAt(0) + k.slice(1).toLowerCase() + ' ' + counts[k],
+style: base + (this.state.st === k ? ' border: none; background: #16191D; color: #FFFFFF; font-weight: 600;' : ' border: 1px solid #DADDD6; background: #FFFFFF; color: #16191D; font-weight: 500;'),
+pick: () => this.setState({ st: k })
+}));
+const rows = data
+.filter((d) => this.state.st === 'SEMUA' || d[9] === this.state.st)
+.slice(0, 4)
+.map((d) => ({
+cont: d[0], name: d[1], pt: d[2], merek: d[3], batch: d[4], umur: d[5], out: f(d[6]), sak: f(d[7]), kg: f(d[8]), status: d[9],
+badge: 'padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; background: ' + colors[d[9]][0] + '; color: ' + colors[d[9]][1]
+}));
+return { tabs, rows };
+}
+}
+</script>
+</body>
+</html>

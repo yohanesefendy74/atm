@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Tambah Item Masuk</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B93E0B}a:hover{color:#8A2E08}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #F2F3EF; font-family: 'IBM Plex Sans', sans-serif; color: #16191D; overflow: hidden">
+  <header style="padding: 20px 20px 12px; display: flex; flex-direction: column; gap: 10px; background: #FFFFFF; border-bottom: 1px solid #DADDD6">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <a href="Outbound-Header.dc.html" aria-label="Kembali ke header" style="width: 44px; height: 44px; margin-left: -10px; display: flex; align-items: center; justify-content: center; color: #16191D"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></a>
+      <div style="flex: 1; display: flex; flex-direction: column">
+        <span style="font-size: 12px; font-weight: 600; color: #B93E0B; letter-spacing: 0.06em; text-transform: uppercase">RP · Repacking · 261000000091</span>
+        <h1 style="margin: 0; font-size: 20px; font-weight: 700">Item Inbound</h1>
+      </div>
+    </div>
+    <div aria-label="Data header" style="display: flex; gap: 6px; flex-wrap: wrap">
+      <span style="padding: 5px 10px; border-radius: 8px; background: #F2F3EF; border: 1px solid #DADDD6; font-family: 'IBM Plex Mono', monospace; font-size: 12px">WH-JKT02</span>
+      <span style="padding: 5px 10px; border-radius: 8px; background: #F2F3EF; border: 1px solid #DADDD6; font-family: 'IBM Plex Mono', monospace; font-size: 12px">TGHU8812348</span>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow: hidden; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; position: relative">
+    <section aria-label="Form item masuk" style="background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="item-code-in" style="font-size: 13px; font-weight: 600">Item Code <span style="color: #B93E0B">*</span></label>
+        <div style="display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 12px; border-radius: 12px; border: 2px solid #1F6B34; background: #FFFFFF">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#545B63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+          <input id="item-code-in" type="text" value="GLA-025" style="flex: 1; min-width: 0; border: none; background: transparent; font-family: 'IBM Plex Mono', monospace; font-size: 17px; font-weight: 600; color: #16191D; outline: none">
+        </div>
+        <span style="font-size: 13px; color: #545B63">Gula Pasir Kemasan 25 kg · Grup: [Nama Grup Item]</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+        <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+          <span style="font-size: 13px; font-weight: 600">UOM</span>
+          <select style="height: 48px; padding: 0 8px; border-radius: 12px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 15px; color: #16191D"><option>KG</option><option>TON</option></select>
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+          <span style="font-size: 13px; font-weight: 600">Brand</span>
+          <select style="width: 100%; box-sizing: border-box; height: 48px; padding: 0 6px; border-radius: 12px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 15px; color: #16191D"><option>BRAND-A</option><option>BRAND-B</option><option>BRAND-C</option></select>
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+          <span style="font-size: 13px; font-weight: 600">Origin</span>
+          <input type="text" value="Brazil" style="width: 100%; box-sizing: border-box; height: 48px; padding: 0 10px; border-radius: 12px; border: 1px solid #C9CDC5; background: #FFFFFF; font-family: inherit; font-size: 15px; color: #16191D">
+        </label>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+        <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+          <span style="font-size: 13px; font-weight: 600">Qty <span style="font-weight: 500; color: #545B63">(KG)</span></span>
+          <input type="number" inputmode="decimal" value="6700" style="width: 100%; box-sizing: border-box; height: 52px; padding: 0 10px; border-radius: 12px; border: 1px solid #C9CDC5; background: #F2F3EF; font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 600; color: #16191D">
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+          <span style="font-size: 13px; font-weight: 600">Qty 2 <span style="font-weight: 500; color: #545B63">(Sak)</span></span>
+          <input type="number" inputmode="numeric" value="268" style="width: 100%; box-sizing: border-box; height: 52px; padding: 0 10px; border-radius: 12px; border: 1px solid #C9CDC5; background: #F2F3EF; font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 600; color: #16191D">
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+          <span style="font-size: 13px; font-weight: 600">Qty Palet</span>
+          <input type="number" inputmode="numeric" value="7" style="width: 100%; box-sizing: border-box; height: 52px; padding: 0 10px; border-radius: 12px; border: 1px solid #C9CDC5; background: #F2F3EF; font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 600; color: #16191D">
+        </label>
+      </div>
+
+      <button style="height: 50px; border-radius: 12px; border: none; background: #1F7A3A; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>Tambah baris</button>
+    </section>
+
+    <section aria-label="Item masuk yang sudah ditambahkan" style="display: flex; flex-direction: column; gap: 8px">
+      <h2 style="margin: 0; font-size: 14px; font-weight: 600">Item Inbound · 1 baris</h2>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #FFFFFF; border: 1px solid #DADDD6; border-radius: 12px">
+        <span style="padding: 2px 6px; border-radius: 5px; background: #E3F2E7; color: #1F6B34; font-size: 11px; font-weight: 700">MASUK</span>
+        <span style="flex: 1; display: flex; flex-direction: column; min-width: 0"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600">GLA-025</span><span style="font-size: 12px; color: #545B63">Gula Pasir Kemasan 25 kg · BRAND-A · Brazil</span></span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; text-align: right">6.700 KG<br>268 sak · 7 plt</span>
+      </div>
+      <p style="margin: 0; font-size: 12px; color: #545B63">Label QR Item Inbound dicetak oleh Admin setelah PT diisi. Krani bisa cetak label tambahan.</p>
+    </section>
+  </main>
+
+  <footer style="padding: 12px 20px 20px; background: #FFFFFF; border-top: 1px solid #DADDD6; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+    <a href="Outbound-Header.dc.html" style="height: 52px; border-radius: 14px; border: 1.5px solid #16191D; color: #16191D; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; text-decoration: none">Kembali</a>
+    <a href="Outbound-Pick.dc.html" style="height: 52px; border-radius: 14px; background: #B93E0B; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; text-decoration: none">Lanjut scan palet</a>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
