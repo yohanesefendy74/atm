@@ -19,7 +19,7 @@ class Shell extends StatefulWidget {
 
 class _ShellState extends State<Shell> {
   int _tab = 0;
-  final _keys = [GlobalKey(), GlobalKey(), GlobalKey(), GlobalKey()];
+  final _keys = [GlobalKey(), GlobalKey(), GlobalKey(), GlobalKey(), GlobalKey()];
 
   void go(int tab) => setState(() => _tab = tab);
 
@@ -27,9 +27,10 @@ class _ShellState extends State<Shell> {
   Widget build(BuildContext context) {
     final pages = [
       HomeTab(key: _keys[0], onGo: go),
-      InboundListScreen(key: _keys[1]),
-      OutboundListScreen(key: _keys[2]),
-      ReportsMenu(key: _keys[3]),
+      TugasScreen(key: _keys[1], embedded: true),
+      InboundListScreen(key: _keys[2]),
+      OutboundListScreen(key: _keys[3]),
+      PosTimbangScreen(key: _keys[4], embedded: true),
     ];
     return Scaffold(
       body: IndexedStack(index: _tab, children: pages),
@@ -50,7 +51,7 @@ class _BottomNav extends StatelessWidget {
 
   Widget _item(int i, IconData icon, String label) {
     final on = tab == i;
-    final color = on ? (i == 2 ? C.outbound : C.inbound) : C.muted;
+    final color = on ? (i == 3 ? C.outbound : C.inbound) : C.muted;
     return Expanded(
       child: InkWell(
         onTap: () => onTab(i),
@@ -73,7 +74,8 @@ class _BottomNav extends StatelessWidget {
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
       child: Row(children: [
         _item(0, Icons.home_outlined, 'Beranda'),
-        _item(1, Icons.download_outlined, 'Inbound'),
+        _item(1, Icons.assignment_outlined, 'Tugas'),
+        _item(2, Icons.download_outlined, 'Inbound'),
         Expanded(
           child: Center(
             child: Material(
@@ -87,8 +89,8 @@ class _BottomNav extends StatelessWidget {
             ),
           ),
         ),
-        _item(2, Icons.upload_outlined, 'Outbound'),
-        _item(3, Icons.bar_chart, 'Laporan'),
+        _item(3, Icons.upload_outlined, 'Outbound'),
+        _item(4, Icons.scale_outlined, 'Timbang'),
       ]),
     );
   }
@@ -182,18 +184,12 @@ class _HomeTabState extends State<HomeTab> {
               () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OutboundHeaderScreen())).then((_) => _load())),
           const SizedBox(height: 10),
           Row(children: [
-            _quick(Icons.assignment_outlined, 'Tugas Saya', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TugasScreen())).then((_) => _load())),
-            const SizedBox(width: 10),
-            _quick(Icons.scale_outlined, 'Pos Timbang', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PosTimbangScreen()))),
-          ]),
-          const SizedBox(height: 10),
-          Row(children: [
             _quick(Icons.qr_code_scanner, 'Scan QR',
                 () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OutboundHeaderScreen()))),
             const SizedBox(width: 10),
-            _quick(Icons.print_outlined, 'Cetak QR ($ready)', () => widget.onGo(1)),
+            _quick(Icons.print_outlined, 'Cetak QR ($ready)', () => widget.onGo(2)),
             const SizedBox(width: 10),
-            _quick(Icons.inventory_2_outlined, 'Cek Stok', () => widget.onGo(3)),
+            _quick(Icons.inventory_2_outlined, 'Laporan / Stok', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReportsMenu()))),
           ]),
           const SizedBox(height: 16),
           Box(

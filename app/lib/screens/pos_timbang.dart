@@ -140,7 +140,8 @@ class _BeratFieldState extends State<BeratField> {
 
 /// Pos timbang: daftar kendaraan di dalam, registrasi masuk, timbang keluar.
 class PosTimbangScreen extends StatefulWidget {
-  const PosTimbangScreen({super.key});
+  const PosTimbangScreen({super.key, this.embedded = false});
+  final bool embedded;
   @override
   State<PosTimbangScreen> createState() => _PosTimbangScreenState();
 }
@@ -196,7 +197,7 @@ class _PosTimbangScreenState extends State<PosTimbangScreen> {
     return Scaffold(
       backgroundColor: C.ground,
       body: Column(children: [
-        Header(title: 'Pos Timbang', eyebrow: 'Kendaraan masuk / keluar'),
+        Header(title: 'Pos Timbang', eyebrow: 'Kendaraan masuk / keluar', back: !widget.embedded),
         Expanded(
           child: RefreshIndicator(
             onRefresh: _load,

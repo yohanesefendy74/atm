@@ -6,7 +6,8 @@ import '../widgets.dart';
 
 /// Tugas krani: dokumen SPBB/SPMB yang ditugaskan Admin.
 class TugasScreen extends StatefulWidget {
-  const TugasScreen({super.key});
+  const TugasScreen({super.key, this.embedded = false});
+  final bool embedded;
   @override
   State<TugasScreen> createState() => _TugasScreenState();
 }
@@ -42,7 +43,7 @@ class _TugasScreenState extends State<TugasScreen> {
     return Scaffold(
       backgroundColor: C.ground,
       body: Column(children: [
-        const Header(title: 'Tugas Saya', eyebrow: 'Bongkar · Muat'),
+        Header(title: 'Tugas Saya', eyebrow: 'Bongkar · Muat', back: !widget.embedded),
         Expanded(
           child: RefreshIndicator(
             onRefresh: _load,
