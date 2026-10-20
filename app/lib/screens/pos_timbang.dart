@@ -317,9 +317,28 @@ class _MasukScreenState extends State<MasukScreen> {
   final _plan = TextEditingController();
   final _alasan = TextEditingController();
   bool _kontBawaan = false;
+  List<Map<String, dynamic>> _yard = [];
+  String? _yardPilih; // kontainer kosong yang dipilih dari yard (Ambil Kontainer)
   Berat? _berat;
   bool _busy = false;
   String? _taraInfo;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadYard();
+  }
+
+  Future<void> _loadYard() async {
+    try {
+      final r = await Api.get('/api/yard', {'whs': widget.whs}) as List;
+      if (mounted) {
+        setState(() => _yard = r.map((e) => Map<String, dynamic>.from(e as Map)).where((y) => y['kondisi'] == 'Kosong').toList());
+      }
+    } catch (_) {}
+  }
+
+  String? get _noKontainer => _kep == 'AmbilKontainer' ? _yardPilih : (_cont.text.trim().isEmpty ? null : _cont.text.trim().toUpperCase().replaceAll(' ', '').replaceAll('-', ''));
 
   Future<void> _cekTara() async {
     try {
@@ -330,6 +349,8 @@ class _MasukScreenState extends State<MasukScreen> {
   }
 
   Future<void> _kirim() async {
+    if (_kep == 'Bongkar' && _noKontainer == null) return showError(context, 'No. kontainer wajib diisi untuk Bongkar');
+    if (_kep == 'AmbilKontainer' && _yardPilih == null) return showError(context, 'Pilih kontainer kosong dari yard');
     if (_berat == null) return showError(context, 'Baca berat dulu');
     setState(() => _busy = true);
     try {
@@ -342,9 +363,9 @@ class _MasukScreenState extends State<MasukScreen> {
           'planNo': _kep == 'AmbilKontainer' ? null : _plan.text.trim(),
           'noPolisi': _plat.text,
           'sopir': _sopir.text,
-          'containerNo': _cont.text.trim().isEmpty ? null : _cont.text.trim(),
+          'containerNo': _noKontainer,
           'alasanBedaPlan': _alasan.text.trim().isEmpty ? null : _alasan.text.trim(),
-          'kontainerBawaan': _kontBawaan,
+          'kontainerBawaan': _kep == 'Muat' && _kontBawaan,
           'timbang': _berat!.toJson(),
         },
         butuhKode: _berat!.sumber == 'MANUAL',
@@ -358,6 +379,33 @@ class _MasukScreenState extends State<MasukScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Kontainer kosong di yard gudang ini: cari lalu pilih (tidak bisa ketik bebas).
+  Widget _yardField() {
+    if (_yard.isEmpty) return const Hint('Tidak ada kontainer kosong di yard gudang ini', color: C.outbound);
+    String label(Map<String, dynamic> y) => '${y['containerNo']} · ${y['posisi'] ?? ''}${y['dialokasikan'] != null ? ' · ${y['dialokasikan']}' : ''}';
+    return Autocomplete<Map<String, dynamic>>(
+      displayStringForOption: label,
+      optionsBuilder: (v) {
+        final q = v.text.trim().toUpperCase();
+        return _yard.where((y) => q.isEmpty || label(y).toUpperCase().contains(q));
+      },
+      onSelected: (y) => setState(() => _yardPilih = y['containerNo'].toString()),
+      fieldViewBuilder: (context, ctrl, focus, onSubmit) => TextField(
+        controller: ctrl,
+        focusNode: focus,
+        textCapitalization: TextCapitalization.characters,
+        decoration: InputDecoration(
+          labelText: 'Kontainer kosong di yard (wajib)',
+          helperText: _yardPilih == null ? 'Ketik untuk mencari, lalu pilih dari daftar' : 'Dipilih: $_yardPilih',
+          suffixIcon: const Icon(Icons.arrow_drop_down),
+        ),
+        onChanged: (_) {
+          if (_yardPilih != null) setState(() => _yardPilih = null);
+        },
+      ),
+    );
   }
 
   @override
@@ -375,6 +423,8 @@ class _MasukScreenState extends State<MasukScreen> {
               onSelectionChanged: (s) => setState(() {
                 _kep = s.first;
                 _berat = null;
+                _yardPilih = null;
+                _kontBawaan = false;
               }),
             ),
             const SizedBox(height: 12),
@@ -383,14 +433,21 @@ class _MasukScreenState extends State<MasukScreen> {
             const SizedBox(height: 10),
             TextField(controller: _sopir, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Nama sopir')),
             const SizedBox(height: 10),
-            TextField(controller: _cont, textCapitalization: TextCapitalization.characters, decoration: const InputDecoration(labelText: 'No. kontainer (opsional)')),
+            if (_kep == 'AmbilKontainer')
+              _yardField()
+            else
+              TextField(
+                controller: _cont,
+                textCapitalization: TextCapitalization.characters,
+                decoration: InputDecoration(labelText: _kep == 'Bongkar' ? 'No. kontainer (wajib)' : 'No. kontainer (opsional)', helperText: 'Contoh TGHU8812345'),
+              ),
             if (_kep != 'AmbilKontainer') ...[
               const SizedBox(height: 10),
               TextField(controller: _plan, textCapitalization: TextCapitalization.characters, decoration: InputDecoration(labelText: _kep == 'Bongkar' ? 'No. SPBB (SPBB/2610/0001)' : 'No. SPMB (SPMB/2610/0001)')),
               const SizedBox(height: 10),
               TextField(controller: _alasan, decoration: const InputDecoration(labelText: 'Alasan beda dokumen (jika ada)')),
             ],
-            if (!masukBruto) CheckboxListTile(contentPadding: EdgeInsets.zero, value: _kontBawaan, onChanged: (v) => setState(() => _kontBawaan = v ?? false), title: const Text('Membawa kontainer kosong')),
+            if (_kep == 'Muat') CheckboxListTile(contentPadding: EdgeInsets.zero, value: _kontBawaan, onChanged: (v) => setState(() => _kontBawaan = v ?? false), title: const Text('Membawa kontainer kosong')),
             const SizedBox(height: 16),
             FieldLabel(masukBruto ? 'Timbang bruto (bermuatan)' : 'Timbang tara (kosong)'),
             BeratField(whs: widget.whs, onChanged: (b) => setState(() => _berat = b)),

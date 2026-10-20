@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gudang_atm/api.dart';
 import 'package:gudang_atm/screens/home.dart';
+import 'package:gudang_atm/screens/pos_timbang.dart';
 import 'package:gudang_atm/theme.dart';
 
 /// Menggambar menu utama (Shell) di ukuran HP Android, mengetuk tiap tab, menyimpan gambar ke test/goldens/.
@@ -51,6 +52,22 @@ void main() {
     // ignore: avoid_print
     print('ERRORS(${errors.length}):\n${errors.toSet().join('\n')}');
     File('test/goldens/errors.txt').writeAsStringSync(errors.toSet().join('\n'));
+    addTearDown(tester.view.reset);
+  });
+
+  testWidgets('Pos timbang: registrasi masuk Bongkar & Ambil Kontainer', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.75;
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: const MasukScreen(whs: 'ATM')));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump(const Duration(milliseconds: 500));
+    await expectLater(find.byType(MasukScreen), matchesGoldenFile('goldens/masuk_bongkar.png'));
+    await tester.tap(find.text('Ambil kont.'));
+    await tester.pump(const Duration(milliseconds: 500));
+    await expectLater(find.byType(MasukScreen), matchesGoldenFile('goldens/masuk_ambil.png'));
+    await tester.tap(find.text('Muat'));
+    await tester.pump(const Duration(milliseconds: 500));
+    await expectLater(find.byType(MasukScreen), matchesGoldenFile('goldens/masuk_muat.png'));
     addTearDown(tester.view.reset);
   });
 }

@@ -179,6 +179,7 @@ ORDER BY p.PlanId DESC", new { whs, jenis, cont }));
                 // kontainer
                 if (cont is not null && !PlanEndpoints.Iso6346(cont)) return Bad("Nomor kontainer tidak valid (ISO 6346: 4 huruf + 7 angka, digit pemeriksa)");
                 if (r.Keperluan == "AmbilKontainer" && cont is null) return Bad("Pilih kontainer kosong dari yard");
+                if (r.Keperluan == "Bongkar" && cont is null) return Bad("No. kontainer wajib diisi untuk Bongkar");
                 if (cont is not null)
                 {
                     var plat2 = await db.ExecuteScalarAsync<string?>("SELECT TOP 1 NoPolisi FROM WHS_Kendaraan WHERE ContainerNo = @c AND Status = 'Di dalam'", new { c = cont }, tx);
@@ -208,7 +209,7 @@ ORDER BY p.PlanId DESC", new { whs, jenis, cont }));
                 else
                 {
                     if (berat > S("TARA_MAX_KG", 20000)) return Bad($"Tara {berat:N0} kg tidak wajar (maks {S("TARA_MAX_KG", 20000):N0}) · kendaraan masih bermuatan?");
-                    var exp = (hist.Terakhir ?? 0) + (r.KontainerBawaan ? kontTara : 0);
+                    var exp = (hist.Terakhir ?? 0) + (r.Keperluan == "AmbilKontainer" ? 0 : r.KontainerBawaan ? kontTara : 0);
                     if (exp > 0)
                     {
                         selisihRata = Math.Round(Math.Abs(berat - exp) / exp * 100, 2);
@@ -227,13 +228,13 @@ ORDER BY p.PlanId DESC", new { whs, jenis, cont }));
                 var tiket = await NextTiket(db, tx);
                 var reg = await db.ExecuteScalarAsync<long>(@"INSERT WHS_Kendaraan (Tiket, WhsCode, Keperluan, PlanId, NoPolisi, Sopir, ContainerNo, AlasanBedaPlan, KontainerBawaan, Peringatan, InUser)
                     OUTPUT INSERTED.RegId VALUES (@tiket, @whs, @kep, @plan, @plat, @sopir, @cont, @alasan, @kb, @per, @uid)",
-                    new { tiket, whs = r.WhsCode, kep = r.Keperluan, plan = planId, plat = FormatPlat(plat), sopir, cont, alasan = Clean(r.AlasanBedaPlan), kb = r.KontainerBawaan, per = warnings.Count == 0 ? null : string.Join("; ", warnings), uid = u.UserId() }, tx);
+                    new { tiket, whs = r.WhsCode, kep = r.Keperluan, plan = planId, plat = FormatPlat(plat), sopir, cont, alasan = Clean(r.AlasanBedaPlan), kb = r.Keperluan == "Muat" && r.KontainerBawaan, per = warnings.Count == 0 ? null : string.Join("; ", warnings), uid = u.UserId() }, tx);
                 var tid = await db.ExecuteScalarAsync<long>(@"INSERT WHS_Timbang (RegId, Alat, KodeTimbangan, Jenis, BeratKg, Sumber, IndikatorStatus, SelisihPersen, TeksMentah, Peringatan, UserId)
                     OUTPUT INSERTED.TimbangId VALUES (@reg, 'KENDARAAN', @kode, @jenis, @berat, @sumber, @ind, @sel, @raw, @per, @uid)",
                     new { reg, kode = Clean(r.Timbang.KodeTimbangan), jenis = masukBruto ? "BRUTO" : "TARA", berat, sumber = r.Timbang.Sumber, ind = Clean(r.Timbang.IndikatorStatus), sel = selisihRata, raw = r.Timbang.TeksMentah is { Length: > 200 } t ? t[..200] : r.Timbang.TeksMentah, per = warnings.Count == 0 ? null : string.Join("; ", warnings), uid = u.UserId() }, tx);
                 if (!masukBruto)
                 {
-                    var taraMobil = berat - (r.KontainerBawaan ? kontTara : 0);
+                    var taraMobil = berat - (r.Keperluan == "Muat" && r.KontainerBawaan ? kontTara : 0);
                     if (taraMobil > 0)
                         await db.ExecuteAsync(@"INSERT WHS_RiwayatBeratMobil (NoPolisi, WhsCode, TaraKg, Sumber, KodeTimbangan, TimbangId, RegId, Sopir, SelisihRataPersen, UserId)
                             VALUES (@plat, @whs, @tara, @sumber, @kode, @tid, @reg, @sopir, @sel, @uid)",
