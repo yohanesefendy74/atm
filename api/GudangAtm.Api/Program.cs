@@ -185,6 +185,7 @@ api.MapAlat(Db);
 api.MapMasterBaca(Db);
 api.MapPlanKrani(Db);
 api.MapKendaraan(Db);
+api.MapPlanKraniSave(Db);
 
 var cms = app.MapGroup("/api/cms").RequireAuthorization("Admin");
 cms.MapCms(Db, cfg);
