@@ -83,6 +83,7 @@ class _BottomNav extends StatelessWidget {
         _item(2, Icons.download_outlined, 'Inbound'),
         Expanded(
           child: Center(
+            heightFactor: 1, // tanpa ini Center memenuhi tinggi layar dan menutupi isi tab
             child: Material(
               color: C.ink,
               borderRadius: BorderRadius.circular(18),
