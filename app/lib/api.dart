@@ -66,6 +66,9 @@ class Session {
   }
 }
 
+/// Nomor build aplikasi ini (diisi CI lewat --dart-define=BUILD_NUMBER). 0 = build lokal.
+const int kBuildNumber = int.fromEnvironment('BUILD_NUMBER', defaultValue: 0);
+
 /// Klien REST ke GudangAtm.Api.
 class Api {
   static const _timeout = Duration(seconds: 20);
@@ -121,6 +124,18 @@ class Api {
     } catch (e) {
       throw ApiException('Tidak bisa terhubung ke server (${Session.I.baseUrl})');
     }
+  }
+
+  /// Cek versi baru di server (distribusi internal). Mengembalikan alamat unduh bila ada versi lebih baru.
+  static Future<String?> cekUpdate() async {
+    try {
+      final r = await http.get(Uri.parse('${Session.I.baseUrl}/unduh/versi.json')).timeout(const Duration(seconds: 5));
+      if (r.statusCode != 200) return null;
+      final j = jsonDecode(utf8.decode(r.bodyBytes));
+      final v = (j['build'] as num?)?.toInt() ?? 0;
+      if (kBuildNumber > 0 && v > kBuildNumber) return '${Session.I.baseUrl}/unduh/';
+    } catch (_) {}
+    return null;
   }
 
   // ------------------------------------------------------------ endpoint

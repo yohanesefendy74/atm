@@ -20,6 +20,15 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _remember = Session.I.rememberedUser != null;
   String _lang = 'Indonesia';
   bool _busy = false;
+  String? _update;
+
+  @override
+  void initState() {
+    super.initState();
+    Api.cekUpdate().then((u) {
+      if (mounted) setState(() => _update = u);
+    });
+  }
 
   @override
   void dispose() {
@@ -79,6 +88,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
               ),
             ),
+            if (_update != null)
+              Box(color: C.amberTint, border: C.amberTint, child: Text('Versi baru aplikasi tersedia. Buka $_update di browser HP untuk mengunduh.', style: const TextStyle(color: C.amberText))),
             Center(child: Image.asset('assets/logo.png', width: 280)),
             const SizedBox(height: 48),
             _row('UserName', TextField(controller: _user, decoration: deco, textInputAction: TextInputAction.next)),

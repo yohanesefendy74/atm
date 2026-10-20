@@ -31,10 +31,30 @@ jobs:
 
       - run: flutter pub get
       - run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      # Tanda tangan tetap: tanpa ini APK baru TIDAK bisa menimpa APK lama di HP (harus uninstall).
+      # Secrets: ANDROID_KEYSTORE_B64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS (lihat docs/MOBILE.md). Bila kosong -> debug key.
+      - name: Siapkan tanda tangan rilis
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -z "$KS_B64" ]; then echo "::warning title=APK tidak bertanda tangan tetap::Isi secrets ANDROID_KEYSTORE_* supaya update bisa menimpa versi lama"; exit 0; fi
+          echo "$KS_B64" | base64 -d > android/app/upload.jks
+          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=upload.jks\n' "$KS_PASS" "$KS_PASS" "$KS_ALIAS" > android/key.properties
+          python3 - <<'PY'
+          import re
+          p='android/app/build.gradle'; s=open(p).read()
+          s=s.replace('android {', 'def keystoreProperties = new Properties()\ndef keystorePropertiesFile = rootProject.file("key.properties")\nif (keystorePropertiesFile.exists()) { keystoreProperties.load(new FileInputStream(keystorePropertiesFile)) }\n\nandroid {', 1)
+          s=s.replace('buildTypes {', 'signingConfigs {\n        release {\n            keyAlias keystoreProperties["keyAlias"]\n            keyPassword keystoreProperties["keyPassword"]\n            storeFile file(keystoreProperties["storeFile"])\n            storePassword keystoreProperties["storePassword"]\n        }\n    }\n    buildTypes {', 1)
+          s=s.replace('signingConfig = signingConfigs.debug', 'signingConfig = signingConfigs.release').replace('signingConfig signingConfigs.debug', 'signingConfig signingConfigs.release')
+          open(p,'w').write(s)
+          PY
       - name: Build APK (error diringkas ke anotasi)
         run: |
           set -o pipefail
-          flutter build apk --release 2>&1 | tee build.log || {
+          flutter build apk --release --build-number=${{ github.run_number }} --dart-define=BUILD_NUMBER=${{ github.run_number }} 2>&1 | tee build.log || {
             echo "::error title=APK build gagal::$(grep -B2 -A14 -E 'What went wrong|error:|Error:|FAILURE' build.log | head -60 | sed 's/%/%25/g' | tr '\n' '|')"
             exit 1
           }
@@ -72,7 +92,7 @@ jobs:
       - name: Build iOS (error diringkas ke anotasi)
         run: |
           set -o pipefail
-          flutter build ios --release --no-codesign 2>&1 | tee build.log || {
+          flutter build ios --release --no-codesign --build-number=${{ github.run_number }} --dart-define=BUILD_NUMBER=${{ github.run_number }} 2>&1 | tee build.log || {
             echo "::error title=iOS build gagal::$(grep -B2 -A14 -E 'error:|Error|FAILURE|\[!\]' build.log | head -60 | sed 's/%/%25/g' | tr '\n' '|')"
             exit 1
           }

@@ -168,6 +168,23 @@ app.UseStaticFiles(new StaticFileOptions
     },
 });
 
+// Distribusi internal aplikasi (APK) tanpa Play Store: file ditaruh di folder di luar publish API (tidak terhapus saat update API)
+{
+    var unduh = cfg["Unduh:Folder"] ?? (OperatingSystem.IsWindows() ? @"C:\GudangAtm\unduh" : Path.Combine(app.Environment.ContentRootPath, "unduh"));
+    Directory.CreateDirectory(unduh);
+    var mime = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+    mime.Mappings[".apk"] = "application/vnd.android.package-archive";
+    mime.Mappings[".ipa"] = "application/octet-stream";
+    app.UseDefaultFiles(new DefaultFilesOptions { RequestPath = "/unduh", FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(unduh) });
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        RequestPath = "/unduh",
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(unduh),
+        ContentTypeProvider = mime,
+        OnPrepareResponse = c => c.Context.Response.Headers.CacheControl = "no-cache",
+    });
+}
+
 app.UseAuthentication();
 app.UseRateLimiter();
 app.UseCsrfProtection();

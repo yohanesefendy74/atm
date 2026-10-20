@@ -24,3 +24,17 @@ Urutan: printer Bluetooth Android yang dipilih (TSPL) > bila tidak ada/gagal, at
 
 ## Belum diuji
 Kode ini belum dikompilasi dan belum diuji di perangkat (tidak ada Flutter SDK di lingkungan penyusun). Jalankan workflow, lalu laporkan error build bila ada.
+
+
+## Distribusi internal (tanpa Play Store)
+
+1. **Tanda tangan tetap (sekali saja).** Tanpa ini, tiap APK baru memakai kunci debug acak dan tidak bisa menimpa versi lama di HP.
+   ```
+   keytool -genkeypair -v -keystore upload.jks -alias gudang -keyalg RSA -keysize 2048 -validity 10000
+   base64 -w0 upload.jks     # (Windows: [Convert]::ToBase64String([IO.File]::ReadAllBytes('upload.jks')))
+   ```
+   Di GitHub: Settings > Secrets and variables > Actions > buat `ANDROID_KEYSTORE_B64` (hasil base64), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (= `gudang`; password store dan key dibuat sama). **Simpan file upload.jks dan passwordnya di tempat aman** - bila hilang, semua HP harus uninstall lalu pasang ulang.
+2. Jalankan workflow *Build aplikasi Gudang ATM*, unduh artifact `gudang-atm-apk` (nama run = nomor build).
+3. Di server: `deploy\08-pasang-apk.ps1 -Apk <path app-release.apk> -Build <nomor run>`.
+4. Krani membuka `https://<server>:5443/unduh/` di browser HP (WiFi gudang), unduh, pasang. Update: ulangi langkah 2-3; app lama menampilkan banner "Versi baru tersedia" di layar login.
+5. iPhone: build iOS di CI belum bertanda tangan. Untuk dipasang butuh Apple Developer Program (TestFlight) - belum disiapkan.
