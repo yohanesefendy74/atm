@@ -4,7 +4,7 @@ Hasil akhir: API + web app Gudang ATM jalan sebagai **Windows Service** (`Gudang
 terhubung ke SQL Server `WORKSHOP_STAGING`. HP krani memakai APK atau membuka alamat itu di browser.
 
 ```
-HP / laptop  --HTTPS 5443-->  Server cloud Win 2019 (GudangAtmApi.exe, Kestrel)  --1433 (VPN/privat)-->  SQL Server 194.233.84.97
+HP / laptop  --HTTPS 5443-->  Server cloud Win 2019 (GudangAtmApi.exe, Kestrel)  --1433 (VPN/privat)-->  SQL Server (satu server, localhost)
 ```
 
 > **Yang perlu dipahami dulu**
@@ -20,7 +20,7 @@ HP / laptop  --HTTPS 5443-->  Server cloud Win 2019 (GudangAtmApi.exe, Kestrel) 
 
 | Hal | Cara cek | Kalau gagal |
 |---|---|---|
-| Server cloud bisa menjangkau SQL Server `194.233.84.97:1433` | di server: `Test-NetConnection 194.233.84.97 -Port 1433` | `194.233.84.97` adalah alamat privat. Perlu **VPN site-to-site / VPN client** dari cloud ke jaringan kantor, atau SQL Server dipindah/di-replikasi ke cloud. **Jangan** membuka port 1433 ke internet. |
+| Server cloud bisa menjangkau SQL Server `localhost:1433` | di server: `Test-NetConnection localhost -Port 1433` | `194.233.84.97` adalah alamat privat. Perlu **VPN site-to-site / VPN client** dari cloud ke jaringan kantor, atau SQL Server dipindah/di-replikasi ke cloud. **Jangan** membuka port 1433 ke internet. |
 | Alamat yang dipakai HP | IP publik atau (lebih baik) nama domain, mis. `gudang.perusahaan.co.id` | Siapkan A-record ke IP publik server |
 | Akses internet dari server | `Invoke-WebRequest https://github.com -UseBasicParsing` | Perlu untuk download .NET, Git, dan clone |
 | Akses ke repository Git | URL repo + Personal Access Token (repo private) | Lihat `docs/GIT.md` |
@@ -42,7 +42,7 @@ Port yang dibuka di **security group / firewall cloud**: `3389` (RDP, batasi ke 
 
 ## 2. Siapkan database (dari PC admin, bukan dari server)
 
-Buka SSMS, sambung ke `194.233.84.97` dengan akun admin, lalu jalankan **berurutan** (semua aman diulang):
+Buka SSMS, sambung ke `localhost` (atau 194.233.84.97 dari PC lain) dengan akun admin, lalu jalankan **berurutan** (semua aman diulang):
 
 1. `database/web_security.sql` — tabel `WHS_AuditLog`, kolom CMS, dll. Di bagian 3 file ini ada contoh membuat login khusus aplikasi.
 2. `database/gudang_atm_relasi.sql` — **hanya bagian 6** (prosedur `dbo.usp_WHS_NextDocEntry`). Bagian lain berisi contoh query.
@@ -111,7 +111,7 @@ Pengaturan › Keamanan › Enkripsi & kredensial › Instal sertifikat › Sert
 .\03-install-service.ps1 -AdminUsers ADMIN1,ADMIN2
 ```
 Ganti `ADMIN1,ADMIN2` dengan `USER_CODE` yang boleh membuka CMS (selain user `OUSR.SUPERUSER = 'Y'`). Parameter lain punya nilai awal
-(`-Server 194.233.84.97 -Database WORKSHOP_STAGING -SqlUser gudang_app -Port 5443`); ubah bila berbeda.
+(`-Server localhost -Database WORKSHOP_STAGING -SqlUser gudang_app -Port 5443`); ubah bila berbeda.
 
 Skrip akan menanyakan **password login SQL** dan **password file .pfx** (tidak tampil di layar), lalu:
 - membuat service `GudangAtmApi` (Automatic, restart otomatis bila crash),
@@ -149,7 +149,7 @@ Kalau gagal, lihat tabel masalah di bawah dan Event Viewer › Windows Logs › 
 | Gejala | Penyebab / solusi |
 |---|---|
 | Service berhenti sendiri saat start | Event Viewer: biasanya `Jwt:Key belum diisi` / connection string kosong → jalankan ulang `03-install-service.ps1` |
-| `Cannot open server ... / timeout` di log | Server cloud tidak menjangkau SQL (VPN putus / firewall 1433). Tes `Test-NetConnection 194.233.84.97 -Port 1433` |
+| `Cannot open server ... / timeout` di log | Server cloud tidak menjangkau SQL (VPN putus / firewall 1433). Tes `Test-NetConnection localhost -Port 1433` |
 | `Login failed for user 'gudang_app'` | Password salah, atau login belum punya user di `WORKSHOP_STAGING` (langkah 2) |
 | Browser: sertifikat tidak dipercaya | Memakai self-signed → pasang `gudang.cer` di perangkat, atau pakai sertifikat CA |
 | Tidak bisa dibuka dari luar server | Security group cloud belum membuka 5443, atau Windows Firewall (`Get-NetFirewallRule -DisplayName 'Gudang ATM HTTPS'`) |

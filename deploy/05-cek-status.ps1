@@ -1,5 +1,5 @@
 <# Gudang ATM - cek cepat: service, SQL Server terjangkau, health API, 20 log terakhir. #>
-param([string]$ServiceName = 'GudangAtmApi', [string]$Server = '194.233.84.97', [int]$Port = 5443)
+param([string]$ServiceName = 'GudangAtmApi', [string]$Server = 'localhost', [int]$Port = 5443)
 Write-Host 'Service' -ForegroundColor Cyan
 Get-Service $ServiceName | Format-Table Name, Status, StartType -AutoSize
 Write-Host "SQL Server ${Server}:1433" -ForegroundColor Cyan
