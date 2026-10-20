@@ -5,6 +5,8 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'inbound.dart';
 import 'outbound.dart';
+import 'pos_timbang.dart';
+import 'tugas.dart';
 import 'reports.dart';
 import 'settings.dart';
 
@@ -178,7 +180,13 @@ class _HomeTabState extends State<HomeTab> {
           const SizedBox(height: 10),
           _bigAction(C.outbound, Icons.upload_outlined, 'Kirim Barang', 'Outbound · OB / KR / RP · scan palet',
               () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OutboundHeaderScreen())).then((_) => _load())),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
+          Row(children: [
+            _quick(Icons.assignment_outlined, 'Tugas Saya', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TugasScreen())).then((_) => _load())),
+            const SizedBox(width: 10),
+            _quick(Icons.scale_outlined, 'Pos Timbang', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PosTimbangScreen()))),
+          ]),
+          const SizedBox(height: 10),
           Row(children: [
             _quick(Icons.qr_code_scanner, 'Scan QR',
                 () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OutboundHeaderScreen()))),

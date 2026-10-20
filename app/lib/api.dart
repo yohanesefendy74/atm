@@ -5,9 +5,10 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiException implements Exception {
-  ApiException(this.message, [this.status]);
+  ApiException(this.message, [this.status, this.data]);
   final String message;
   final int? status;
+  final Map? data;
   @override
   String toString() => message;
 }
@@ -93,7 +94,7 @@ class Api {
     String msg = 'Server error ${r.statusCode}';
     if (body is Map && body['message'] != null) msg = body['message'].toString();
     if (r.statusCode == 401 && Session.I.token != null) msg = 'Sesi habis, silakan login ulang';
-    throw ApiException(msg, r.statusCode);
+    throw ApiException(msg, r.statusCode, body is Map ? body : null);
   }
 
   static Future<dynamic> get(String path, [Map<String, String?>? query]) async {
