@@ -31,7 +31,13 @@ jobs:
 
       - run: flutter pub get
       - run: flutter analyze --no-fatal-infos --no-fatal-warnings
-      - run: flutter build apk --release
+      - name: Build APK (error diringkas ke anotasi)
+        run: |
+          set -o pipefail
+          flutter build apk --release 2>&1 | tee build.log || {
+            echo "::error title=APK build gagal::$(grep -B2 -A14 -E 'What went wrong|error:|Error:|FAILURE' build.log | head -60 | sed 's/%/%25/g' | tr '\n' '|')"
+            exit 1
+          }
 
       - uses: actions/upload-artifact@v4
         with:
@@ -59,4 +65,10 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :NSBluetoothAlwaysUsageDescription string Membaca timbangan lewat Bluetooth" $P || true
           /usr/libexec/PlistBuddy -c "Add :NSBluetoothPeripheralUsageDescription string Membaca timbangan lewat Bluetooth" $P || true
       - run: flutter pub get
-      - run: flutter build ios --release --no-codesign
+      - name: Build iOS (error diringkas ke anotasi)
+        run: |
+          set -o pipefail
+          flutter build ios --release --no-codesign 2>&1 | tee build.log || {
+            echo "::error title=iOS build gagal::$(grep -B2 -A14 -E 'error:|Error|FAILURE|\[!\]' build.log | head -60 | sed 's/%/%25/g' | tr '\n' '|')"
+            exit 1
+          }
