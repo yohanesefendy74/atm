@@ -109,7 +109,7 @@ class Api {
     } on TimeoutException {
       throw ApiException('Server tidak merespons. Cek koneksi WiFi gudang.');
     } catch (e) {
-      throw ApiException('Tidak bisa terhubung ke server (${Session.I.baseUrl})');
+      throw ApiException('Tidak bisa terhubung ke server (${Session.I.baseUrl}): ${e.toString().split('\n').first}');
     }
   }
 
@@ -122,7 +122,7 @@ class Api {
     } on TimeoutException {
       throw ApiException('Server tidak merespons. Cek koneksi WiFi gudang.');
     } catch (e) {
-      throw ApiException('Tidak bisa terhubung ke server (${Session.I.baseUrl})');
+      throw ApiException('Tidak bisa terhubung ke server (${Session.I.baseUrl}): ${e.toString().split('\n').first}');
     }
   }
 
