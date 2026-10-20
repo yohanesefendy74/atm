@@ -41,7 +41,10 @@ public record OutboundRequest(
     string? ContainerNo,
     DateTime? DocDate,
     List<DocLine> OutLines,
-    List<DocLine>? InLines);
+    List<DocLine>? InLines,
+    string? AlasanKode = null,
+    string? Catatan = null,
+    string? KodeRuangan = null);
 
 public record SavedDoc(string ObjType, long DocEntry, string TrxCode);
 
