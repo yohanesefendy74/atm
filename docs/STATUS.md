@@ -19,3 +19,23 @@ Pertanyaan yang masih terbuka ada di percakapan desain; tanyakan sebelum tahap 1
 
 
 **Gateway alat (timbangan RS232, printer TSC):** API (`GatewayEndpoints.cs`), `database/gateway.sql`, dan `gateway/` sudah ditulis, belum dikompilasi/diuji. Lihat `GATEWAY.md`. Format data timbangan menunggu hasil `--sniff`.
+
+## Status v2 (update terbaru)
+
+Sudah ditulis dan **lolos kompilasi di CI** (API, Gateway, Web, APK, iOS tanpa tanda tangan). **Belum pernah dijalankan terhadap database/alat sungguhan.**
+
+| Modul | API | Web Admin | App krani |
+|---|---|---|---|
+| Setup & Master (ruangan, palet, jenis container, dock, timbangan, printer, gateway) | ya | ya | baca saja |
+| SPBB / SPMB + titipan | ya | ya | Tugas Saya |
+| Jadwal bongkar-muat | ya | ya | (tampil di Tugas) |
+| Registrasi kendaraan & timbang masuk/keluar, yard, kode Admin | ya | ya (lihat & kode) | Pos Timbang |
+| Krani per dokumen (parsial, ruangan, brand) | ya | - | Tugas Saya |
+| Surat Jalan multi-SPMB | ya | ya | - |
+| Riwayat berat (mobil/kontainer) | ya | ya | - |
+| Penyesuaian / Repacking (alasan, selisih, ruangan titipan) | ya (di /outbound) | - | layar outbound lama belum kirim AlasanKode/KodeRuangan |
+| Distribusi APK internal | `/unduh/` | - | banner versi baru |
+
+Urutan SQL: `gudang_atm_v2_struktur.sql` -> `gateway.sql` -> `gudang_atm_v2_tambahan.sql`.
+
+Belum dikerjakan / perlu keputusan: layar app Penyesuaian & Repacking versi v2, CMS titipan per ruangan (v1 masih OWHS.External), format data A12E (`--sniff`), iOS TestFlight, uji dengan data SAP nyata (kolom bertanda ASUMSI).
