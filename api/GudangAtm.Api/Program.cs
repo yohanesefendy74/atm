@@ -203,6 +203,7 @@ api.MapMasterBaca(Db);
 api.MapPlanKrani(Db);
 api.MapKendaraan(Db);
 api.MapPlanKraniSave(Db);
+api.MapKontainer(Db);
 
 var cms = app.MapGroup("/api/cms").RequireAuthorization("Admin");
 cms.MapCms(Db, cfg);
@@ -211,6 +212,7 @@ cms.MapPlan(Db);
 cms.MapJadwal(Db);
 cms.MapKendaraanAdmin(Db);
 cms.MapSuratJalan(Db);
+cms.MapKontainerAdmin(Db);
 
 // Path /api yang tidak dikenal -> 404 JSON, selain itu -> halaman SPA
 app.Map("/api/{**rest}", () => Results.NotFound(new { message = "Endpoint tidak ditemukan" }));

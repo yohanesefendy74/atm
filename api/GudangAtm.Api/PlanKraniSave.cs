@@ -6,7 +6,7 @@ using Microsoft.Data.SqlClient;
 namespace GudangAtm.Api;
 
 public record TerimaLine(int PlanLine, decimal Qty, decimal Qty2, decimal QtyPalet, string? Brand, string? KodeRuangan);
-public record TerimaReq(long? RegId, DateTime? DocDate, List<TerimaLine> Lines);
+public record TerimaReq(long? RegId, DateTime? DocDate, List<TerimaLine> Lines, long? SesiId = null);
 
 /// Krani menyimpan penerimaan (SPBB) / pengiriman (SPMB) terhadap dokumen rencana. Satu simpan = satu OKRN (penerimaan ke-N).
 public static class PlanKraniSave
@@ -35,15 +35,26 @@ public static class PlanKraniSave
                 if (pl.Jenis is not ("SPBB" or "SPMB")) return Bad("Jenis dokumen tidak dikenal");
 
                 string noMobil = "", cont = "";
-                if (r.RegId is not null)
+                long? regId = r.RegId, sesiId = null;
+                if (pl.Jenis == "SPBB")
+                {
+                    // Bongkar kontainer: input krani terhadap kontainer di dock (truk pembawa mungkin sudah keluar)
+                    if (r.SesiId is null) return Bad("Pilih kontainer yang sedang dibongkar");
+                    var ks = await db.QueryFirstOrDefaultAsync<(long? PlanId, string Status, string ContainerNo, string? Plat1, long? RegId1)?>(
+                        "SELECT PlanId, Status, ContainerNo, Plat1, RegId1 FROM WHS_KontainerSesi WHERE SesiId = @s", new { s = r.SesiId }, tx);
+                    if (ks is null) return Bad("Kontainer tidak ditemukan");
+                    if (ks.Value.PlanId != id) return Bad("Kontainer ini terdaftar untuk dokumen lain");
+                    if (ks.Value.Status is not ("ISI_MASUK" or "DI_DOCK")) return Bad("Kontainer sudah selesai dibongkar");
+                    noMobil = ks.Value.Plat1 ?? ""; cont = ks.Value.ContainerNo; regId = ks.Value.RegId1; sesiId = r.SesiId;
+                }
+                else if (r.RegId is not null)
                 {
                     var k = await db.QueryFirstOrDefaultAsync<(long? PlanId, string NoPolisi, string? ContainerNo, string Status)?>("SELECT PlanId, NoPolisi, ContainerNo, Status FROM WHS_Kendaraan WHERE RegId = @r", new { r = r.RegId }, tx);
                     if (k is null || k.Value.Status != "Di dalam") return Bad("Kendaraan tidak di dalam gudang");
                     if (k.Value.PlanId != id) return Bad("Kendaraan ini terdaftar untuk dokumen lain");
                     noMobil = k.Value.NoPolisi; cont = k.Value.ContainerNo ?? "";
                 }
-                else if (pl.Jenis == "SPMB") return Bad("Pilih kendaraan yang sedang memuat");
-                else return Bad("Pilih kendaraan yang sedang bongkar");
+                else return Bad("Pilih kendaraan yang sedang memuat");
 
                 var plan1 = (await db.QueryAsync<(int PlanLine, string ItemCode, string? Dscription, string? ContainerNo, string? BrandName, decimal QtyPlan, decimal QtyDone, string? PaletCode, string? KodeRuangan, string? Size, string? Type, string? Crop)>(
                     "SELECT PlanLine, ItemCode, Dscription, ContainerNo, BrandName, QtyPlan, QtyDone, PaletCode, KodeRuangan, Size, [Type], Crop FROM WHS_Plan1 WITH (UPDLOCK) WHERE PlanId = @id", new { id }, tx)).ToDictionary(x => x.PlanLine);
@@ -77,7 +88,7 @@ public static class PlanKraniSave
                 var docEntry = dp.Get<long>("@DocEntry");
                 await db.ExecuteAsync(Sql.InsertHeader, new { objType, docEntry, docDate = date, bplId = u.BplId(), whsCode = pl.WhsCode, userId = u.UserId(), trxCode = trx, noMobil, containerNo = string.IsNullOrEmpty(cont) ? null : cont }, tx);
                 var ke = await db.ExecuteScalarAsync<int>("SELECT ISNULL(MAX(PenerimaanKe), 0) + 1 FROM OKRN WHERE PlanId = @id", new { id }, tx);
-                await db.ExecuteAsync("UPDATE OKRN SET PlanId = @id, PenerimaanKe = @ke, RegId = @reg WHERE ObjType = @objType AND DocEntry = @docEntry", new { id, ke, reg = r.RegId, objType, docEntry }, tx);
+                await db.ExecuteAsync("UPDATE OKRN SET PlanId = @id, PenerimaanKe = @ke, RegId = @reg, SesiId = @sesi WHERE ObjType = @objType AND DocEntry = @docEntry", new { id, ke, reg = regId, sesi = sesiId, objType, docEntry }, tx);
 
                 var lineNum = 0;
                 foreach (var l in r.Lines)
