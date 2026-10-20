@@ -128,6 +128,10 @@ export function AdminKendaraan() {
   const yard = useLoad(() => (whs && tab === 'yard' ? get<Row[]>('/api/yard', { whs }) : Promise.resolve([])), [whs, tab]);
   const rm = useLoad(() => (tab === 'mobil' ? get<Row[]>('/api/cms/riwayat/mobil', { plat }) : Promise.resolve([])), [tab, plat]);
   const rk = useLoad(() => (tab === 'kontainer' ? get<Row[]>('/api/cms/riwayat/kontainer', { no: cont }) : Promise.resolve([])), [tab, cont]);
+  const [qs, setQs] = useState('');
+  const ks = useLoad(() => (tab === 'sesi' ? get<Row[]>('/api/cms/kontainer-sesi', { whs, q: qs }) : Promise.resolve([])), [tab, whs, qs]);
+  const [sesi, setSesi] = useState<Row | null>(null);
+  const kg = (v: unknown) => (v == null ? '-' : fmt(v));
   async function buatKode() { try { const r = await post<Row>('/api/cms/kode-persetujuan', { WhsCode: whs, Tujuan: 'TIMBANG' }); setKode(r.kode); } catch (e) { toast(errText(e), true); } }
   const T = (cols: [string, string][], rows: Row[]) => (
     <div className="tablewrap"><table className="table"><thead><tr>{cols.map(([, l]) => <th key={l}>{l}</th>)}</tr></thead><tbody>
@@ -137,10 +141,35 @@ export function AdminKendaraan() {
   return (
     <Page eyebrow="Admin" title="Kendaraan & Riwayat Berat" accent="ink" extra={
       <div className="stack tight"><WhsPick value={whs} onChange={setWhs} />
-        <div className="chips">{[['dalam', 'Di dalam'], ['yard', 'Yard kontainer'], ['mobil', 'Riwayat tara mobil'], ['kontainer', 'Riwayat tara kontainer']].map(([k, t]) => <button key={k} className="chip" aria-pressed={tab === k} onClick={() => setTab(k)}>{t}</button>)}</div></div>}>
+        <div className="chips">{[['dalam', 'Di dalam'], ['sesi', 'Timbang kontainer'], ['yard', 'Yard kontainer'], ['mobil', 'Riwayat tara mobil'], ['kontainer', 'Riwayat tara kontainer']].map(([k, t]) => <button key={k} className="chip" aria-pressed={tab === k} onClick={() => setTab(k)}>{t}</button>)}</div></div>}>
       {whs && <div className="card pad-s row"><button className="btn small" onClick={buatKode}>Buat kode persetujuan</button>{kode && <span className="mono"><strong>{kode}</strong> · berlaku 15 menit, sekali pakai</span>}</div>}
       {tab === 'dalam' && T([['tiket', 'Tiket'], ['noPolisi', 'Plat'], ['sopir', 'Sopir'], ['keperluan', 'Keperluan'], ['planNo', 'Dokumen'], ['jamMasuk', 'Masuk'], ['selesaiKrani', 'Krani selesai']], dalam.data ?? [])}
-      {tab === 'yard' && T([['containerNo', 'Kontainer'], ['posisi', 'Area'], ['kondisi', 'Kondisi'], ['taraKg', 'Tara kg'], ['dialokasikan', 'Dialokasikan']], yard.data ?? [])}
+      {tab === 'sesi' && (<>
+        <input className="input" placeholder="Cari kontainer / SPBB / plat" value={qs} onChange={(e) => setQs(e.target.value)} />
+        <div className="tablewrap"><table className="table"><thead><tr><th>Kontainer</th><th>SPBB</th><th>Status</th><th>Isi (T1-T2)</th><th>Kosong (T4-T3)</th><th>Net</th><th>Krani</th><th>Selisih</th><th /></tr></thead><tbody>
+          {(ks.data ?? []).map((k) => (
+            <tr key={k.sesiId}><td data-label="Kontainer" className="mono">{k.containerNo}</td><td data-label="SPBB" className="mono">{k.planNo ?? '-'}</td><td data-label="Status">{k.status}</td>
+              <td data-label="Isi" className="num">{kg(k.beratIsi)}</td><td data-label="Kosong" className="num">{kg(k.beratKosong)}</td><td data-label="Net" className="num">{kg(k.net)}</td>
+              <td data-label="Krani" className="num">{kg(k.netKrani)}</td><td data-label="Selisih" className="num">{k.selisihPersen != null ? `${k.selisihPersen}%` : '-'}</td>
+              <td><button className="btn small outline" onClick={async () => setSesi(await get<Row>(`/api/cms/kontainer-sesi/${k.sesiId}`))}>Detail</button></td></tr>
+          ))}</tbody></table></div>
+        {sesi && (
+          <div className="card stack">
+            <div className="row"><strong className="mono grow">{sesi.header.containerNo} · {sesi.header.planNo ?? '-'}</strong><button className="btn small ghost" onClick={() => setSesi(null)}>Tutup</button></div>
+            <div className="small">T1 {kg(sesi.header.t1)} ({sesi.header.plat1 ?? '-'}) · T2 {kg(sesi.header.t2)} → isi <strong>{kg(sesi.header.beratIsi)}</strong> kg</div>
+            <div className="small">T3 {kg(sesi.header.t3)} ({sesi.header.plat3 ?? '-'}) · T4 {kg(sesi.header.t4)} → kosong <strong>{kg(sesi.header.beratKosong)}</strong> kg</div>
+            <div>Net barang <strong>{kg(sesi.header.net)}</strong> kg · input krani {kg(sesi.header.netKrani)} kg{sesi.header.selisihPersen != null ? ` · selisih ${sesi.header.selisihPersen}%` : ''}</div>
+            {sesi.header.peringatan && <div className="small muted">{sesi.header.peringatan}</div>}
+            <div className="tablewrap"><table className="table"><thead><tr><th>Barang</th><th>Karung</th><th>KG krani</th><th>Sampel</th><th>Estimasi sisa</th><th>Alokasi sisa</th><th>KG timbang</th></tr></thead><tbody>
+              {((sesi.alokasi as Row[]).length ? (sesi.alokasi as Row[]) : (sesi.items as Row[])).map((a) => (
+                <tr key={a.planLine}><td data-label="Barang">{a.itemCode}</td><td data-label="Karung" className="num">{kg(a.sakTotal)}</td><td data-label="KG krani" className="num">{kg(a.kgKrani)}</td>
+                  <td data-label="Sampel" className="num">{a.sakSampel ? `${a.sakSampel} krg / ${fmt(a.kgSampel)} kg` : 'belum'}</td>
+                  <td data-label="Estimasi sisa" className="num">{kg(a.estimasiSisaKg)}</td><td data-label="Alokasi sisa" className="num">{kg(a.alokasiSisaKg)}</td><td data-label="KG timbang" className="num"><strong>{kg(a.kgTimbang)}</strong></td></tr>
+              ))}</tbody></table></div>
+          </div>
+        )}
+      </>)}
+      {tab === 'yard' && T([['containerNo', 'Kontainer'], ['status', 'Lokasi'], ['posisi', 'Area'], ['kondisi', 'Kondisi'], ['taraKg', 'Tara kg'], ['dialokasikan', 'Dialokasikan']], yard.data ?? [])}
       {tab === 'mobil' && (<><input className="input" placeholder="Cari plat (kosong = ringkasan)" value={plat} onChange={(e) => setPlat(e.target.value)} />
         {plat ? T([['noPolisi', 'Plat'], ['taraKg', 'Tara kg'], ['sumber', 'Sumber'], ['selisihRataPersen', 'Selisih %'], ['sopir', 'Sopir'], ['waktuTimbang', 'Waktu'], ['oleh', 'Oleh']], rm.data ?? [])
           : T([['noPolisi', 'Plat'], ['jumlahTimbang', 'Jml'], ['rataTara', 'Rata'], ['minTara', 'Min'], ['maxTara', 'Maks'], ['taraTerakhir', 'Terakhir']], rm.data ?? [])}</>)}
