@@ -106,7 +106,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             const SizedBox(height: 16),
             const FieldLabel('Alamat server API'),
-            TextField(controller: _url, keyboardType: TextInputType.url, decoration: const InputDecoration(hintText: 'https://172.28.88.1:5443')),
+            TextField(controller: _url, keyboardType: TextInputType.url, decoration: const InputDecoration(hintText: 'https://194.233.84.97:5443')),
             const Hint('Server GudangAtm.Api di jaringan kantor. HP harus terhubung ke WiFi gudang.'),
             const SizedBox(height: 10),
             BigButton(label: 'Simpan & tes koneksi', busy: _busy, onPressed: _saveUrl, outlined: true),

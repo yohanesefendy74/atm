@@ -119,7 +119,7 @@ Untuk distribusi resmi, buat keystore sendiri sesuai panduan Flutter "Build and 
 ## 4. Pemakaian di HP
 
 1. Install APK (izinkan "Install unknown apps").
-2. Di layar Login, ikon ⚙ → isi alamat server, mis. `https://172.28.88.1:5443` → **Simpan & tes koneksi**.
+2. Di layar Login, ikon ⚙ → isi alamat server, mis. `https://194.233.84.97:5443` → **Simpan & tes koneksi**.
    Bila sertifikat dari CA internal, pasang dulu sertifikat CA di HP (Pengaturan › Keamanan › Install sertifikat).
 3. Pair printer TSC / Xprinter di Pengaturan Bluetooth Android, lalu di aplikasi:
    Pengaturan → Printer → **Pilih** → **Cetak label uji**.

@@ -18,7 +18,7 @@ class Session {
   Session._();
   static final Session I = Session._();
 
-  String baseUrl = 'https://172.28.88.1:5443';
+  String baseUrl = 'https://194.233.84.97:5443';
   String? token;
   Map<String, dynamic>? user;
   String? printerMac;

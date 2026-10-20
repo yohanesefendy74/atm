@@ -7,7 +7,7 @@
 #Requires -RunAsAdministrator
 param(
     [string]$ServiceName = 'GudangAtmApi',
-    [string]$Server = '172.28.88.1',          # SQL Server (harus terjangkau dari server cloud, mis. lewat VPN)
+    [string]$Server = '194.233.84.97',          # SQL Server (harus terjangkau dari server cloud)
     [string]$Database = 'WORKSHOP_STAGING',
     [string]$SqlUser = 'gudang_app',          # login SQL khusus aplikasi, BUKAN sa
     [string[]]$AdminUsers = @(),              # USER_CODE yang boleh membuka CMS selain OUSR.SUPERUSER = 'Y'
