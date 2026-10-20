@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:permission_handler/permission_handler.dart';
 import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 
 import 'api.dart';
+import 'label_pdf.dart';
+import 'tspl.dart';
 
 class PrinterInfo {
   PrinterInfo(this.name, this.mac);
@@ -43,5 +47,24 @@ class LabelPrinter {
       final ok = await PrintBluetoothThermal.writeBytes(bytes.sublist(i, end));
       if (!ok) throw ApiException('Pengiriman ke printer terputus');
     }
+  }
+
+  /// Cetak label: lewat Bluetooth bila printer sudah dipilih dan terhubung; bila tidak (printer tidak terdeteksi, Bluetooth mati,
+  /// atau iPhone) memakai PDF + dialog cetak sistem. Mengembalikan true bila memakai PDF.
+  static Future<bool> cetak(List<LabelData> labels, LabelSize size) async {
+    final mac = Session.I.printerMac;
+    final bisaBluetooth = Platform.isAndroid && mac != null && mac.isNotEmpty;
+    if (bisaBluetooth) {
+      try {
+        await send(Tspl.build(labels, size));
+        return false;
+      } on ApiException {
+        // jatuh ke PDF
+      } catch (_) {
+        // jatuh ke PDF
+      }
+    }
+    await LabelPdf.cetak(labels, size);
+    return true;
   }
 }

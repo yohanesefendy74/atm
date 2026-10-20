@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../printer.dart';
+import '../scale_ble.dart';
 import '../theme.dart';
 import '../tspl.dart';
 import '../widgets.dart';
@@ -17,6 +18,8 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _url = TextEditingController(text: Session.I.baseUrl);
   List<PrinterInfo>? _printers;
+  List<ScaleDevice>? _scales;
+  String? _scaleInfo;
   bool _busy = false;
 
   @override
@@ -47,10 +50,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _scanScales() async {
+    setState(() => _busy = true);
+    try {
+      final r = await BleScale.scan();
+      if (mounted) setState(() => _scales = r);
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _testScale(ScaleDevice d) async {
+    setState(() => _busy = true);
+    try {
+      await BleScale.I.connect(d.id);
+      final r = await BleScale.I.readStable();
+      if (mounted) setState(() => _scaleInfo = '${d.name}: ${r.kg} kg ${r.stabil ? "(stabil)" : "(belum stabil)"}   [${r.raw}]');
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _testPrint() async {
     try {
-      await LabelPrinter.send(Tspl.test(const LabelSize(100, 70)));
-      if (mounted) showInfo(context, 'Label uji dikirim ke printer');
+      final pdf = await LabelPrinter.cetak(Tspl.testLabels(), const LabelSize(100, 70));
+      if (mounted) showInfo(context, pdf ? 'Label uji dibuat sebagai PDF' : 'Label uji dikirim ke printer');
     } catch (e) {
       if (mounted) showError(context, e);
     }
@@ -109,7 +137,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ]),
             ),
             const SizedBox(height: 10),
+            const Hint('Bila printer Bluetooth tidak dipilih/terdeteksi (atau di iPhone), label dibuat sebagai PDF lalu dicetak lewat dialog cetak.'),
             BigButton(label: 'Cetak label uji', icon: Icons.print_outlined, onPressed: _testPrint, outlined: true),
+            const SizedBox(height: 24),
+            const FieldLabel('Timbangan Bluetooth (ESP32)'),
+            Box(
+              padding: const EdgeInsets.all(12),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Row(children: [
+                  const Icon(Icons.scale_outlined, color: C.greenText),
+                  const SizedBox(width: 10),
+                  const Expanded(child: Text('Cari timbangan di sekitar', style: TextStyle(fontWeight: FontWeight.w600))),
+                  TextButton(onPressed: _busy ? null : _scanScales, child: const Text('Cari')),
+                ]),
+                if (_scales != null && _scales!.isEmpty) const Hint('Tidak ada timbangan terdeteksi. Dekati ESP32 dan pastikan menyala.'),
+                for (final d in _scales ?? <ScaleDevice>[])
+                  ListTile(dense: true, title: Text(d.name), subtitle: Text(d.id, style: const TextStyle(fontFamily: mono)), trailing: const Text('Tes baca'), onTap: _busy ? null : () => _testScale(d)),
+                if (_scaleInfo != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_scaleInfo!, style: const TextStyle(fontFamily: mono))),
+              ]),
+            ),
             if (widget.loggedIn) ...[
               const SizedBox(height: 32),
               BigButton(

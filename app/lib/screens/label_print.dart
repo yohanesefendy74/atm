@@ -74,9 +74,9 @@ class _LabelPrintScreenState extends State<LabelPrintScreen> {
     setState(() => _busy = true);
     try {
       final labels = _labels();
-      await LabelPrinter.send(Tspl.build(labels, _size));
+      final pdf = await LabelPrinter.cetak(labels, _size);
       final total = labels.fold<int>(0, (s, l) => s + l.copies);
-      if (mounted) showInfo(context, '$total label dikirim ke printer');
+      if (mounted) showInfo(context, pdf ? '$total label dibuat sebagai PDF (printer Bluetooth tidak tersedia)' : '$total label dikirim ke printer');
     } catch (e) {
       if (mounted) showError(context, e);
     } finally {

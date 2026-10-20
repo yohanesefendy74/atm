@@ -89,8 +89,7 @@ class Tspl {
     return latin1.encode(b.toString().replaceAll('\n', '\r\n'));
   }
 
-  /// Label uji 1 lembar untuk cek koneksi printer.
-  static List<int> test(LabelSize size) => build([
+  static List<LabelData> testLabels() => [
         LabelData(
           containerNo: 'TEST0000001',
           date: DateTime.now(),
@@ -102,5 +101,8 @@ class Tspl {
           sakPerPalet: 25,
           copies: 1,
         )
-      ], size);
+      ];
+
+  /// Label uji 1 lembar untuk cek koneksi printer.
+  static List<int> test(LabelSize size) => build(testLabels(), size);
 }

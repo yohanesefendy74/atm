@@ -1,4 +1,4 @@
-name: Build APK Gudang ATM
+name: Build aplikasi Gudang ATM (Android APK + iOS)
 
 on:
   workflow_dispatch:
@@ -37,3 +37,26 @@ jobs:
         with:
           name: gudang-atm-apk
           path: app/build/app/outputs/flutter-apk/app-release.apk
+
+  ios:
+    # Build iPhone TANPA tanda tangan (hanya membuktikan kode bisa dikompilasi).
+    # Untuk dipasang di iPhone butuh Apple Developer Program + tanda tangan (lihat docs/MOBILE.md).
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.24.5'
+      - run: flutter create --org com.levelup --project-name gudang_atm --platforms=ios .
+      - name: Izin iOS (kamera, Bluetooth)
+        run: |
+          P=ios/Runner/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string Scan QR palet" $P || true
+          /usr/libexec/PlistBuddy -c "Add :NSBluetoothAlwaysUsageDescription string Membaca timbangan lewat Bluetooth" $P || true
+          /usr/libexec/PlistBuddy -c "Add :NSBluetoothPeripheralUsageDescription string Membaca timbangan lewat Bluetooth" $P || true
+      - run: flutter pub get
+      - run: flutter build ios --release --no-codesign
