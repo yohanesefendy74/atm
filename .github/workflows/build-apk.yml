@@ -58,6 +58,10 @@ jobs:
           channel: stable
           flutter-version: '3.24.5'
       - run: flutter create --org com.levelup --project-name gudang_atm --platforms=ios .
+      - name: Target minimum iOS 13 (dibutuhkan plugin printer/Bluetooth)
+        run: |
+          sed -i '' "s/^# platform :ios.*/platform :ios, '13.0'/" ios/Podfile
+          sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = 1[0-2]\.0/IPHONEOS_DEPLOYMENT_TARGET = 13.0/g' ios/Runner.xcodeproj/project.pbxproj
       - name: Izin iOS (kamera, Bluetooth)
         run: |
           P=ios/Runner/Info.plist
