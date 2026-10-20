@@ -1,0 +1,52 @@
+name: CI (API, Gateway, Web)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'api/**'
+      - 'gateway/**'
+      - 'web/**'
+      - '.github/workflows/ci.yml'
+
+jobs:
+  dotnet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build API
+        run: |
+          set -o pipefail
+          dotnet build api/GudangAtm.Api/GudangAtm.Api.csproj -c Release 2>&1 | tee build.log || {
+            echo "::error title=API build gagal::$(grep -E 'error ' build.log | sort -u | head -40 | sed 's/%/%25/g' | tr '\n' '|')"
+            exit 1
+          }
+      - name: Build Gateway
+        run: |
+          set -o pipefail
+          dotnet build gateway/GudangAtm.Gateway/GudangAtm.Gateway.csproj -c Release 2>&1 | tee build2.log || {
+            echo "::error title=Gateway build gagal::$(grep -E 'error ' build2.log | sort -u | head -40 | sed 's/%/%25/g' | tr '\n' '|')"
+            exit 1
+          }
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --no-audit --no-fund
+      - name: Build web
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee build.log || {
+            echo "::error title=Web build gagal::$(grep -E 'error|Error' build.log | head -40 | sed 's/%/%25/g' | tr '\n' '|')"
+            exit 1
+          }
