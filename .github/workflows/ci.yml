@@ -9,6 +9,9 @@ on:
       - 'web/**'
       - '.github/workflows/ci.yml'
 
+permissions:
+  contents: write
+
 jobs:
   dotnet:
     runs-on: ubuntu-latest
@@ -57,3 +60,12 @@ jobs:
             echo "::error title=Web build gagal::$(grep -E 'error|Error' build.log | head -40 | sed 's/%/%25/g' | tr '\n' '|')"
             exit 1
           }
+      # Server hanya menjalankan dotnet publish (tanpa Node): hasil build web disimpan ke api/GudangAtm.Api/wwwroot di repo.
+      - name: Simpan hasil build web ke wwwroot (main)
+        if: github.ref == 'refs/heads/main'
+        working-directory: .
+        run: |
+          git add -A api/GudangAtm.Api/wwwroot
+          if git diff --cached --quiet; then echo "wwwroot sudah terbaru"; exit 0; fi
+          git -c user.name=ci -c user.email=ci@local commit -qm "Web: perbarui wwwroot hasil build [skip ci]"
+          git push -q origin HEAD:main
