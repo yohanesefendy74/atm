@@ -99,6 +99,7 @@ public static class PlanKraniSave
                         new { q = l.Qty, q2 = l.Qty2, pa = (int)Math.Ceiling(l.QtyPalet), id, pl = l.PlanLine }, tx);
                     lineNum++;
                 }
+                await db.ExecuteAsync(Sql.UpdateTotals, new { objType, docEntry }, tx);
                 var sisaTotal = await db.ExecuteScalarAsync<decimal>("SELECT SUM(QtyPlan - QtyDone) FROM WHS_Plan1 WHERE PlanId = @id", new { id }, tx);
                 var status = sisaTotal <= 0.0001m ? "Selesai" : "Proses";
                 await db.ExecuteAsync("UPDATE WHS_Plan SET Status = @s WHERE PlanId = @id", new { s = status, id }, tx);

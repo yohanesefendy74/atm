@@ -297,7 +297,7 @@ ORDER BY p.PlanId DESC", new { whs, jenis, cont }));
                 // berat palet (jenis palet x jumlah) dan input krani (net) untuk kendaraan ini
                 var paletKg = await db.ExecuteScalarAsync<decimal?>(@"SELECT SUM(d.QtyPalet * mp.BeratKg) FROM OKRN h JOIN KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
                     JOIN WHS_MasterPalet mp ON mp.PaletCode = d.PaletCode WHERE h.RegId = @regId", new { regId }, tx) ?? 0;
-                var inputKrani = await db.ExecuteScalarAsync<decimal?>("SELECT SUM(d.Quantity) FROM OKRN h JOIN KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry WHERE h.RegId = @regId AND d.Flag <> 0 AND (h.ObjType = '6730' OR d.Flag = -1)", new { regId }, tx) ?? 0;
+                var inputKrani = await db.ExecuteScalarAsync<decimal?>("SELECT SUM(d.qty) FROM OKRN h JOIN KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry WHERE h.RegId = @regId AND d.flags <> 0 AND (h.ObjType = '6730' OR d.flags = -1)", new { regId }, tx) ?? 0;
 
                 decimal? taraKont = r.TaraKontainer;
                 if (r.KontainerTinggal)

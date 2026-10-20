@@ -318,6 +318,7 @@ public static class Helpers
                 }, tx);
             }
 
+            await db.ExecuteAsync(Sql.UpdateTotals, new { objType, docEntry }, tx);
             await tx.CommitAsync();
             return new SavedDoc(objType, docEntry, trxCode);
         }

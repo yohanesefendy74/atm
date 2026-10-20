@@ -6,14 +6,14 @@ namespace GudangAtm.Api;
 /// Kolom yang SUDAH dikonfirmasi user:
 ///   OUSR.USER_CODE, OUSR.password (base64), OUSR.USERID, OUSR.Branch, OUSR.Fax
 ///   OKRN.BPLId, OKRN.WhsCode, OKRN.UserId, OKRN.CardCode, OKRN.U_IDU_Kode_PT, OKRN.ObjType, OKRN.DocEntry, OKRN.TrxCode
-///   KRN1.ObjType, KRN1.DocEntry, KRN1.ItemCode, KRN1.brand_name, KRN1.Flag
+///   KRN1.ObjType, KRN1.DocEntry, KRN1.ItemCode, KRN1.brand_name, KRN1.flags
 ///   USR9.WhsCode, OWHS.External, OCRD.CardType/CardName, OITM/OITB, SYS_GCM (CONDITION='MSTBRAND'), SYS_NOURUT
 ///
 /// Kolom ASUMSI (cek & ganti bila nama di database berbeda):
 ///   OUSR.U_NAME                      nama user
 ///   USR9.UserId                      kolom user di USR9
-///   OKRN.DocDate, NoMobil, ContainerNo, DocStatus ('O'/'C'), CreateDate
-///   KRN1.LineNum, UomCode, Origin, Quantity (KG), Qty2 (sak), QtyPalet, LineStatus ('O'/'C')
+///   OKRN.DocDate, VehicleNo (no. mobil), ContainerNo, DocStatus ('O'/'C'), DateCrt, total_qty/total_Sak/Total_Palet
+///   KRN1.LineNum, DistNumber (origin), qty (KG), Qty2 (sak), QtyPalet, flags (+1 masuk / -1 keluar), LineStatus ('O'/'C')
 ///   OITM.InvntryUom, OPRC.PrcName
 ///   OUSR.SUPERUSER ('Y' = Admin CMS)
 ///   OKRN.NumAtCard, OKRN.U_NoBL      (diisi Admin di CMS)
@@ -80,17 +80,17 @@ SELECT  TOP 60
         h.DocDate      AS docDate,
         h.TrxCode      AS trxCode,
         h.WhsCode      AS whsCode,
-        h.NoMobil      AS noMobil,
+        h.VehicleNo      AS noMobil,
         h.ContainerNo  AS containerNo,
         h.U_IDU_Kode_PT AS ptCode,
         COUNT(d.ItemCode)                                         AS lineCount,
-        SUM(CASE WHEN d.Flag =  1 THEN 1 ELSE 0 END)              AS inLines,
-        SUM(ABS(d.Quantity))                                      AS qtyKg,
+        SUM(CASE WHEN d.flags =  1 THEN 1 ELSE 0 END)              AS inLines,
+        SUM(ABS(d.qty))                                      AS qtyKg,
         SUM(ABS(d.Qty2))                                          AS qtySak,
         SUM(ABS(d.QtyPalet))                                      AS qtyPalet,
-        SUM(CASE WHEN d.Flag = 1 THEN d.QtyPalet ELSE 0 END)      AS labelCount,
+        SUM(CASE WHEN d.flags = 1 THEN d.QtyPalet ELSE 0 END)      AS labelCount,
         CASE WHEN h.DocStatus = 'C' THEN 'Selesai'
-             WHEN SUM(CASE WHEN d.Flag = 1 THEN 1 ELSE 0 END) = 0 THEN 'Menunggu DO'
+             WHEN SUM(CASE WHEN d.flags = 1 THEN 1 ELSE 0 END) = 0 THEN 'Menunggu DO'
              WHEN ISNULL(h.U_IDU_Kode_PT, '') = '' THEN 'Menunggu PT'
              ELSE 'Siap cetak' END                                AS status
 FROM    OKRN h
@@ -99,12 +99,12 @@ WHERE   h.BPLId = @bplId
   AND   h.ObjType IN @objTypes
   AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = h.WhsCode)
   AND   h.DocDate >= DATEADD(day, -45, CAST(GETDATE() AS date))
-GROUP BY h.ObjType, h.DocEntry, h.DocDate, h.TrxCode, h.WhsCode, h.NoMobil, h.ContainerNo, h.U_IDU_Kode_PT, h.DocStatus
+GROUP BY h.ObjType, h.DocEntry, h.DocDate, h.TrxCode, h.WhsCode, h.VehicleNo, h.ContainerNo, h.U_IDU_Kode_PT, h.DocStatus
 ORDER BY h.DocEntry DESC";
 
     public const string DocHeader = @"
 SELECT  h.ObjType AS objType, h.DocEntry AS docEntry, h.DocDate AS docDate, h.TrxCode AS trxCode,
-        h.WhsCode AS whsCode, h.NoMobil AS noMobil, h.ContainerNo AS containerNo,
+        h.WhsCode AS whsCode, h.VehicleNo AS noMobil, h.ContainerNo AS containerNo,
         h.U_IDU_Kode_PT AS ptCode, p.PrcName AS ptName, h.DocStatus AS docStatus
 FROM    OKRN h
 LEFT JOIN OPRC p ON p.PrcCode = h.U_IDU_Kode_PT
@@ -112,9 +112,9 @@ WHERE   h.ObjType = @objType AND h.DocEntry = @docEntry AND h.BPLId = @bplId
   AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = h.WhsCode)";
 
     public const string DocLines = @"
-SELECT  d.LineNum AS lineNum, d.ItemCode AS itemCode, i.ItemName AS itemName, d.UomCode AS uom,
-        d.brand_name AS brand, d.Origin AS origin, d.Quantity AS qty, d.Qty2 AS qty2,
-        d.QtyPalet AS qtyPalet, d.Flag AS flag
+SELECT  d.LineNum AS lineNum, d.ItemCode AS itemCode, i.ItemName AS itemName, 'KG' AS uom,
+        d.brand_name AS brand, d.DistNumber AS origin, d.qty AS qty, d.Qty2 AS qty2,
+        d.QtyPalet AS qtyPalet, d.flags AS flag
 FROM    KRN1 d
 JOIN    OITM i ON i.ItemCode = d.ItemCode
 WHERE   d.ObjType = @objType AND d.DocEntry = @docEntry
@@ -124,30 +124,36 @@ ORDER BY d.LineNum";
     public const string NextDocEntry = "dbo.usp_WHS_NextDocEntry";
 
     public const string InsertHeader = @"
-INSERT INTO OKRN (ObjType, DocEntry, DocDate, BPLId, WhsCode, UserId, TrxCode, NoMobil, ContainerNo, DocStatus, CreateDate)
-VALUES (@objType, @docEntry, @docDate, @bplId, @whsCode, @userId, @trxCode, @noMobil, @containerNo, 'O', GETDATE())";
+INSERT INTO OKRN (ObjType, DocEntry, DocDate, BPLId, WhsCode, UserId, TrxCode, VehicleNo, ContainerNo, DocStatus, DateCrt, total_qty, total_Sak, Total_Palet)
+VALUES (@objType, @docEntry, @docDate, @bplId, @whsCode, @userId, @trxCode, @noMobil, @containerNo, 'O', GETDATE(), 0, 0, 0)";
+
+    /// Total header dari baris (dipanggil setelah semua baris disimpan / diubah).
+    public const string UpdateTotals = @"
+UPDATE  h SET total_qty = ISNULL(t.q, 0), total_Sak = ISNULL(t.s, 0), Total_Palet = ISNULL(t.p, 0)
+FROM    OKRN h OUTER APPLY (SELECT SUM(d.qty) q, SUM(d.Qty2) s, SUM(d.QtyPalet) p FROM KRN1 d WHERE d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry) t
+WHERE   h.ObjType = @objType AND h.DocEntry = @docEntry";
 
     public const string InsertLine = @"
-INSERT INTO KRN1 (ObjType, DocEntry, LineNum, ItemCode, UomCode, brand_name, Origin, Quantity, Qty2, QtyPalet, Flag, LineStatus)
-VALUES (@objType, @docEntry, @lineNum, @itemCode, @uom, @brand, @origin, @qty, @qty2, @qtyPalet, @flag, 'O')";
+INSERT INTO KRN1 (ObjType, DocEntry, LineNum, ItemCode, brand_name, DistNumber, qty, Qty2, QtyPalet, flags, LineStatus)
+VALUES (@objType, @docEntry, @lineNum, @itemCode, @brand, @origin, @qty, @qty2, @qtyPalet, @flag, 'O')";
 
     /// Baris inbound asal untuk QR yymmdd-itemcode-container (sumber brand, origin, isi per sak / per palet).
     public const string PalletSource = @"
 SELECT  TOP 1
-        d.ItemCode AS itemCode, i.ItemName AS itemName, d.brand_name AS brand, d.Origin AS origin,
+        d.ItemCode AS itemCode, i.ItemName AS itemName, d.brand_name AS brand, d.DistNumber AS origin,
         h.ContainerNo AS containerNo, h.DocDate AS inboundDate, h.WhsCode AS whsCode,
-        d.Quantity AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet
+        d.qty AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet
 FROM    OKRN h
 JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
 JOIN    OITM i ON i.ItemCode = d.ItemCode
-WHERE   d.Flag = 1 AND d.ItemCode = @itemCode AND ISNULL(h.ContainerNo, '') = @containerNo AND h.BPLId = @bplId
+WHERE   d.flags = 1 AND d.ItemCode = @itemCode AND ISNULL(h.ContainerNo, '') = @containerNo AND h.BPLId = @bplId
 ORDER BY CASE WHEN CONVERT(char(6), h.DocDate, 12) = @yymmdd THEN 0 ELSE 1 END, h.DocDate";
 
     /// Stok = jumlah qty × Flag dari dokumen yang sudah diposting (Close).
     public const string StockForPallet = @"
-SELECT  ISNULL(SUM(d.Quantity * d.Flag), 0) AS stockKg,
-        ISNULL(SUM(d.Qty2     * d.Flag), 0) AS stockSak,
-        ISNULL(SUM(d.QtyPalet * d.Flag), 0) AS stockPalet
+SELECT  ISNULL(SUM(d.qty * d.flags), 0) AS stockKg,
+        ISNULL(SUM(d.Qty2     * d.flags), 0) AS stockSak,
+        ISNULL(SUM(d.QtyPalet * d.flags), 0) AS stockPalet
 FROM    OKRN h
 JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
 WHERE   h.DocStatus = 'C' AND h.WhsCode = @whsCode AND d.ItemCode = @itemCode AND ISNULL(h.ContainerNo, '') = @containerNo";
@@ -155,15 +161,15 @@ WHERE   h.DocStatus = 'C' AND h.WhsCode = @whsCode AND d.ItemCode = @itemCode AN
     /// Data label: hanya baris masuk (Flag 1). PT dicetak dari OPRC.PrcName.
     public const string LabelLines = @"
 SELECT  d.ItemCode AS itemCode, i.ItemName AS itemName, d.brand_name AS brand,
-        d.Quantity AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet
+        d.qty AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet
 FROM    KRN1 d
 JOIN    OITM i ON i.ItemCode = d.ItemCode
-WHERE   d.ObjType = @objType AND d.DocEntry = @docEntry AND d.Flag = 1
+WHERE   d.ObjType = @objType AND d.DocEntry = @docEntry AND d.flags = 1
 ORDER BY d.LineNum";
 
     public const string StockPerItem = @"
 SELECT  d.ItemCode AS itemCode, i.ItemName AS itemName,
-        SUM(d.Quantity * d.Flag) AS kg, SUM(d.Qty2 * d.Flag) AS sak, SUM(d.QtyPalet * d.Flag) AS palet,
+        SUM(d.qty * d.flags) AS kg, SUM(d.Qty2 * d.flags) AS sak, SUM(d.QtyPalet * d.flags) AS palet,
         COUNT(DISTINCT h.ContainerNo) AS containers
 FROM    OKRN h
 JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
@@ -171,26 +177,26 @@ JOIN    OITM i ON i.ItemCode = d.ItemCode
 WHERE   h.DocStatus = 'C' AND h.BPLId = @bplId AND (@whsCode IS NULL OR h.WhsCode = @whsCode)
   AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = h.WhsCode)
 GROUP BY d.ItemCode, i.ItemName
-HAVING  SUM(d.Quantity * d.Flag) <> 0
+HAVING  SUM(d.qty * d.flags) <> 0
 ORDER BY d.ItemCode";
 
     public const string StockPerContainer = @"
 SELECT  h.ContainerNo AS containerNo, d.ItemCode AS itemCode, i.ItemName AS itemName, MAX(d.brand_name) AS brand,
-        MIN(CASE WHEN d.Flag = 1 THEN h.DocDate END) AS inboundDate,
-        SUM(d.Quantity * d.Flag) AS kg, SUM(d.Qty2 * d.Flag) AS sak, SUM(d.QtyPalet * d.Flag) AS palet
+        MIN(CASE WHEN d.flags = 1 THEN h.DocDate END) AS inboundDate,
+        SUM(d.qty * d.flags) AS kg, SUM(d.Qty2 * d.flags) AS sak, SUM(d.QtyPalet * d.flags) AS palet
 FROM    OKRN h
 JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
 JOIN    OITM i ON i.ItemCode = d.ItemCode
 WHERE   h.DocStatus = 'C' AND h.BPLId = @bplId AND (@whsCode IS NULL OR h.WhsCode = @whsCode)
   AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = h.WhsCode)
 GROUP BY h.ContainerNo, d.ItemCode, i.ItemName
-HAVING  SUM(d.Quantity * d.Flag) <> 0
+HAVING  SUM(d.qty * d.flags) <> 0
 ORDER BY h.ContainerNo, d.ItemCode";
 
     public const string StockCard = @"
 SELECT  h.DocDate AS docDate, h.ObjType AS objType, h.DocEntry AS docEntry, h.TrxCode AS trxCode,
-        h.ContainerNo AS containerNo, d.Flag AS flag,
-        d.Quantity * d.Flag AS kg, d.Qty2 * d.Flag AS sak, d.QtyPalet * d.Flag AS palet
+        h.ContainerNo AS containerNo, d.flags AS flag,
+        d.qty * d.flags AS kg, d.Qty2 * d.flags AS sak, d.QtyPalet * d.flags AS palet
 FROM    OKRN h
 JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
 WHERE   h.DocStatus = 'C' AND h.BPLId = @bplId AND d.ItemCode = @itemCode
@@ -210,10 +216,10 @@ SELECT  SUM(CASE WHEN h.ObjType = '6730' THEN 1 ELSE 0 END)                     
         ISNULL(SUM(x.palOut), 0)  AS paletOut
 FROM    OKRN h
 OUTER APPLY (
-    SELECT SUM(CASE WHEN d.Flag =  1 THEN d.Quantity ELSE 0 END) AS kgIn,
-           SUM(CASE WHEN d.Flag = -1 THEN d.Quantity ELSE 0 END) AS kgOut,
-           SUM(CASE WHEN d.Flag =  1 THEN d.QtyPalet ELSE 0 END) AS palIn,
-           SUM(CASE WHEN d.Flag = -1 THEN d.QtyPalet ELSE 0 END) AS palOut
+    SELECT SUM(CASE WHEN d.flags =  1 THEN d.qty ELSE 0 END) AS kgIn,
+           SUM(CASE WHEN d.flags = -1 THEN d.qty ELSE 0 END) AS kgOut,
+           SUM(CASE WHEN d.flags =  1 THEN d.QtyPalet ELSE 0 END) AS palIn,
+           SUM(CASE WHEN d.flags = -1 THEN d.QtyPalet ELSE 0 END) AS palOut
     FROM KRN1 d WHERE d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
 ) x
 WHERE   h.BPLId = @bplId AND h.DocDate BETWEEN @from AND @to
@@ -228,7 +234,7 @@ SELECT  TOP 200
         h.ObjType AS objType, h.DocEntry AS docEntry, h.DocDate AS docDate, h.TrxCode AS trxCode,
         h.WhsCode AS whsCode, w.WhsName AS whsName,
         CAST(CASE WHEN w.External = 'Y' THEN 1 ELSE 0 END AS bit) AS isTitipan,
-        h.NoMobil AS noMobil, h.ContainerNo AS containerNo,
+        h.VehicleNo AS noMobil, h.ContainerNo AS containerNo,
         h.U_IDU_Kode_PT AS ptCode, p.PrcName AS ptName,
         h.CardCode AS cardCode, c.CardName AS cardName, h.NumAtCard AS numAtCard, h.U_NoBL AS blNo,
         u.USER_CODE AS krani, h.DocStatus AS docStatus,
@@ -239,7 +245,7 @@ LEFT JOIN OPRC p ON p.PrcCode = h.U_IDU_Kode_PT
 LEFT JOIN OCRD c ON c.CardCode = h.CardCode
 LEFT JOIN OUSR u ON u.USERID = h.UserId
 OUTER APPLY (
-    SELECT COUNT(*) AS lineCount, SUM(d.Quantity) AS qtyKg, SUM(d.Qty2) AS qtySak, SUM(d.QtyPalet) AS qtyPalet,
+    SELECT COUNT(*) AS lineCount, SUM(d.qty) AS qtyKg, SUM(d.Qty2) AS qtySak, SUM(d.QtyPalet) AS qtyPalet,
            SUM(CASE WHEN d.qty_scan IS NOT NULL OR d.qty2_scan IS NOT NULL OR d.QtyPalet_scan IS NOT NULL THEN 1 ELSE 0 END) AS editedLines
     FROM KRN1 d WHERE d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
 ) x
@@ -252,7 +258,7 @@ ORDER BY CASE WHEN h.DocStatus = 'O' THEN 0 ELSE 1 END, h.DocDate DESC, h.DocEnt
 SELECT  h.ObjType AS objType, h.DocEntry AS docEntry, h.DocDate AS docDate, h.TrxCode AS trxCode,
         h.WhsCode AS whsCode, w.WhsName AS whsName,
         CAST(CASE WHEN w.External = 'Y' THEN 1 ELSE 0 END AS bit) AS isTitipan,
-        h.NoMobil AS noMobil, h.ContainerNo AS containerNo,
+        h.VehicleNo AS noMobil, h.ContainerNo AS containerNo,
         h.U_IDU_Kode_PT AS ptCode, p.PrcName AS ptName,
         h.CardCode AS cardCode, c.CardName AS cardName, c.CardType AS cardType,
         h.NumAtCard AS numAtCard, h.U_NoBL AS blNo, u.USER_CODE AS krani, h.DocStatus AS docStatus
@@ -265,8 +271,8 @@ WHERE   h.ObjType = @objType AND h.DocEntry = @docEntry AND h.BPLId = @bplId";
 
     public const string CmsLines = @"
 SELECT  d.LineNum AS lineNum, d.ItemCode AS itemCode, i.ItemName AS itemName, g.ItmsGrpNam AS groupName,
-        d.UomCode AS uom, d.brand_name AS brand, d.Origin AS origin, d.Flag AS flag,
-        d.Quantity AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet,
+        'KG' AS uom, d.brand_name AS brand, d.DistNumber AS origin, d.flags AS flag,
+        d.qty AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet,
         d.qty_scan AS qtyScan, d.qty2_scan AS qty2Scan, d.QtyPalet_scan AS qtyPaletScan,
         d.NumAtCard AS numAtCard, d.LineStatus AS lineStatus
 FROM    KRN1 d
@@ -298,10 +304,10 @@ WHERE   o.DocNum = TRY_CAST(@numAtCard AS INT) AND o.CardCode = @cardCode AND o.
     /// Backup nilai krani ke *_scan hanya sekali (saat pertama kali diedit Admin), lalu tulis nilai baru.
     public const string CmsUpdateLine = @"
 UPDATE  KRN1
-SET     qty_scan      = CASE WHEN qty_scan      IS NULL AND Quantity <> @qty      THEN Quantity ELSE qty_scan END,
+SET     qty_scan      = CASE WHEN qty_scan      IS NULL AND qty      <> @qty      THEN qty      ELSE qty_scan END,
         qty2_scan     = CASE WHEN qty2_scan     IS NULL AND Qty2     <> @qty2     THEN Qty2     ELSE qty2_scan END,
         QtyPalet_scan = CASE WHEN QtyPalet_scan IS NULL AND QtyPalet <> @qtyPalet THEN QtyPalet ELSE QtyPalet_scan END,
-        Quantity = @qty, Qty2 = @qty2, QtyPalet = @qtyPalet, NumAtCard = @numAtCard
+        qty = @qty, Qty2 = @qty2, QtyPalet = @qtyPalet, NumAtCard = @numAtCard
 WHERE   ObjType = @objType AND DocEntry = @docEntry AND LineNum = @lineNum AND LineStatus = 'O'";
 
     public const string CmsUpdateHeader = @"

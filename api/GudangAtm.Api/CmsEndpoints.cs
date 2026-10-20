@@ -172,6 +172,7 @@ ORDER BY LogTime DESC", new { objType, docEntry, bplId = u.BplId() }));
                     await db.ExecuteAsync(Sql.MoveHeader, new { objType, docEntry, newObjType, newDocEntry = finalEntry, bplId = u.BplId() }, tx);
                 }
 
+                await db.ExecuteAsync(Sql.UpdateTotals, new { objType = newObjType, docEntry = finalEntry }, tx);
                 await Audit.Write(db, tx, u, ctx, "CMS_SAVE", newObjType, finalEntry,
                     $"{h.TrxCode}->{trx}; PT={pt}; BP={card}; baris diedit={req.Lines?.Count ?? 0}" +
                     (newObjType != h.ObjType ? $"; nomor lama {h.ObjType}/{docEntry}" : ""));

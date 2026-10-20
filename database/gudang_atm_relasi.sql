@@ -150,15 +150,15 @@ WHERE   c.CardCode = @CardCode;
 --     6710 Susut      : SS         -> Flag = -1
 --     6720 Penyesuaian: KR         -> Flag 1 atau -1
 --     6720 Repacking  : RP         -> Flag 1 atau -1  (ASUMSI ObjType 6720)
-SELECT  h.ObjType, h.DocEntry, h.TrxCode, d.LineNum, d.Flag,   -- ASUMSI LineNum
+SELECT  h.ObjType, h.DocEntry, h.TrxCode, d.LineNum, d.flags,   -- ASUMSI LineNum
         'Flag/TrxCode tidak sesuai' AS Masalah
 FROM    OKRN h
 JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
 WHERE   h.ObjType = @ObjType AND h.DocEntry = @DocEntry
   AND NOT (
-        (h.TrxCode IN ('IB','BT','RC') AND h.ObjType = '6730' AND d.Flag = 1)
-     OR (h.TrxCode IN ('OB','BT','SS') AND h.ObjType = '6710' AND d.Flag = -1)
-     OR (h.TrxCode IN ('KR','RP')      AND h.ObjType = '6720' AND d.Flag IN (1,-1))
+        (h.TrxCode IN ('IB','BT','RC') AND h.ObjType = '6730' AND d.flags = 1)
+     OR (h.TrxCode IN ('OB','BT','SS') AND h.ObjType = '6710' AND d.flags = -1)
+     OR (h.TrxCode IN ('KR','RP')      AND h.ObjType = '6720' AND d.flags IN (1,-1))
   );
 
 -- 5d. BT otomatis dari warehouse: Whs titipan (OWHS.External = 'Y') wajib BT,
@@ -252,9 +252,9 @@ SELECT  h.WhsCode,
         d.ItemCode,
         h.U_IDU_Kode_PT          AS PT,
         d.brand_name,
-        SUM(d.Quantity * d.Flag) AS QtyKG,
-        SUM(d.Qty2     * d.Flag) AS QtySak,
-        SUM(d.QtyPalet * d.Flag) AS QtyPalet
+        SUM(d.qty * d.flags) AS QtyKG,
+        SUM(d.Qty2     * d.flags) AS QtySak,
+        SUM(d.QtyPalet * d.flags) AS QtyPalet
 FROM    OKRN h
 JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
 WHERE   h.DocStatus = 'C' AND d.LineStatus = 'C'
@@ -274,5 +274,5 @@ JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
 JOIN    OITM i ON i.ItemCode = d.ItemCode
 JOIN    OPRC p ON p.PrcCode = h.U_IDU_Kode_PT
 WHERE   h.ObjType = @ObjType AND h.DocEntry = @DocEntry
-  AND   d.Flag = 1                                  -- hanya baris masuk (inbound / Item Inbound KR-RP)
+  AND   d.flags = 1                                  -- hanya baris masuk (inbound / Item Inbound KR-RP)
   AND   ISNULL(h.U_IDU_Kode_PT, '') <> '';          -- terkunci sampai PT diisi Admin

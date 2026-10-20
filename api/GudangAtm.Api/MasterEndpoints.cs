@@ -115,7 +115,7 @@ WHERE (@whs IS NULL OR r.WhsCode = @whs) ORDER BY r.WhsCode, r.KodeRuangan", new
             if (cur.Value.Titipan != r.Titipan && dipakai > 0) return Bad("Tanda titipan tidak bisa diubah: ruangan sudah dipakai transaksi");
             if (cur.Value.Aktif && !r.Aktif)
             {
-                var stok = await db.ExecuteScalarAsync<decimal?>(@"SELECT SUM(d.Quantity * d.Flag) FROM KRN1 d JOIN OKRN h ON h.ObjType = d.ObjType AND h.DocEntry = d.DocEntry
+                var stok = await db.ExecuteScalarAsync<decimal?>(@"SELECT SUM(d.qty * d.flags) FROM KRN1 d JOIN OKRN h ON h.ObjType = d.ObjType AND h.DocEntry = d.DocEntry
                     WHERE h.DocStatus = 'C' AND d.KodeRuangan = @kode", new { kode }) ?? 0;
                 if (stok > 0) return Bad($"Ruangan masih berisi barang ({stok:N0} kg), tidak boleh dinonaktifkan");
                 var plan = await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WHS_Plan WHERE KodeRuangan = @kode AND Status IN ('Terbit','Proses','Partial')", new { kode });
