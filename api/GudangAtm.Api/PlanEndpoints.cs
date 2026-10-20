@@ -49,21 +49,26 @@ public static class PlanEndpoints
     public static void MapPlan(this RouteGroupBuilder cms, Func<SqlConnection> dbf)
     {
         // Dokumen SAP terbuka yang bisa dijadikan dasar plan
-        cms.MapGet("/plan/sumber", async (string src, string? q, ClaimsPrincipal u) =>
+        cms.MapGet("/plan/sumber", async (string src, string? nama, string? nomor, string? q, ClaimsPrincipal u) =>
         {
+            // Pencarian per jenis: DO = Customer (CardName) / No. DO (DocNum); BL = Supplier (CardName) / No. BL (NumAtCard); SO = Customer / No. SO.
             var t = Tbl(src); if (t is null) return Bad("Sumber harus BL, DO, atau SO");
-            var like = $"%{(q ?? "").Trim()}%";
+            var n = (nama ?? "").Trim(); var no = (nomor ?? "").Trim();
+            if (n == "" && no == "" && !string.IsNullOrWhiteSpace(q)) { n = q.Trim(); }
+            if (n.Length > 100 || no.Length > 100) return Bad("Kata pencarian terlalu panjang");
             await using var db = dbf();
             var ptCol = src == "SO" ? "NULL" : "h.U_IDU_KODE_PT";
+            var noCond = src == "BL" ? "h.NumAtCard LIKE @noLike" : "CAST(h.DocNum AS NVARCHAR(20)) LIKE @noLike";
             var sql = $@"
 SELECT TOP 100 h.DocEntry AS docEntry, h.DocNum AS docNum, h.CardCode AS cardCode, h.CardName AS cardName, h.DocDate AS docDate,
        h.NumAtCard AS numAtCard, {ptCol} AS ptCode
 FROM {t.Value.H} h
 WHERE h.CANCELED = 'N' AND h.DocStatus = 'O' AND h.DocType = 'I' AND h.DocDate <= GETDATE() AND h.BPLId = @bplId
-  AND (CAST(h.DocNum AS NVARCHAR(20)) LIKE @like OR h.CardName LIKE @like OR h.CardCode LIKE @like OR h.NumAtCard LIKE @like)
+  AND (@nama = '' OR h.CardName LIKE @namaLike)
+  AND (@nomor = '' OR {noCond})
   AND EXISTS (SELECT 1 FROM {t.Value.L} l WHERE l.DocEntry = h.DocEntry AND l.OpenQty > 0)
 ORDER BY h.DocDate DESC, h.DocNum DESC";
-            return Results.Ok(await db.QueryAsync(sql, new { like, bplId = u.BplId() }));
+            return Results.Ok(await db.QueryAsync(sql, new { nama = n, namaLike = $"%{n}%", nomor = no, noLike = $"%{no}%", bplId = u.BplId() }));
         });
 
         cms.MapGet("/plan/sumber/{src}/{docEntry:int}", async (string src, int docEntry, ClaimsPrincipal u) =>

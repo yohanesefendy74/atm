@@ -34,7 +34,8 @@ export function PlanNew() {
   const [jenis, setJenis] = useState<'SPBB' | 'SPMB'>('SPBB');
   const [src, setSrc] = useState('BL');
   const [whs, setWhs] = useState('');
-  const [q, setQ] = useState('');
+  const [nama, setNama] = useState('');
+  const [nomor, setNomor] = useState('');
   const [found, setFound] = useState<Src[]>([]);
   const [docs, setDocs] = useState<{ head: Src; lines: SrcLine[] }[]>([]);
   const [ruang, setRuang] = useState('');
@@ -50,7 +51,7 @@ export function PlanNew() {
 
   const srcOpts = jenis === 'SPBB' ? ['BL', 'DO'] : ['SO'];
   async function cari() {
-    try { setFound(await get<Row[]>('/api/cms/plan/sumber', { src, q })); } catch (e) { toast(errText(e), true); }
+    try { setFound(await get<Row[]>('/api/cms/plan/sumber', { src, nama, nomor })); } catch (e) { toast(errText(e), true); }
   }
   async function pilihWhs(w: string) {
     setWhs(w);
@@ -93,17 +94,18 @@ export function PlanNew() {
         <div className="chips">{(['SPBB', 'SPMB'] as const).map((j) => <button key={j} className="chip" aria-pressed={jenis === j} onClick={() => { setJenis(j); setSrc(j === 'SPBB' ? 'BL' : 'SO'); setDocs([]); setFound([]); }}>{j}</button>)}</div>
         <SearchSelect options={whsOpts(wh.data)} value={whs} onChange={pilihWhs} placeholder="Cari & pilih gudang" />
         <div className="row">
-          {srcOpts.length > 1 && <select className="input" value={src} onChange={(e) => setSrc(e.target.value)}>{srcOpts.map((s) => <option key={s}>{s}</option>)}</select>}
-          <input className="input grow" placeholder={`Cari ${src}: no / BP / PO`} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && cari()} />
+          {srcOpts.length > 1 && <select className="input" value={src} onChange={(e) => { setSrc(e.target.value); setFound([]); setDocs([]); }}>{srcOpts.map((s) => <option key={s}>{s}</option>)}</select>}
+          <input className="input grow" placeholder={src === 'BL' ? 'Supplier' : 'Customer'} aria-label={src === 'BL' ? 'Cari supplier' : 'Cari customer'} value={nama} onChange={(e) => setNama(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && cari()} />
+          <input className="input grow" placeholder={src === 'BL' ? 'Nomor BL' : `Nomor ${src}`} aria-label={src === 'BL' ? 'Cari nomor BL' : `Cari nomor ${src}`} value={nomor} onChange={(e) => setNomor(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && cari()} />
           <button className="btn small" onClick={cari}>Cari</button>
         </div>
         {found.map((d) => (
-          <button key={d.docEntry} className="card pad-s click" onClick={() => tambah(d)}><span className="mono">{d.docNum}</span> · {d.cardName} · {fmtDate(d.docDate)} {d.numAtCard ? `· PO ${d.numAtCard}` : ''}</button>
+          <button key={d.docEntry} className="card pad-s click" onClick={() => tambah(d)}><span className="mono">{src === 'BL' ? `BL ${d.numAtCard ?? '-'}` : `${src} ${d.docNum}`}</span> · {d.cardName} · {fmtDate(d.docDate)}{src !== 'BL' && d.numAtCard ? ` · PO ${d.numAtCard}` : ''}</button>
         ))}
       </div>
       {docs.map((d, di) => (
         <div key={d.head.docEntry} className="card stack">
-          <div className="row"><strong className="grow">{src} {d.head.docNum} · {d.head.cardName}</strong><button className="btn small ghost" onClick={() => setDocs(docs.filter((_, i) => i !== di))}>Hapus</button></div>
+          <div className="row"><strong className="grow">{src === 'BL' ? `BL ${d.head.numAtCard ?? d.head.docNum}` : `${src} ${d.head.docNum}`} · {d.head.cardName}</strong><button className="btn small ghost" onClick={() => setDocs(docs.filter((_, i) => i !== di))}>Hapus</button></div>
           {d.lines.map((l, li) => (
             <div key={l.lineNum} className="card pad-s stack tight">
               <label className="row"><input type="checkbox" checked={!!l.pick} onChange={(e) => upd(di, li, { pick: e.target.checked })} /> <span className="grow">{l.itemCode} · {l.dscription}</span></label>
