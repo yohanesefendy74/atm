@@ -13,7 +13,7 @@ namespace GudangAtm.Api;
 ///   OUSR.U_NAME                      nama user
 ///   USR9.UserId                      kolom user di USR9
 ///   OKRN.DocDate, VehicleNo (no. mobil), ContainerNo, DocStatus ('O'/'C'), DateCrt, total_qty/total_Sak/Total_Palet
-///   KRN1.LineNum, DistNumber (origin), qty (KG), Qty2 (sak), QtyPalet, flags (+1 masuk / -1 keluar), LineStatus ('O'/'C')
+///   KRN1.LineNum, Origin (asal barang, kolom tambahan), DistNumber (batch, tidak diisi aplikasi), qty (KG), Qty2 (sak), QtyPalet, flags (+1 masuk / -1 keluar), LineStatus ('O'/'C')
 ///   OITM.InvntryUom, OPRC.PrcName
 ///   OUSR.SUPERUSER ('Y' = Admin CMS)
 ///   OKRN.NumAtCard, OKRN.U_NoBL      (diisi Admin di CMS)
@@ -113,7 +113,7 @@ WHERE   h.ObjType = @objType AND h.DocEntry = @docEntry AND h.BPLId = @bplId
 
     public const string DocLines = @"
 SELECT  d.LineNum AS lineNum, d.ItemCode AS itemCode, i.ItemName AS itemName, 'KG' AS uom,
-        d.brand_name AS brand, d.DistNumber AS origin, d.qty AS qty, d.Qty2 AS qty2,
+        d.brand_name AS brand, d.Origin AS origin, d.qty AS qty, d.Qty2 AS qty2,
         d.QtyPalet AS qtyPalet, d.flags AS flag
 FROM    KRN1 d
 JOIN    OITM i ON i.ItemCode = d.ItemCode
@@ -134,13 +134,13 @@ FROM    OKRN h OUTER APPLY (SELECT SUM(d.qty) q, SUM(d.Qty2) s, SUM(d.QtyPalet) 
 WHERE   h.ObjType = @objType AND h.DocEntry = @docEntry";
 
     public const string InsertLine = @"
-INSERT INTO KRN1 (ObjType, DocEntry, LineNum, ItemCode, brand_name, DistNumber, qty, Qty2, QtyPalet, flags, LineStatus)
+INSERT INTO KRN1 (ObjType, DocEntry, LineNum, ItemCode, brand_name, Origin, qty, Qty2, QtyPalet, flags, LineStatus)
 VALUES (@objType, @docEntry, @lineNum, @itemCode, @brand, @origin, @qty, @qty2, @qtyPalet, @flag, 'O')";
 
     /// Baris inbound asal untuk QR yymmdd-itemcode-container (sumber brand, origin, isi per sak / per palet).
     public const string PalletSource = @"
 SELECT  TOP 1
-        d.ItemCode AS itemCode, i.ItemName AS itemName, d.brand_name AS brand, d.DistNumber AS origin,
+        d.ItemCode AS itemCode, i.ItemName AS itemName, d.brand_name AS brand, d.Origin AS origin,
         h.ContainerNo AS containerNo, h.DocDate AS inboundDate, h.WhsCode AS whsCode,
         d.qty AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet
 FROM    OKRN h
@@ -271,7 +271,7 @@ WHERE   h.ObjType = @objType AND h.DocEntry = @docEntry AND h.BPLId = @bplId";
 
     public const string CmsLines = @"
 SELECT  d.LineNum AS lineNum, d.ItemCode AS itemCode, i.ItemName AS itemName, g.ItmsGrpNam AS groupName,
-        'KG' AS uom, d.brand_name AS brand, d.DistNumber AS origin, d.flags AS flag,
+        'KG' AS uom, d.brand_name AS brand, d.Origin AS origin, d.flags AS flag,
         d.qty AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet,
         d.qty_scan AS qtyScan, d.qty2_scan AS qty2Scan, d.QtyPalet_scan AS qtyPaletScan,
         d.NumAtCard AS numAtCard, d.LineStatus AS lineStatus

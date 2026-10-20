@@ -2,6 +2,10 @@
 USE WORKSHOP_STAGING;
 GO
 
+/* Origin (asal barang) per baris krani. DistNumber = batch SAP, tidak dipakai untuk origin. */
+IF COL_LENGTH('dbo.KRN1','Origin') IS NULL ALTER TABLE dbo.KRN1 ADD Origin NVARCHAR(100) NULL;
+GO
+
 /* Kode persetujuan Admin (6 digit, berlaku 15 menit, sekali pakai): untuk berat manual, selisih net > batas, dll. */
 IF OBJECT_ID('dbo.WHS_KodeAdmin') IS NULL
 CREATE TABLE dbo.WHS_KodeAdmin (
