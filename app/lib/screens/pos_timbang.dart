@@ -218,7 +218,9 @@ Column(children: [
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: Box(
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => KeluarScreen(whs: _w!, veh: v))).then((_) => _load()),
+                    onTap: () => Navigator.of(context)
+                        .push(MaterialPageRoute(builder: (_) => v['keperluan'] == 'Bongkar' ? LepasScreen(whs: _w!, veh: v) : KeluarScreen(whs: _w!, veh: v)))
+                        .then((_) => _load()),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Row(children: [
                         Expanded(child: Text('${v['noPolisi']}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
@@ -383,8 +385,8 @@ class _MasukScreenState extends State<MasukScreen> {
 
   /// Kontainer kosong di yard gudang ini: cari lalu pilih (tidak bisa ketik bebas).
   Widget _yardField() {
-    if (_yard.isEmpty) return const Hint('Tidak ada kontainer kosong di yard gudang ini', color: C.outbound);
-    String label(Map<String, dynamic> y) => '${y['containerNo']} · ${y['posisi'] ?? ''}${y['dialokasikan'] != null ? ' · ${y['dialokasikan']}' : ''}';
+    if (_yard.isEmpty) return const Hint('Tidak ada kontainer kosong di dock / yard gudang ini', color: C.outbound);
+    String label(Map<String, dynamic> y) => '${y['containerNo']} · ${y['status'] ?? ''} ${y['posisi'] ?? ''}${y['dialokasikan'] != null ? ' · ${y['dialokasikan']}' : ''}';
     return Autocomplete<Map<String, dynamic>>(
       displayStringForOption: label,
       optionsBuilder: (v) {
@@ -397,7 +399,7 @@ class _MasukScreenState extends State<MasukScreen> {
         focusNode: focus,
         textCapitalization: TextCapitalization.characters,
         decoration: InputDecoration(
-          labelText: 'Kontainer kosong di yard (wajib)',
+          labelText: 'Kontainer kosong di dock / yard (wajib)',
           helperText: _yardPilih == null ? 'Ketik untuk mencari, lalu pilih dari daftar' : 'Dipilih: $_yardPilih',
           suffixIcon: const Icon(Icons.arrow_drop_down),
         ),
@@ -410,7 +412,6 @@ class _MasukScreenState extends State<MasukScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final masukBruto = _kep == 'Bongkar';
     return Scaffold(
       backgroundColor: C.ground,
       body: Column(children: [
@@ -418,7 +419,7 @@ class _MasukScreenState extends State<MasukScreen> {
         Expanded(
           child: ListView(padding: const EdgeInsets.all(16), children: [
             SegmentedButton<String>(
-              segments: const [ButtonSegment(value: 'Bongkar', label: Text('Bongkar')), ButtonSegment(value: 'Muat', label: Text('Muat')), ButtonSegment(value: 'AmbilKontainer', label: Text('Ambil kont.'))],
+              segments: const [ButtonSegment(value: 'Bongkar', label: Text('Bongkar')), ButtonSegment(value: 'Muat', label: Text('Muat')), ButtonSegment(value: 'AmbilKontainer', label: Text('Tarik kont.'))],
               selected: {_kep},
               onSelectionChanged: (s) => setState(() {
                 _kep = s.first;
@@ -449,7 +450,7 @@ class _MasukScreenState extends State<MasukScreen> {
             ],
             if (_kep == 'Muat') CheckboxListTile(contentPadding: EdgeInsets.zero, value: _kontBawaan, onChanged: (v) => setState(() => _kontBawaan = v ?? false), title: const Text('Membawa kontainer kosong')),
             const SizedBox(height: 16),
-            FieldLabel(masukBruto ? 'Timbang bruto (bermuatan)' : 'Timbang tara (kosong)'),
+            FieldLabel(_kep == 'Bongkar' ? 'Timbang truk + kontainer isi (T1)' : _kep == 'AmbilKontainer' ? 'Timbang kepala saja (T3)' : 'Timbang kepala (+ kontainer kosong) (A)'),
             BeratField(whs: widget.whs, onChanged: (b) => setState(() => _berat = b)),
           ]),
         ),
@@ -469,9 +470,102 @@ class KeluarScreen extends StatefulWidget {
 
 class _KeluarScreenState extends State<KeluarScreen> {
   Berat? _berat;
-  bool _tinggal = false;
-  final _tara = TextEditingController();
+  bool _yardSimpan = false;
   final _yard = TextEditingController();
+  bool _busy = false;
+
+  Future<void> _kirim() async {
+    if (_berat == null) return showError(context, 'Baca berat dulu');
+    if (_yardSimpan && !RegExp(r'^YARD-[A-C]\d{2}$').hasMatch(_yard.text.trim().toUpperCase())) return showError(context, 'Area yard format YARD-A01');
+    setState(() => _busy = true);
+    try {
+      final r = await _kirimTimbang(
+        context,
+        '/api/kendaraan/${widget.veh['regId']}/keluar',
+        {
+          'timbang': _berat!.toJson(),
+          'kontainerTinggal': _yardSimpan,
+          'yardArea': _yardSimpan ? _yard.text.trim().toUpperCase() : null,
+          'taraKontainer': null,
+        },
+        butuhKode: _berat!.sumber == 'MANUAL',
+      );
+      if (r != null && mounted) {
+        await _hasil(r);
+        if (mounted) Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _hasil(Map<String, dynamic> r) async {
+    final al = (r['alokasi'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
+    final kosong = r['kosongKg'];
+    await showDialog<void>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Timbang keluar tersimpan'),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (kosong != null) Text('Berat kontainer kosong: ${toD(kosong).toStringAsFixed(0)} kg'),
+            if (toD(r['net']) > 0) Text('Net barang: ${toD(r['net']).toStringAsFixed(0)} kg', style: const TextStyle(fontWeight: FontWeight.w700)),
+            if (toD(r['input']) > 0) Text('Input krani: ${toD(r['input']).toStringAsFixed(0)} kg${r['selisihPersen'] != null ? ' · selisih ${r['selisihPersen']}%' : ''}'),
+            if (al.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              const Text('Pembagian per barang', style: TextStyle(fontWeight: FontWeight.w600)),
+              for (final a in al) Text('${a['itemCode']}: ${toD(a['kgTimbang']).toStringAsFixed(0)} kg (krani ${toD(a['kgKrani']).toStringAsFixed(0)})'),
+            ],
+          ]),
+        ),
+        actions: [FilledButton(onPressed: () => Navigator.pop(c), child: const Text('OK'))],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final v = widget.veh;
+    final tarik = v['keperluan'] == 'AmbilKontainer';
+    return Scaffold(
+      backgroundColor: C.ground,
+      body: Column(children: [
+        Header(title: tarik ? 'Tarik Kontainer Keluar' : 'Timbang Keluar', eyebrow: '${v['noPolisi']} · ${tarik ? 'Tarik kontainer ${v['containerNo'] ?? ''}' : v['keperluan']}'),
+        Expanded(
+          child: ListView(padding: const EdgeInsets.all(16), children: [
+            if (v['selesaiKrani'] != true && !tarik) const Box(color: C.amberTint, child: Text('Krani belum menyelesaikan pekerjaan · kendaraan belum boleh keluar', style: TextStyle(color: C.amberText))),
+            const SizedBox(height: 12),
+            FieldLabel(tarik ? 'Timbang kepala + kontainer kosong (T4)' : 'Timbang kepala yang sama + muatan (B)'),
+            if (tarik) const Hint('Berat kontainer kosong = T4 - T3 (kepala saat masuk). Net barang = berat kontainer isi - berat kontainer kosong.'),
+            if (!tarik) const Hint('Net muatan = B - A (timbang saat masuk) - berat palet. Kepala harus sama dengan saat masuk.'),
+            const SizedBox(height: 8),
+            BeratField(whs: widget.whs, onChanged: (b) => setState(() => _berat = b)),
+            if (tarik) ...[
+              CheckboxListTile(contentPadding: EdgeInsets.zero, value: _yardSimpan, onChanged: (x) => setState(() => _yardSimpan = x ?? false), title: const Text('Kontainer kosong disimpan di yard (tidak keluar)')),
+              if (_yardSimpan) TextField(controller: _yard, textCapitalization: TextCapitalization.characters, decoration: const InputDecoration(labelText: 'Area yard (YARD-A01)')),
+            ],
+          ]),
+        ),
+        Footer(children: [BigButton(label: 'Simpan timbang keluar', busy: _busy, onPressed: _kirim)]),
+      ]),
+    );
+  }
+}
+
+/// T2: kontainer sudah dilepas di dock, kepala truk ditimbang sendiri lalu keluar.
+class LepasScreen extends StatefulWidget {
+  const LepasScreen({super.key, required this.whs, required this.veh});
+  final String whs;
+  final Map<String, dynamic> veh;
+  @override
+  State<LepasScreen> createState() => _LepasScreenState();
+}
+
+class _LepasScreenState extends State<LepasScreen> {
+  Berat? _berat;
+  final _dock = TextEditingController();
   bool _busy = false;
 
   Future<void> _kirim() async {
@@ -480,18 +574,12 @@ class _KeluarScreenState extends State<KeluarScreen> {
     try {
       final r = await _kirimTimbang(
         context,
-        '/api/kendaraan/${widget.veh['regId']}/keluar',
-        {
-          'timbang': _berat!.toJson(),
-          'kontainerTinggal': _tinggal,
-          'yardArea': _tinggal ? _yard.text.trim().toUpperCase() : null,
-          'taraKontainer': _tinggal ? double.tryParse(_tara.text.replaceAll(',', '.')) : null,
-        },
+        '/api/kendaraan/${widget.veh['regId']}/lepas-kontainer',
+        {'timbang': _berat!.toJson(), 'dock': _dock.text.trim().isEmpty ? null : _dock.text.trim().toUpperCase()},
         butuhKode: _berat!.sumber == 'MANUAL',
       );
       if (r != null && mounted) {
-        final net = toD(r['net']);
-        showInfo(context, 'Selesai · net ${net.toStringAsFixed(0)} kg${r['selisihPersen'] != null ? ' · selisih ${r['selisihPersen']}%' : ''}');
+        showInfo(context, 'Berat kontainer isi ${toD(r['beratIsiKg']).toStringAsFixed(0)} kg · kepala keluar');
         Navigator.of(context).pop();
       }
     } catch (e) {
@@ -504,29 +592,21 @@ class _KeluarScreenState extends State<KeluarScreen> {
   @override
   Widget build(BuildContext context) {
     final v = widget.veh;
-    final bongkar = v['keperluan'] == 'Bongkar';
-    final adaKont = v['containerNo'] != null;
     return Scaffold(
       backgroundColor: C.ground,
       body: Column(children: [
-        Header(title: 'Timbang Keluar', eyebrow: '${v['noPolisi']} · ${v['keperluan']}'),
+        Header(title: 'Lepas Kontainer', eyebrow: '${v['noPolisi']} · ${v['containerNo'] ?? ''}'),
         Expanded(
           child: ListView(padding: const EdgeInsets.all(16), children: [
-            if (v['selesaiKrani'] != true && v['keperluan'] != 'AmbilKontainer') const Box(color: C.amberTint, child: Text('Krani belum menyelesaikan pekerjaan · kendaraan belum boleh keluar', style: TextStyle(color: C.amberText))),
+            const Box(child: Text('Kontainer sudah dilepas di loading dock. Timbang KEPALA truk saja (T2). Berat kontainer isi = T1 - T2.')),
             const SizedBox(height: 12),
-            FieldLabel(bongkar ? 'Timbang tara (kosong)' : 'Timbang bruto (bermuatan)'),
+            TextField(controller: _dock, textCapitalization: TextCapitalization.characters, decoration: const InputDecoration(labelText: 'Loading dock (opsional)')),
+            const SizedBox(height: 16),
+            const FieldLabel('Timbang kepala saja (T2)'),
             BeratField(whs: widget.whs, onChanged: (b) => setState(() => _berat = b)),
-            if (adaKont && bongkar) ...[
-              CheckboxListTile(contentPadding: EdgeInsets.zero, value: _tinggal, onChanged: (x) => setState(() => _tinggal = x ?? false), title: const Text('Kontainer ditinggal di yard')),
-              if (_tinggal) ...[
-                TextField(controller: _tara, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Tara kontainer (kg)')),
-                const SizedBox(height: 10),
-                TextField(controller: _yard, textCapitalization: TextCapitalization.characters, decoration: const InputDecoration(labelText: 'Area yard (YARD-A01)')),
-              ],
-            ],
           ]),
         ),
-        Footer(children: [BigButton(label: 'Simpan timbang keluar', busy: _busy, onPressed: _kirim)]),
+        Footer(children: [BigButton(label: 'Simpan · kepala keluar', busy: _busy, onPressed: _kirim)]),
       ]),
     );
   }

@@ -62,12 +62,28 @@ void main() {
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump(const Duration(milliseconds: 500));
     await expectLater(find.byType(MasukScreen), matchesGoldenFile('goldens/masuk_bongkar.png'));
-    await tester.tap(find.text('Ambil kont.'));
+    await tester.tap(find.text('Tarik kont.'));
     await tester.pump(const Duration(milliseconds: 500));
     await expectLater(find.byType(MasukScreen), matchesGoldenFile('goldens/masuk_ambil.png'));
     await tester.tap(find.text('Muat'));
     await tester.pump(const Duration(milliseconds: 500));
     await expectLater(find.byType(MasukScreen), matchesGoldenFile('goldens/masuk_muat.png'));
+    addTearDown(tester.view.reset);
+  });
+
+  testWidgets('Pos timbang: lepas kontainer & tarik keluar', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.75;
+    final v = {'regId': 1, 'noPolisi': 'B 1234 XYZ', 'keperluan': 'Bongkar', 'containerNo': 'EMCU1234567'};
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: LepasScreen(whs: 'ATM', veh: v)));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump(const Duration(milliseconds: 500));
+    await expectLater(find.byType(LepasScreen), matchesGoldenFile('goldens/lepas.png'));
+    final t = {'regId': 2, 'noPolisi': 'B 9 ABC', 'keperluan': 'AmbilKontainer', 'containerNo': 'EMCU1234567'};
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: KeluarScreen(whs: 'ATM', veh: t)));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump(const Duration(milliseconds: 500));
+    await expectLater(find.byType(KeluarScreen), matchesGoldenFile('goldens/tarik.png'));
     addTearDown(tester.view.reset);
   });
 }

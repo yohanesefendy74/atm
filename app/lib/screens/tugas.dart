@@ -95,6 +95,13 @@ class _TugasDetailState extends State<TugasDetail> {
   final _pal = <int, TextEditingController>{};
   final _room = <int, String?>{};
   int? _regId;
+  // SPBB: kontainer di dock + sampling berat per barang
+  List<Map<String, dynamic>> _kont = [];
+  int? _sesiId;
+  List<Map<String, dynamic>> _kItems = [];
+  String? _kStatus;
+  final _sSak = <int, TextEditingController>{};
+  final _sKg = <int, TextEditingController>{};
   String? _error;
   bool _busy = false;
 
@@ -115,8 +122,18 @@ class _TugasDetailState extends State<TugasDetail> {
           .map((e) => Map<String, dynamic>.from(e as Map))
           .where((v) => v['planNo'] == h['planNo'])
           .toList();
+      var kont = <Map<String, dynamic>>[];
+      if (h['jenis'] == 'SPBB') {
+        kont = (await Api.get('/api/kontainer/dock', {'whs': whs}) as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .where((k) => toI(k['planId']) == widget.planId)
+            .toList();
+      }
       if (!mounted) return;
       setState(() {
+        _kont = kont;
+        if (_sesiId == null && kont.length == 1) _sesiId = toI(kont.first['sesiId']);
+        if (_sesiId != null && !kont.any((k) => toI(k['sesiId']) == _sesiId)) _sesiId = null;
         _h = h;
         _lines = lines;
         _ruang = ruang.where((x) => h['titipan'] == null || x['titipan'] == h['titipan']).toList();
@@ -130,8 +147,47 @@ class _TugasDetailState extends State<TugasDetail> {
           _room[k] ??= l['kodeRuangan']?.toString() ?? h['kodeRuangan']?.toString();
         }
       });
+      if (_sesiId != null) await _loadKont();
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
+    }
+  }
+
+  Future<void> _loadKont() async {
+    if (_sesiId == null) return;
+    final r = Map<String, dynamic>.from(await Api.get('/api/kontainer/$_sesiId') as Map);
+    if (!mounted) return;
+    setState(() {
+      _kStatus = (r['header'] as Map)['status']?.toString();
+      _kItems = (r['items'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      for (final i in _kItems) {
+        final k = toI(i['planLine']);
+        _sSak.putIfAbsent(k, () => TextEditingController(text: toI(i['sakSampel']) > 0 ? '${toI(i['sakSampel'])}' : ''));
+        _sKg.putIfAbsent(k, () => TextEditingController(text: toD(i['kgSampel']) > 0 ? toD(i['kgSampel']).toString() : ''));
+      }
+    });
+  }
+
+  Future<void> _simpanSampling() async {
+    final items = <Map<String, dynamic>>[];
+    for (final i in _kItems) {
+      final k = toI(i['planLine']);
+      final sak = int.tryParse(_sSak[k]!.text.trim()) ?? 0;
+      final kg = double.tryParse(_sKg[k]!.text.replaceAll(',', '.')) ?? 0;
+      if (sak <= 0 && kg <= 0) continue;
+      if (sak < 1 || kg <= 0) return showError(context, '${i['itemCode']}: isi jumlah karung sampel (min 1) dan beratnya');
+      items.add({'planLine': k, 'sakSampel': sak, 'kgSampel': kg});
+    }
+    if (items.isEmpty) return showError(context, 'Isi sampling minimal satu barang');
+    setState(() => _busy = true);
+    try {
+      await Api.put('/api/kontainer/$_sesiId/sampling', {'items': items});
+      if (mounted) showInfo(context, 'Sampling tersimpan');
+      await _loadKont();
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -149,11 +205,13 @@ class _TugasDetailState extends State<TugasDetail> {
         'kodeRuangan': _room[k],
       });
     }
-    if (_regId == null) return showError(context, 'Pilih kendaraan dulu (registrasi di pos timbang)');
+    final spbb = _h?['jenis'] == 'SPBB';
+    if (spbb && _sesiId == null) return showError(context, 'Pilih kontainer yang sedang dibongkar');
+    if (!spbb && _regId == null) return showError(context, 'Pilih kendaraan dulu (registrasi di pos timbang)');
     if (items.isEmpty) return showError(context, 'Isi qty minimal satu baris');
     setState(() => _busy = true);
     try {
-      final r = await Api.post('/api/plan/${widget.planId}/simpan', {'regId': _regId, 'lines': items});
+      final r = await Api.post('/api/plan/${widget.planId}/simpan', {'regId': spbb ? null : _regId, 'sesiId': spbb ? _sesiId : null, 'lines': items});
       if (!mounted) return;
       showInfo(context, 'Tersimpan · penerimaan ke-${r['penerimaanKe']}');
       for (final c in [..._qty.values, ..._sak.values, ..._pal.values]) {
@@ -168,12 +226,17 @@ class _TugasDetailState extends State<TugasDetail> {
   }
 
   Future<void> _selesai() async {
-    if (_regId == null) return;
+    final spbb = _h?['jenis'] == 'SPBB';
+    if (spbb ? _sesiId == null : _regId == null) return;
     setState(() => _busy = true);
     try {
-      await Api.post('/api/kendaraan/$_regId/selesai-krani', {});
+      if (spbb) {
+        await Api.post('/api/kontainer/$_sesiId/selesai-bongkar', {});
+      } else {
+        await Api.post('/api/kendaraan/$_regId/selesai-krani', {});
+      }
       if (mounted) {
-        showInfo(context, 'Kendaraan boleh timbang keluar');
+        showInfo(context, spbb ? 'Kontainer kosong · siap ditarik (timbang kepala lalu kepala + kontainer)' : 'Kendaraan boleh timbang keluar');
         Navigator.of(context).pop();
       }
     } catch (e) {
@@ -200,22 +263,79 @@ class _TugasDetailState extends State<TugasDetail> {
                     if (h['titipan'] == true) const Hint('Ruangan titipan · barang tidak boleh dicampur dengan non-titipan'),
                   ])),
                   const SizedBox(height: 12),
-                  const FieldLabel('Kendaraan', required: true),
-                  if (_veh.isEmpty) const Hint('Belum ada kendaraan terdaftar untuk dokumen ini. Daftarkan dulu di Pos Timbang.', color: C.outbound),
-                  DropdownButtonFormField<int>(
-                    value: _regId,
-                    items: [for (final v in _veh) DropdownMenuItem(value: toI(v['regId']), child: Text('${v['noPolisi']} · ${v['sopir']}'))],
-                    onChanged: (v) => setState(() => _regId = v),
-                  ),
+                  if (spbb) ...[
+                    const FieldLabel('Kontainer', required: true),
+                    if (_kont.isEmpty) const Hint('Belum ada kontainer untuk dokumen ini. Truk harus ditimbang masuk di Pos Timbang.', color: C.outbound),
+                    DropdownButtonFormField<int>(
+                      value: _sesiId,
+                      items: [
+                        for (final k in _kont)
+                          DropdownMenuItem(value: toI(k['sesiId']), child: Text('${k['containerNo']} · ${_statusKont(k['status'])}')),
+                      ],
+                      onChanged: (v) {
+                        setState(() {
+                          _sesiId = v;
+                          _kItems = [];
+                          _sSak.clear();
+                          _sKg.clear();
+                        });
+                        _loadKont();
+                      },
+                    ),
+                    if (_kStatus == 'ISI_MASUK') const Hint('Kepala truk belum ditimbang (lepas kontainer). Input boleh, selesai bongkar setelah lepas.', color: C.amberText),
+                  ] else ...[
+                    const FieldLabel('Kendaraan', required: true),
+                    if (_veh.isEmpty) const Hint('Belum ada kendaraan terdaftar untuk dokumen ini. Daftarkan dulu di Pos Timbang.', color: C.outbound),
+                    DropdownButtonFormField<int>(
+                      value: _regId,
+                      items: [for (final v in _veh) DropdownMenuItem(value: toI(v['regId']), child: Text('${v['noPolisi']} · ${v['sopir']}'))],
+                      onChanged: (v) => setState(() => _regId = v),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   for (final l in _lines) _lineCard(l, spbb),
+                  if (spbb && _sesiId != null) _samplingCard(),
                 ]),
         ),
         if (h != null)
           Footer(children: [
             BigButton(label: 'Simpan ${spbb ? 'penerimaan' : 'pengiriman'}', color: spbb ? C.inbound : C.outbound, busy: _busy, onPressed: _simpan),
-            BigButton(label: 'Selesai · kendaraan boleh keluar', outlined: true, color: C.ink, onPressed: _regId == null || _busy ? null : _selesai),
+            BigButton(
+              label: spbb ? 'Selesai bongkar · kontainer kosong' : 'Selesai · kendaraan boleh keluar',
+              outlined: true,
+              color: C.ink,
+              onPressed: (spbb ? _sesiId == null : _regId == null) || _busy ? null : _selesai,
+            ),
           ]),
+      ]),
+    );
+  }
+
+  static String _statusKont(dynamic s) => switch (s) {
+        'ISI_MASUK' => 'truk masih terpasang',
+        'DI_DOCK' => 'di dock · dibongkar',
+        'KOSONG' => 'sudah kosong',
+        _ => '$s',
+      };
+
+  /// Sampling berat: per barang di kontainer ini, timbang beberapa karung (bebas, min 1).
+  Widget _samplingCard() {
+    return Box(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Sampling berat per barang', style: TextStyle(fontWeight: FontWeight.w700)),
+        const Hint('Timbang beberapa karung tiap barang. Berat bersih kontainer dibagi ke tiap barang sesuai sampling (prorata).'),
+        const SizedBox(height: 8),
+        if (_kItems.isEmpty) const Text('Simpan input barang dulu, lalu isi sampling.', style: TextStyle(color: C.muted)),
+        for (final i in _kItems) ...[
+          Text('${i['itemCode']} · ${toD(i['sakTotal']).toStringAsFixed(0)} karung · ${toD(i['kgKrani']).toStringAsFixed(0)} kg', style: const TextStyle(fontWeight: FontWeight.w600)),
+          Row(children: [
+            Expanded(child: TextField(controller: _sSak[toI(i['planLine'])], keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Karung sampel'))),
+            const SizedBox(width: 8),
+            Expanded(child: TextField(controller: _sKg[toI(i['planLine'])], keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Berat sampel (kg)'))),
+          ]),
+          const SizedBox(height: 10),
+        ],
+        if (_kItems.isNotEmpty) BigButton(label: 'Simpan sampling', outlined: true, color: C.inbound, busy: _busy, onPressed: _simpanSampling),
       ]),
     );
   }
