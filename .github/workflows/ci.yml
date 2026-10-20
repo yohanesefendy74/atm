@@ -43,6 +43,13 @@ jobs:
         with:
           node-version: '20'
       - run: npm install --no-audit --no-fund
+      - name: Typecheck web
+        run: |
+          set -o pipefail
+          npm run typecheck 2>&1 | tee tc.log || {
+            echo "::error title=Web typecheck gagal::$(grep -E 'error' tc.log | head -40 | sed 's/%/%25/g' | tr '\n' '|')"
+            exit 1
+          }
       - name: Build web
         run: |
           set -o pipefail

@@ -16,6 +16,7 @@ public sealed class ScaleReader : IDisposable
     readonly Regex pat, stabilPat;
     readonly object gate = new();
     readonly List<Reading> recent = new();
+    SerialPort? port;
     Stream? stream;
     TcpClient? tcp;
     bool Tcp => o.Mode.Equals("Tcp", StringComparison.OrdinalIgnoreCase);
