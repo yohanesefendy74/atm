@@ -3,6 +3,8 @@ on:
   workflow_dispatch:
   push:
     paths: ['app/**', '.github/workflows/app-screens.yml']
+permissions:
+  contents: write
 jobs:
   screens:
     runs-on: ubuntu-latest
@@ -20,3 +22,9 @@ jobs:
           echo "::warning title=gagal::$(grep -E 'Error|Exception|failed' test.log | head -20 | tr '\n' '|')"
       - uses: actions/upload-artifact@v4
         with: { name: layar, path: app/test/goldens }
+      - name: Simpan gambar ke branch layar (untuk dibaca tanpa unduh artifact)
+        working-directory: app/test/goldens
+        run: |
+          git init -q -b layar && git add -A
+          git -c user.name=ci -c user.email=ci@local commit -qm "layar ${{ github.sha }}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" layar
