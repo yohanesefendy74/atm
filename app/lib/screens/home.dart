@@ -19,9 +19,13 @@ class Shell extends StatefulWidget {
 
 class _ShellState extends State<Shell> {
   int _tab = 0;
+  final _visited = <int>{0};
   final _keys = [GlobalKey(), GlobalKey(), GlobalKey(), GlobalKey(), GlobalKey()];
 
-  void go(int tab) => setState(() => _tab = tab);
+  void go(int tab) => setState(() {
+        _tab = tab;
+        _visited.add(tab);
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +37,8 @@ class _ShellState extends State<Shell> {
       PosTimbangScreen(key: _keys[4], embedded: true),
     ];
     return Scaffold(
-      body: IndexedStack(index: _tab, children: pages),
+      resizeToAvoidBottomInset: false,
+      body: IndexedStack(index: _tab, children: [for (var i = 0; i < pages.length; i++) _visited.contains(i) ? pages[i] : const SizedBox.shrink()]),
       bottomNavigationBar: _BottomNav(
         tab: _tab,
         onTab: go,

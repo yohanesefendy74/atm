@@ -40,9 +40,8 @@ class _TugasScreenState extends State<TugasScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: C.ground,
-      body: Column(children: [
+    return Material(color: C.ground, child: 
+Column(children: [
         Header(title: 'Tugas Saya', eyebrow: 'Bongkar · Muat', back: !widget.embedded),
         Expanded(
           child: RefreshIndicator(
@@ -75,7 +74,7 @@ class _TugasScreenState extends State<TugasScreen> {
           ),
         ),
       ]),
-    );
+    ));
   }
 }
 

@@ -194,9 +194,8 @@ class _PosTimbangScreenState extends State<PosTimbangScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: C.ground,
-      body: Column(children: [
+    return Material(color: C.ground, child: 
+Column(children: [
         Header(title: 'Pos Timbang', eyebrow: 'Kendaraan masuk / keluar', back: !widget.embedded),
         Expanded(
           child: RefreshIndicator(
@@ -242,7 +241,7 @@ class _PosTimbangScreenState extends State<PosTimbangScreen> {
           ),
         ]),
       ]),
-    );
+    ));
   }
 }
 

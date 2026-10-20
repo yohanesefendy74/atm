@@ -13,6 +13,10 @@ Future<void> main() async {
   await initializeDateFormatting('id');
   await Session.I.load();
   HttpOverrides.global = _InternalCert();
+  ErrorWidget.builder = (d) => Material(
+        color: const Color(0xFFFFF4D6),
+        child: Padding(padding: const EdgeInsets.all(12), child: SingleChildScrollView(child: Text('Terjadi kesalahan tampilan:\n${d.exceptionAsString()}', style: const TextStyle(fontSize: 12, color: Color(0xFF7A5300))))),
+      );
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(const GudangApp());
 }
