@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gudang_atm/api.dart';
 import 'package:gudang_atm/screens/home.dart';
 import 'package:gudang_atm/screens/pos_timbang.dart';
+import 'package:gudang_atm/screens/tugas.dart';
 import 'package:gudang_atm/theme.dart';
 
 /// Menggambar menu utama (Shell) di ukuran HP Android, mengetuk tiap tab, menyimpan gambar ke test/goldens/.
@@ -84,6 +85,16 @@ void main() {
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pump(const Duration(milliseconds: 500));
     await expectLater(find.byType(KeluarScreen), matchesGoldenFile('goldens/tarik.png'));
+    addTearDown(tester.view.reset);
+  });
+
+  testWidgets('Selesai muat: timbang palet', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.75;
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: const PaletScreen(whs: 'ATM', regId: 1)));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump(const Duration(milliseconds: 500));
+    await expectLater(find.byType(PaletScreen), matchesGoldenFile('goldens/palet.png'));
     addTearDown(tester.view.reset);
   });
 }

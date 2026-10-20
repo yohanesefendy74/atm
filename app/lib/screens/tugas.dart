@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'pos_timbang.dart';
 
 /// Tugas krani: dokumen SPBB/SPMB yang ditugaskan Admin.
 class TugasScreen extends StatefulWidget {
@@ -233,7 +234,8 @@ class _TugasDetailState extends State<TugasDetail> {
       if (spbb) {
         await Api.post('/api/kontainer/$_sesiId/selesai-bongkar', {});
       } else {
-        await Api.post('/api/kendaraan/$_regId/selesai-krani', {});
+        final ok = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => PaletScreen(whs: _h!['whsCode'].toString(), regId: _regId!)));
+        if (ok != true) return;
       }
       if (mounted) {
         showInfo(context, spbb ? 'Kontainer kosong · siap ditarik (timbang kepala lalu kepala + kontainer)' : 'Kendaraan boleh timbang keluar');
@@ -373,6 +375,91 @@ class _TugasDetailState extends State<TugasDetail> {
           ],
         ]),
       ),
+    );
+  }
+}
+
+
+/// Selesai muat: palet ikut tertimbang di truk, jadi krani menimbang SEMUA palet (boleh beberapa kali) lalu totalnya dikurangkan dari net.
+class PaletScreen extends StatefulWidget {
+  const PaletScreen({super.key, required this.whs, required this.regId});
+  final String whs;
+  final int regId;
+  @override
+  State<PaletScreen> createState() => _PaletScreenState();
+}
+
+class _PaletScreenState extends State<PaletScreen> {
+  final _batch = <({int jumlah, double kg, String sumber})>[];
+  final _jml = TextEditingController();
+  Berat? _berat;
+  Key _fieldKey = UniqueKey();
+  bool _busy = false;
+
+  int get _totalJml => _batch.fold(0, (a, b) => a + b.jumlah);
+  double get _totalKg => _batch.fold(0.0, (a, b) => a + b.kg);
+
+  void _tambah() {
+    final j = int.tryParse(_jml.text.trim()) ?? 0;
+    if (j <= 0) return showError(context, 'Isi jumlah palet yang sedang ditimbang');
+    if (_berat == null) return showError(context, 'Baca berat palet dulu');
+    setState(() {
+      _batch.add((jumlah: j, kg: _berat!.kg, sumber: _berat!.sumber));
+      _jml.clear();
+      _berat = null;
+      _fieldKey = UniqueKey();
+    });
+  }
+
+  Future<void> _simpan({bool tanpaPalet = false}) async {
+    if (!tanpaPalet && _batch.isEmpty) return showError(context, 'Belum ada palet yang ditimbang');
+    setState(() => _busy = true);
+    try {
+      await Api.post('/api/kendaraan/${widget.regId}/selesai-krani', {
+        'jumlahPalet': tanpaPalet ? 0 : _totalJml,
+        'beratPaletKg': tanpaPalet ? 0 : _totalKg,
+        'timbang': tanpaPalet || _batch.isEmpty ? null : {'beratKg': _totalKg, 'sumber': _batch.last.sumber, 'indikatorStatus': 'Stabil'},
+      });
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: C.ground,
+      body: Column(children: [
+        const Header(title: 'Timbang Palet', eyebrow: 'Selesai muat', accent: C.outbound),
+        Expanded(
+          child: ListView(padding: const EdgeInsets.all(16), children: [
+            const Box(child: Text('Palet ikut tertimbang bersama truk. Timbang semua palet yang dimuat (boleh beberapa kali). Total berat palet dikurangkan dari net muatan.')),
+            const SizedBox(height: 12),
+            TextField(controller: _jml, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Jumlah palet di timbangan')),
+            const SizedBox(height: 10),
+            BeratField(key: _fieldKey, whs: widget.whs, alat: 'PALET', manualPerluAdmin: false, onChanged: (b) => setState(() => _berat = b)),
+            const SizedBox(height: 10),
+            BigButton(label: 'Tambahkan ke daftar', outlined: true, color: C.outbound, onPressed: _tambah),
+            const SizedBox(height: 16),
+            for (var i = 0; i < _batch.length; i++)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text('${_batch[i].jumlah} palet · ${_batch[i].kg.toStringAsFixed(1)} kg'),
+                subtitle: Text(_batch[i].sumber),
+                trailing: IconButton(icon: const Icon(Icons.delete_outline), tooltip: 'Hapus', onPressed: () => setState(() => _batch.removeAt(i))),
+              ),
+            if (_batch.isNotEmpty)
+              Text('Total: $_totalJml palet · ${_totalKg.toStringAsFixed(1)} kg', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+          ]),
+        ),
+        Footer(children: [
+          BigButton(label: 'Simpan · kendaraan boleh keluar', color: C.outbound, busy: _busy, onPressed: () => _simpan()),
+          BigButton(label: 'Muat tanpa palet', outlined: true, color: C.ink, onPressed: _busy ? null : () => _simpan(tanpaPalet: true)),
+        ]),
+      ]),
     );
   }
 }

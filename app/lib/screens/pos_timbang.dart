@@ -18,7 +18,8 @@ class Berat {
 
 /// Pembaca berat: Bluetooth (default bila terhubung), via Gateway PC, atau manual (butuh kode Admin).
 class BeratField extends StatefulWidget {
-  const BeratField({super.key, required this.whs, required this.onChanged, this.alat = 'KENDARAAN'});
+  const BeratField({super.key, required this.whs, required this.onChanged, this.alat = 'KENDARAAN', this.manualPerluAdmin = true});
+  final bool manualPerluAdmin;
   final String whs;
   final String alat;
   final ValueChanged<Berat?> onChanged;
@@ -110,7 +111,7 @@ class _BeratFieldState extends State<BeratField> {
         TextField(
           controller: _manual,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(labelText: 'Berat (kg)', helperText: 'Perlu kode persetujuan Admin'),
+          decoration: InputDecoration(labelText: 'Berat (kg)', helperText: widget.manualPerluAdmin ? 'Perlu kode persetujuan Admin' : null),
           onChanged: (v) {
             final d = double.tryParse(v.replaceAll(',', '.'));
             _set(d == null || d <= 0 ? null : Berat(d, 'MANUAL', null, null, _kode));

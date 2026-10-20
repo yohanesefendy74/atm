@@ -12,6 +12,7 @@ public record TimbangIn(string? KodeTimbangan, decimal BeratKg, string Sumber, s
 public record MasukReq(string WhsCode, string Keperluan, string? PlanNo, string NoPolisi, string Sopir, string? ContainerNo, string? AlasanBedaPlan,
     bool KontainerBawaan, TimbangIn Timbang, bool AckPeringatan, string? KodeAdmin);
 public record KeluarReq(TimbangIn Timbang, bool KontainerTinggal, string? YardArea, decimal? TaraKontainer, bool AckPeringatan, string? KodeAdmin);
+public record SelesaiMuatReq(int JumlahPalet, decimal BeratPaletKg, TimbangIn? Timbang);
 public record LepasReq(TimbangIn Timbang, string? Dock, bool AckPeringatan, string? KodeAdmin);
 public record KodeAdminReq(string WhsCode, string? Tujuan);
 
@@ -94,7 +95,7 @@ public static partial class KendaraanEndpoints
             await using var db = dbf();
             if (await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM USR9 WHERE UserId = @uid AND WhsCode = @whs", new { uid = u.UserId(), whs }) == 0) return Results.Forbid();
             return Results.Ok(await db.QueryAsync(@"
-SELECT k.RegId AS regId, k.Tiket AS tiket, k.Keperluan AS keperluan, k.NoPolisi AS noPolisi, k.Sopir AS sopir, k.ContainerNo AS containerNo, k.JamMasuk AS jamMasuk, k.JamKeluar AS jamKeluar,
+SELECT k.RegId AS regId, k.Tiket AS tiket, k.Keperluan AS keperluan, k.JumlahPalet AS jumlahPalet, k.BeratPaletKg AS beratPaletKg, k.NoPolisi AS noPolisi, k.Sopir AS sopir, k.ContainerNo AS containerNo, k.JamMasuk AS jamMasuk, k.JamKeluar AS jamKeluar,
        k.SelesaiKrani AS selesaiKrani, k.Status AS status, p.PlanNo AS planNo, p.Jenis AS jenis, k.Peringatan AS peringatan
 FROM WHS_Kendaraan k LEFT JOIN WHS_Plan p ON p.PlanId = k.PlanId
 WHERE k.WhsCode = @whs AND (@status IS NULL AND k.Status = 'Di dalam' OR k.Status = @status) ORDER BY k.RegId DESC", new { whs, status = Clean(status) }));
@@ -267,16 +268,37 @@ ORDER BY p.PlanId DESC", new { whs, jenis, cont }));
         });
 
         // Krani menandai selesai (syarat boleh keluar)
-        api.MapPost("/kendaraan/{regId:long}/selesai-krani", async (long regId, ClaimsPrincipal u, HttpContext ctx) =>
+        // Krani selesai memuat: timbang SEMUA palet (palet ikut tertimbang di truk), lalu kendaraan boleh timbang keluar
+        api.MapPost("/kendaraan/{regId:long}/selesai-krani", async (long regId, SelesaiMuatReq? r, ClaimsPrincipal u, HttpContext ctx) =>
         {
             await using var db = dbf();
-            var k = await db.QueryFirstOrDefaultAsync<(string WhsCode, long? PlanId, string Status)?>("SELECT WhsCode, PlanId, Status FROM WHS_Kendaraan WHERE RegId = @regId", new { regId });
+            var k = await db.QueryFirstOrDefaultAsync<(string WhsCode, long? PlanId, string Status, string Keperluan)?>("SELECT WhsCode, PlanId, Status, Keperluan FROM WHS_Kendaraan WHERE RegId = @regId", new { regId });
             if (k is null) return Results.NotFound(new { message = "Kendaraan tidak ditemukan" });
             if (await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM USR9 WHERE UserId = @uid AND WhsCode = @w", new { uid = u.UserId(), w = k.Value.WhsCode }) == 0) return Results.Forbid();
             if (k.Value.Status != "Di dalam") return Bad("Kendaraan tidak di dalam gudang");
             if (k.Value.PlanId is not null && await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM OKRN WHERE RegId = @regId", new { regId }) == 0) return Bad("Belum ada input krani untuk kendaraan ini");
-            await db.ExecuteAsync("UPDATE WHS_Kendaraan SET SelesaiKrani = 1 WHERE RegId = @regId", new { regId });
-            await Audit.Safe(db, u, ctx, "KENDARAAN_SELESAI", "KENDARAAN", regId, null);
+            long? tid = null;
+            if (k.Value.Keperluan == "Muat")
+            {
+                if (r is null || r.JumlahPalet < 0 || r.JumlahPalet > 200) return Bad("Isi jumlah palet yang dimuat (0 bila tanpa palet)");
+                if (r.JumlahPalet == 0 && r.BeratPaletKg != 0) return Bad("Jumlah palet 0 · berat palet harus 0");
+                if (r.JumlahPalet > 0)
+                {
+                    if (r.BeratPaletKg <= 0) return Bad("Timbang semua palet lalu isi total beratnya");
+                    var avg = r.BeratPaletKg / r.JumlahPalet;
+                    if (avg < 3 || avg > 150) return Bad($"Rata-rata {avg:N1} kg per palet tidak wajar · cek timbangan / jumlah palet");
+                }
+                if (r.Timbang is { } t && r.JumlahPalet > 0)
+                {
+                    if (t.Sumber is not ("LAN" or "GATEWAY" or "BLE" or "MANUAL")) return Bad("Sumber timbangan tidak valid");
+                    tid = await db.ExecuteScalarAsync<long>(@"INSERT WHS_Timbang (RegId, Alat, KodeTimbangan, Jenis, BeratKg, Sumber, IndikatorStatus, TeksMentah, Peringatan, UserId)
+                        OUTPUT INSERTED.TimbangId VALUES (@reg, 'PALET', @kode, 'TARA', @berat, @sumber, @ind, @raw, @per, @uid)",
+                        new { reg = regId, kode = Clean(t.KodeTimbangan), berat = r.BeratPaletKg, sumber = t.Sumber, ind = Clean(t.IndikatorStatus), raw = t.TeksMentah is { Length: > 200 } x ? x[..200] : t.TeksMentah, per = $"{r.JumlahPalet} palet", uid = u.UserId() });
+                }
+            }
+            await db.ExecuteAsync("UPDATE WHS_Kendaraan SET SelesaiKrani = 1, JumlahPalet = @j, BeratPaletKg = @b, PaletTimbangId = @tid WHERE RegId = @regId",
+                new { regId, j = k.Value.Keperluan == "Muat" ? r!.JumlahPalet : (int?)null, b = k.Value.Keperluan == "Muat" ? r!.BeratPaletKg : (decimal?)null, tid });
+            await Audit.Safe(db, u, ctx, "KENDARAAN_SELESAI", "KENDARAAN", regId, r is null ? null : $"{r.JumlahPalet} palet {r.BeratPaletKg:N1} kg");
             return Results.Ok();
         });
 
@@ -329,11 +351,11 @@ ORDER BY p.PlanId DESC", new { whs, jenis, cont }));
 
                 if (kk.Keperluan == "Muat")
                 {
-                    // A = kepala (+ kontainer kosong) saat masuk, B = kepala yang sama + muatan. Net = B - A - berat palet.
-                    var paletKg = await db.ExecuteScalarAsync<decimal?>(@"SELECT SUM(d.QtyPalet * mp.BeratKg) FROM OKRN h JOIN KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
-                        JOIN WHS_MasterPalet mp ON mp.PaletCode = d.PaletCode WHERE h.RegId = @regId", new { regId }, tx) ?? 0;
+                    // A = kepala (+ kontainer kosong) saat masuk, B = kepala yang sama + muatan + palet. Net = B - A - berat semua palet (ditimbang krani).
+                    var paletKg = await db.ExecuteScalarAsync<decimal?>("SELECT BeratPaletKg FROM WHS_Kendaraan WHERE RegId = @regId", new { regId }, tx);
+                    if (paletKg is null) return Bad("Berat palet belum ditimbang krani");
                     bandingkan = await db.ExecuteScalarAsync<decimal?>("SELECT SUM(d.qty) FROM OKRN h JOIN KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry WHERE h.RegId = @regId AND d.flags = -1", new { regId }, tx) ?? 0;
-                    net = berat - masuk.Value.BeratKg - paletKg;
+                    net = berat - masuk.Value.BeratKg - paletKg.Value;
                     if (net <= 0) return Bad("Net muatan ≤ 0 · cek berat");
                     await Banding();
                 }

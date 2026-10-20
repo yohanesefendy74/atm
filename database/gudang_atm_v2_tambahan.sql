@@ -122,3 +122,9 @@ GO
 
 IF COL_LENGTH('dbo.OKRN','SesiId') IS NULL ALTER TABLE dbo.OKRN ADD SesiId BIGINT NULL;   -- input krani untuk kontainer ini
 GO
+
+/* Muat: palet ikut tertimbang di truk. Setelah selesai muat krani menimbang SEMUA palet; total ini dikurangkan dari net muatan. */
+IF COL_LENGTH('dbo.WHS_Kendaraan','JumlahPalet')   IS NULL ALTER TABLE dbo.WHS_Kendaraan ADD JumlahPalet INT NULL;
+IF COL_LENGTH('dbo.WHS_Kendaraan','BeratPaletKg')  IS NULL ALTER TABLE dbo.WHS_Kendaraan ADD BeratPaletKg NUMERIC(12,2) NULL;
+IF COL_LENGTH('dbo.WHS_Kendaraan','PaletTimbangId') IS NULL ALTER TABLE dbo.WHS_Kendaraan ADD PaletTimbangId BIGINT NULL;
+GO
