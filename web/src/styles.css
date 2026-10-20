@@ -261,3 +261,12 @@ a.list-item { text-decoration: none; color: inherit; }
 .login .pw button { position: absolute; right: 1px; top: 1px; bottom: 1px; width: 48px; border: 0; border-radius: 0 5px 5px 0; background: #e4e1f0; cursor: pointer; }
 .login .exit { background: none; border: 0; color: var(--login-navy); font-weight: 700; cursor: pointer; padding: 10px; }
 @media (min-width: 900px) { .login { background: var(--ground); align-items: center; } .login form { background: #fff; border-radius: 20px; border: 1px solid var(--line); } }
+
+/* combo dengan pencarian */
+.ssel { position: relative; width: 100%; }
+.ssel-list { position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 4px); max-height: 260px; overflow-y: auto;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.12); padding: 4px; }
+.ssel-opt { padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+.ssel-opt.hi { background: var(--accent-tint); }
+.ssel-opt.on { font-weight: 600; }
+.ssel-empty { padding: 10px 12px; color: var(--muted); font-size: 14px; }

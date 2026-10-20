@@ -1,17 +1,12 @@
 import { useState } from 'react';
 import { get, post, type Row } from '../api';
-import { ErrorBox, Page, Spinner, StatusPill, errText, fmt, fmtDate, todayIso, useLoad, useToast, useWarehouses } from '../ui';
+import { ErrorBox, Page, SearchSelect, Spinner, StatusPill, errText, fmt, fmtDate, todayIso, useLoad, useToast, useWarehouses, whsOpts } from '../ui';
 
 const hm = (m?: number | null) => (m == null ? '-' : `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`);
 
 function WhsPick({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const wh = useWarehouses();
-  return (
-    <select className="input" value={value} onChange={(e) => onChange(e.target.value)} aria-label="Gudang">
-      <option value="">Pilih gudang</option>
-      {(wh.data ?? []).map((w) => <option key={w.whsCode} value={w.whsCode}>{w.whsCode} · {w.whsName}</option>)}
-    </select>
-  );
+  return <div style={{ minWidth: 260 }}><SearchSelect options={whsOpts(wh.data)} value={value} onChange={onChange} placeholder="Cari & pilih gudang" /></div>;
 }
 
 export function AdminJadwal() {
@@ -41,9 +36,7 @@ export function AdminJadwal() {
               <div className="small">{p.party} · {fmt(p.kg)} kg · {p.noPolisi ?? 'belum datang'}</div>
               <div className="row">
                 <input className="input" type="time" value={ed[p.planId]?.eta ?? p.eta ?? ''} onChange={(e) => setEd({ ...ed, [p.planId]: { ...ed[p.planId], eta: e.target.value } })} aria-label="ETA" />
-                <select className="input" value={ed[p.planId]?.dock ?? p.dock ?? ''} onChange={(e) => setEd({ ...ed, [p.planId]: { ...ed[p.planId], dock: e.target.value } })} aria-label="Jalur">
-                  <option value="">Otomatis</option>{(data.docks as string[]).map((d) => <option key={d}>{d}</option>)}
-                </select>
+                <div className="grow"><SearchSelect options={(data.docks as string[]).map((d) => ({ value: d, label: d }))} value={ed[p.planId]?.dock ?? p.dock ?? ''} onChange={(v) => setEd({ ...ed, [p.planId]: { ...ed[p.planId], dock: v } })} allowEmpty="Otomatis" placeholder="Jalur" /></div>
               </div>
               {o && <div className={'small ' + (o.lewat ? 'pill amber' : '')}>Jalur {o.dock ?? '-'} · {hm(o.mulai)}-{hm(o.selesai)} · {o.durasi} mnt{o.tunggu > 0 ? ` · tunggu ${o.tunggu} mnt` : ''}{o.lewat ? ' · MELEWATI JAM KERJA' : ''}</div>}
               {!o && p.jadwalMulai && <div className="small muted">Terjadwal {p.dock} · {String(p.jadwalMulai).slice(11, 16)}-{String(p.jadwalSelesai).slice(11, 16)}</div>}
@@ -93,7 +86,7 @@ export function AdminSuratJalan() {
               </div>
             ))}
             {ids.length > 0 && (<>
-              <select className="input" value={reg} onChange={(e) => setReg(e.target.value)} aria-label="Kendaraan"><option value="">Kendaraan (opsional)</option>{(veh.data ?? []).map((v) => <option key={v.regId} value={v.regId}>{v.noPolisi} · {v.sopir}</option>)}</select>
+              <SearchSelect options={(veh.data ?? []).map((v) => ({ value: String(v.regId), label: `${v.noPolisi} · ${v.sopir}` }))} value={reg} onChange={setReg} allowEmpty="(tanpa kendaraan)" placeholder="Kendaraan (opsional)" />
               <input className="input" type="date" max={todayIso()} value={tgl} onChange={(e) => setTgl(e.target.value)} />
               <button className="btn" onClick={buat}>Terbitkan Surat Jalan ({ids.length} SPMB)</button>
             </>)}

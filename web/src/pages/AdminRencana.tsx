@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { get, post, put, type Row } from '../api';
 import { Link, match, navigate } from '../router';
-import { ErrorBox, KV, Page, Spinner, StatusPill, errText, fmt, fmtDate, useLoad, useToast, useWarehouses } from '../ui';
+import { ErrorBox, KV, Page, SearchSelect, Spinner, StatusPill, errText, fmt, fmtDate, useLoad, useToast, useWarehouses, whsOpts } from '../ui';
 
 export function PlanList() {
   const [jenis, setJenis] = useState('');
@@ -71,6 +71,7 @@ export function PlanNew() {
   }
   const upd = (di: number, li: number, patch: Partial<SrcLine>) => setDocs(docs.map((d, i) => (i !== di ? d : { ...d, lines: d.lines.map((l, j) => (j !== li ? l : { ...l, ...patch })) })));
   const room = ruangList.find((r) => r.kodeRuangan === ruang);
+  const paletOpts = paletList.filter((p) => p.aktif).map((p) => ({ value: p.paletCode, label: `${p.paletCode} · ${p.beratKg} kg` }));
 
   async function terbit() {
     const lines = docs.flatMap((d) => d.lines.filter((l) => l.pick && (l.qtyPlan ?? 0) > 0).map((l) => ({
@@ -90,9 +91,7 @@ export function PlanNew() {
     <Page eyebrow="Admin" title="Terbitkan SPBB / SPMB" accent="ink" backTo="/admin/plan" footer={<button className="btn" disabled={busy || !docs.length || !ruang} onClick={terbit}>Terbitkan</button>}>
       <div className="card stack">
         <div className="chips">{(['SPBB', 'SPMB'] as const).map((j) => <button key={j} className="chip" aria-pressed={jenis === j} onClick={() => { setJenis(j); setSrc(j === 'SPBB' ? 'BL' : 'SO'); setDocs([]); setFound([]); }}>{j}</button>)}</div>
-        <select className="input" value={whs} onChange={(e) => pilihWhs(e.target.value)} aria-label="Gudang">
-          <option value="">Pilih gudang</option>{(wh.data ?? []).map((w) => <option key={w.whsCode} value={w.whsCode}>{w.whsCode} · {w.whsName}</option>)}
-        </select>
+        <SearchSelect options={whsOpts(wh.data)} value={whs} onChange={pilihWhs} placeholder="Cari & pilih gudang" />
         <div className="row">
           {srcOpts.length > 1 && <select className="input" value={src} onChange={(e) => setSrc(e.target.value)}>{srcOpts.map((s) => <option key={s}>{s}</option>)}</select>}
           <input className="input grow" placeholder={`Cari ${src}: no / BP / PO`} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && cari()} />
@@ -115,7 +114,7 @@ export function PlanNew() {
               </div>
               {jenis === 'SPBB' && (
                 <div className="row">
-                  <input className="input" list="dl-palet" placeholder="Jenis palet" value={l.palet ?? ''} onChange={(e) => upd(di, li, { palet: e.target.value })} />
+                  <SearchSelect options={paletOpts} value={l.palet ?? ''} onChange={(v) => upd(di, li, { palet: v })} allowEmpty="(tanpa palet)" placeholder="Jenis palet" />
                   <input className="input" type="number" placeholder="Jml palet" value={l.paletPlan ?? ''} onChange={(e) => upd(di, li, { paletPlan: Number(e.target.value) })} />
                 </div>
               )}
@@ -123,10 +122,8 @@ export function PlanNew() {
           ))}
         </div>
       ))}
-      <datalist id="dl-palet">{paletList.filter((p) => p.aktif).map((p) => <option key={p.paletCode} value={p.paletCode}>{p.beratKg} kg</option>)}</datalist>
-      <datalist id="dl-ruang">{ruangList.filter((r) => r.aktif).map((r) => <option key={r.kodeRuangan} value={r.kodeRuangan}>{r.namaRuangan}{r.titipan ? ' (titipan)' : ''}</option>)}</datalist>
       <div className="card stack">
-        <label className="stack tight"><span className="small muted">Ruangan</span><input className="input" list="dl-ruang" value={ruang} onChange={(e) => setRuang(e.target.value)} /></label>
+        <label className="stack tight"><span className="small muted">Ruangan</span><SearchSelect options={ruangList.filter((r) => r.aktif).map((r) => ({ value: r.kodeRuangan, label: `${r.kodeRuangan} · ${r.namaRuangan}${r.titipan ? ' (titipan)' : ''}` }))} value={ruang} onChange={setRuang} placeholder="Cari & pilih ruangan" /></label>
         {room?.titipan && <label className="stack tight"><span className="small muted">Kode customer titipan (pemilik barang)</span><input className="input" value={titipanCard} onChange={(e) => setTitipanCard(e.target.value)} /></label>}
         {jenis === 'SPBB' && <label className="stack tight"><span className="small muted">Kode PT (opsional)</span><input className="input" value={pt} onChange={(e) => setPt(e.target.value)} /></label>}
         <div className="row"><label className="stack tight grow"><span className="small muted">Tanggal jadwal</span><input className="input" type="date" value={tgl} onChange={(e) => setTgl(e.target.value)} /></label>

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { get, post, put, type Row } from '../api';
-import { ErrorBox, Page, Spinner, errText, useLoad, useToast, useWarehouses } from '../ui';
+import { ErrorBox, Page, SearchSelect, Spinner, errText, useLoad, useToast, useWarehouses, whsOpts } from '../ui';
 
-type Field = { k: string; label: string; type?: 'text' | 'number' | 'bool' | 'whs'; pk?: boolean; hint?: string };
+type Field = { k: string; label: string; type?: 'text' | 'number' | 'bool' | 'whs' | 'gateway' | 'enum'; opts?: string[]; pk?: boolean; hint?: string };
 type Cfg = { key: string; title: string; path: string; fields: Field[]; pkPut?: boolean; whsFilter?: boolean; createable?: boolean };
 
 const CFG: Cfg[] = [
@@ -17,11 +17,11 @@ const CFG: Cfg[] = [
   { key: 'dock', title: 'Jalur (Dock)', path: 'dock', whsFilter: true, createable: true, fields: [
     { k: 'dockCode', label: 'Kode', pk: true }, { k: 'whsCode', label: 'Gudang', type: 'whs' }, { k: 'nama', label: 'Nama' }, { k: 'aktif', label: 'Aktif', type: 'bool' }] },
   { key: 'timbangan', title: 'Timbangan', path: 'timbangan', whsFilter: true, createable: true, fields: [
-    { k: 'kodeTimbangan', label: 'Kode', pk: true, hint: 'mis. TP-01' }, { k: 'whsCode', label: 'Gudang', type: 'whs' }, { k: 'alat', label: 'Jenis (KENDARAAN/PALET)' },
-    { k: 'lokasi', label: 'Lokasi' }, { k: 'alamatLan', label: 'Alamat Gateway/ESP32' }, { k: 'gatewayId', label: 'Gateway' },
+    { k: 'kodeTimbangan', label: 'Kode', pk: true, hint: 'mis. TP-01' }, { k: 'whsCode', label: 'Gudang', type: 'whs' }, { k: 'alat', label: 'Jenis', type: 'enum', opts: ['KENDARAAN', 'PALET'] },
+    { k: 'lokasi', label: 'Lokasi' }, { k: 'alamatLan', label: 'Alamat Gateway/ESP32' }, { k: 'gatewayId', label: 'Gateway', type: 'gateway' },
     { k: 'tolOverridePct', label: 'Toleransi % (opsional)', type: 'number' }, { k: 'aktif', label: 'Aktif', type: 'bool' }] },
   { key: 'printer', title: 'Printer', path: 'printer', whsFilter: true, createable: true, fields: [
-    { k: 'kodePrinter', label: 'Kode', pk: true }, { k: 'whsCode', label: 'Gudang', type: 'whs' }, { k: 'gatewayId', label: 'Gateway' },
+    { k: 'kodePrinter', label: 'Kode', pk: true }, { k: 'whsCode', label: 'Gudang', type: 'whs' }, { k: 'gatewayId', label: 'Gateway', type: 'gateway' },
     { k: 'lokasi', label: 'Lokasi' }, { k: 'ukuranMm', label: 'Ukuran label' }, { k: 'aktif', label: 'Aktif', type: 'bool' }] },
 ];
 
@@ -34,6 +34,8 @@ function MasterTable({ cfg }: { cfg: Cfg }) {
   const { data, error, loading, reload } = useLoad(() => get<Row[]>(`/api/cms/master/${cfg.path}`, cfg.whsFilter ? { whs } : undefined), [cfg.path, whs]);
   const [form, setForm] = useState<Row | null>(null);
   const [isNew, setIsNew] = useState(false);
+  const needGw = cfg.fields.some((f) => f.type === 'gateway');
+  const gw = useLoad(() => (needGw ? get<Row[]>('/api/cms/master/gateway') : Promise.resolve([] as Row[])), [needGw]);
   const pk = cfg.fields.find((f) => f.pk)!.k;
 
   async function save() {
@@ -52,10 +54,7 @@ function MasterTable({ cfg }: { cfg: Cfg }) {
     <div className="stack">
       <div className="row">
         {cfg.whsFilter && (
-          <select className="input" value={whs} onChange={(e) => setWhs(e.target.value)} aria-label="Filter gudang">
-            <option value="">Semua gudang</option>
-            {(wh.data ?? []).map((w) => <option key={w.whsCode} value={w.whsCode}>{w.whsCode} · {w.whsName}</option>)}
-          </select>
+          <div style={{ minWidth: 260 }}><SearchSelect options={whsOpts(wh.data)} value={whs} onChange={setWhs} allowEmpty="Semua gudang" placeholder="Filter gudang" /></div>
         )}
         <span className="grow" />
         {cfg.createable && <button className="btn small" onClick={() => { setIsNew(true); setForm({ aktif: true }); }}>+ Baru</button>}
@@ -82,10 +81,14 @@ function MasterTable({ cfg }: { cfg: Cfg }) {
               {f.type === 'bool' ? (
                 <input type="checkbox" checked={!!form[f.k]} onChange={(e) => setForm({ ...form, [f.k]: e.target.checked })} />
               ) : f.type === 'whs' ? (
-                <>
-                  <input className="input" list="dl-whs" value={form[f.k] ?? ''} onChange={(e) => setForm({ ...form, [f.k]: e.target.value.split(' ')[0] })} disabled={!isNew && f.k === 'whsCode'} />
-                  <datalist id="dl-whs">{(wh.data ?? []).map((w) => <option key={w.whsCode} value={w.whsCode}>{w.whsName}</option>)}</datalist>
-                </>
+                <SearchSelect options={whsOpts(wh.data)} value={form[f.k] ?? ''} onChange={(v) => setForm({ ...form, [f.k]: v })} disabled={!isNew} placeholder="Cari & pilih gudang" />
+              ) : f.type === 'gateway' ? (
+                <SearchSelect options={(gw.data ?? []).map((g) => ({ value: g.gatewayId, label: `${g.gatewayId} · ${g.whsCode}${g.keterangan ? ' · ' + g.keterangan : ''}` }))}
+                  value={form[f.k] ?? ''} onChange={(v) => setForm({ ...form, [f.k]: v || null })} allowEmpty="(tanpa gateway)" placeholder="Cari & pilih gateway" />
+              ) : f.type === 'enum' ? (
+                <select className="input" value={form[f.k] ?? ''} onChange={(e) => setForm({ ...form, [f.k]: e.target.value })}>
+                  <option value="">Pilih</option>{f.opts!.map((o) => <option key={o}>{o}</option>)}
+                </select>
               ) : (
                 <input className="input" type={f.type === 'number' ? 'number' : 'text'} placeholder={f.hint} value={form[f.k] ?? ''} disabled={f.pk && !isNew}
                   onChange={(e) => setForm({ ...form, [f.k]: f.type === 'number' ? (e.target.value === '' ? null : Number(e.target.value)) : e.target.value })} />
@@ -126,8 +129,7 @@ function Gateways() {
         ))}</tbody></table></div>
       <div className="card stack"><strong>Gateway baru</strong>
         <input className="input" placeholder="ID mis. GW-JKT01" value={id} onChange={(e) => setId(e.target.value)} />
-        <input className="input" list="dl-whs2" placeholder="Gudang" value={whs} onChange={(e) => setWhs(e.target.value.split(' ')[0])} />
-        <datalist id="dl-whs2">{(wh.data ?? []).map((w) => <option key={w.whsCode} value={w.whsCode}>{w.whsName}</option>)}</datalist>
+        <SearchSelect options={whsOpts(wh.data)} value={whs} onChange={setWhs} placeholder="Cari & pilih gudang" />
         <input className="input" placeholder="Keterangan" value={ket} onChange={(e) => setKet(e.target.value)} />
         <button className="btn small" onClick={buat}>Buat</button></div>
     </div>

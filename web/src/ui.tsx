@@ -407,3 +407,76 @@ export function LineRow({ l, onDelete, badge, sak = 'krg' }: { l: Line | Row; on
     </div>
   );
 }
+
+// ---------------------------------------------------------------- combo dengan pencarian (hanya boleh memilih dari daftar)
+export type Opt = { value: string; label: string };
+
+export function SearchSelect(props: {
+  options: Opt[];
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  allowEmpty?: string; // label untuk pilihan kosong (mis. "Semua gudang"); tanpa ini nilai kosong tidak bisa dipilih ulang
+  ariaLabel?: string;
+}) {
+  const cur = props.options.find((o) => o.value === props.value);
+  const [q, setQ] = useState<string | null>(null); // null = tidak sedang mengetik
+  const [open, setOpen] = useState(false);
+  const [hi, setHi] = useState(0);
+  const text = q ?? (cur ? cur.label : props.value && !cur ? props.value : '');
+  const term = (q ?? '').trim().toLowerCase();
+  const list = [
+    ...(props.allowEmpty !== undefined ? [{ value: '', label: props.allowEmpty }] : []),
+    ...props.options.filter((o) => !term || o.label.toLowerCase().includes(term) || o.value.toLowerCase().includes(term)),
+  ].slice(0, 100);
+  const pick = (o: Opt) => {
+    props.onChange(o.value);
+    setQ(null);
+    setOpen(false);
+  };
+  return (
+    <div className="ssel">
+      <input
+        className="input"
+        role="combobox"
+        aria-expanded={open}
+        aria-label={props.ariaLabel ?? props.placeholder}
+        placeholder={props.placeholder ?? 'Cari & pilih'}
+        disabled={props.disabled}
+        value={text}
+        onFocus={(e) => {
+          setOpen(true);
+          setHi(0);
+          e.target.select();
+        }}
+        onChange={(e) => {
+          setQ(e.target.value);
+          setOpen(true);
+          setHi(0);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown') { e.preventDefault(); setHi((h) => Math.min(h + 1, list.length - 1)); }
+          else if (e.key === 'ArrowUp') { e.preventDefault(); setHi((h) => Math.max(h - 1, 0)); }
+          else if (e.key === 'Enter' && open && list[hi]) { e.preventDefault(); pick(list[hi]); }
+          else if (e.key === 'Escape') { setQ(null); setOpen(false); }
+        }}
+        onBlur={() => setTimeout(() => { setQ(null); setOpen(false); }, 150)}
+      />
+      {open && !props.disabled && (
+        <div className="ssel-list" role="listbox">
+          {list.length === 0 && <div className="ssel-empty">Tidak ditemukan</div>}
+          {list.map((o, i) => (
+            <div key={o.value || '_'} role="option" aria-selected={o.value === props.value}
+              className={'ssel-opt' + (i === hi ? ' hi' : '') + (o.value === props.value ? ' on' : '')}
+              onMouseDown={(e) => { e.preventDefault(); pick(o); }}>
+              {o.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export const whsOpts = (list: Warehouse[] | null) => (list ?? []).map((w) => ({ value: w.whsCode, label: `${w.whsCode} · ${w.whsName}` }));
