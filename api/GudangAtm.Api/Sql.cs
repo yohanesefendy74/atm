@@ -36,7 +36,7 @@ WHERE   u.USER_CODE = @userCode AND u.[password] COLLATE Latin1_General_BIN2 = @
     public const string Warehouses = @"
 SELECT  w.WhsCode  AS whsCode,
         w.WhsName  AS whsName,
-        CAST(CASE WHEN w.External = 'Y' THEN 1 ELSE 0 END AS bit) AS isTitipan,
+        CAST(CASE WHEN w.[External] = 'Y' THEN 1 ELSE 0 END AS bit) AS isTitipan,
         CAST(CASE WHEN w.WhsCode = u.Fax THEN 1 ELSE 0 END AS bit) AS isDefault
 FROM    USR9 a
 JOIN    OWHS w ON w.WhsCode = a.WhsCode
@@ -45,7 +45,7 @@ WHERE   a.UserId = @userId
 ORDER BY isDefault DESC, w.WhsCode";
 
     public const string WarehouseAccess = @"
-SELECT  CAST(CASE WHEN w.External = 'Y' THEN 1 ELSE 0 END AS bit) AS isTitipan
+SELECT  CAST(CASE WHEN w.[External] = 'Y' THEN 1 ELSE 0 END AS bit) AS isTitipan
 FROM    USR9 a
 JOIN    OWHS w ON w.WhsCode = a.WhsCode
 WHERE   a.UserId = @userId AND a.WhsCode = @whsCode";
@@ -233,7 +233,7 @@ WHERE   h.BPLId = @bplId AND h.DocDate BETWEEN @from AND @to
 SELECT  TOP 200
         h.ObjType AS objType, h.DocEntry AS docEntry, h.DocDate AS docDate, h.TrxCode AS trxCode,
         h.WhsCode AS whsCode, w.WhsName AS whsName,
-        CAST(CASE WHEN w.External = 'Y' THEN 1 ELSE 0 END AS bit) AS isTitipan,
+        CAST(CASE WHEN w.[External] = 'Y' THEN 1 ELSE 0 END AS bit) AS isTitipan,
         h.VehicleNo AS noMobil, h.ContainerNo AS containerNo,
         h.U_IDU_Kode_PT AS ptCode, p.PrcName AS ptName,
         h.CardCode AS cardCode, c.CardName AS cardName, h.NumAtCard AS numAtCard, h.U_NoBL AS blNo,
@@ -257,7 +257,7 @@ ORDER BY CASE WHEN h.DocStatus = 'O' THEN 0 ELSE 1 END, h.DocDate DESC, h.DocEnt
     public const string CmsHeader = @"
 SELECT  h.ObjType AS objType, h.DocEntry AS docEntry, h.DocDate AS docDate, h.TrxCode AS trxCode,
         h.WhsCode AS whsCode, w.WhsName AS whsName,
-        CAST(CASE WHEN w.External = 'Y' THEN 1 ELSE 0 END AS bit) AS isTitipan,
+        CAST(CASE WHEN w.[External] = 'Y' THEN 1 ELSE 0 END AS bit) AS isTitipan,
         h.VehicleNo AS noMobil, h.ContainerNo AS containerNo,
         h.U_IDU_Kode_PT AS ptCode, p.PrcName AS ptName,
         h.CardCode AS cardCode, c.CardName AS cardName, c.CardType AS cardType,

@@ -21,8 +21,8 @@ SELECT  u.USERID,
         u.Branch                AS BPLId,
         u.Fax                   AS WhsCode,
         w.WhsName,
-        w.External,
-        CASE WHEN w.External = 'Y' THEN 1 ELSE 0 END AS IsTitipan
+        w.[External],
+        CASE WHEN w.[External] = 'Y' THEN 1 ELSE 0 END AS IsTitipan
 FROM    OUSR u
 LEFT JOIN OWHS w ON w.WhsCode = u.Fax
 WHERE   u.USER_CODE = @user_code
@@ -37,7 +37,7 @@ DECLARE @UserId INT;                                  -- OUSR.USERID dari hasil 
 
 SELECT  w.WhsCode,
         w.WhsName,
-        CASE WHEN w.External = 'Y' THEN 1 ELSE 0 END AS IsTitipan,
+        CASE WHEN w.[External] = 'Y' THEN 1 ELSE 0 END AS IsTitipan,
         CASE WHEN w.WhsCode = u.Fax THEN 1 ELSE 0 END AS IsDefault
 FROM    USR9 a
 JOIN    OWHS w ON w.WhsCode = a.WhsCode
@@ -98,7 +98,7 @@ DECLARE @BPLId INT;
 
 SELECT  h.*,
         w.WhsName,
-        CASE WHEN w.External = 'Y' THEN 'Titipan' ELSE 'Milik sendiri' END AS JenisBarang,
+        CASE WHEN w.[External] = 'Y' THEN 'Titipan' ELSE 'Milik sendiri' END AS JenisBarang,
         p.PrcName               AS NamaPT,
         c.CardName,
         c.CardType,
@@ -164,19 +164,19 @@ WHERE   h.ObjType = @ObjType AND h.DocEntry = @DocEntry
 -- 5d. BT otomatis dari warehouse: Whs titipan (OWHS.External = 'Y') wajib BT,
 --     Whs biasa tidak boleh BT. KR & RP tidak boleh di Whs titipan.
 --     Retur Customer (RC) tidak ikut aturan ini.
-SELECT  h.ObjType, h.DocEntry, h.WhsCode, w.External, h.TrxCode,
-        CASE WHEN w.External = 'Y' AND h.TrxCode IN ('KR','RP') THEN 'KR/RP tidak boleh di Whs titipan'
-             WHEN w.External = 'Y' THEN 'BT harus dipakai'
+SELECT  h.ObjType, h.DocEntry, h.WhsCode, w.[External], h.TrxCode,
+        CASE WHEN w.[External] = 'Y' AND h.TrxCode IN ('KR','RP') THEN 'KR/RP tidak boleh di Whs titipan'
+             WHEN w.[External] = 'Y' THEN 'BT harus dipakai'
              ELSE 'BT tidak boleh' END AS Masalah
 FROM    OKRN h
 JOIN    OWHS w ON w.WhsCode = h.WhsCode
 WHERE   h.ObjType = @ObjType AND h.DocEntry = @DocEntry
   AND   h.TrxCode IN ('IB','OB','BT','KR','RP')
-  AND ( (w.External = 'Y' AND h.TrxCode <> 'BT')
-     OR (ISNULL(w.External,'N') <> 'Y' AND h.TrxCode = 'BT') );
+  AND ( (w.[External] = 'Y' AND h.TrxCode <> 'BT')
+     OR (ISNULL(w.[External],'N') <> 'Y' AND h.TrxCode = 'BT') );
 
 -- Nilai TrxCode default saat dokumen dibuat dari HP:
---   SELECT CASE WHEN w.External = 'Y' THEN 'BT'
+--   SELECT CASE WHEN w.[External] = 'Y' THEN 'BT'
 --               WHEN @ObjType = '6730' THEN 'IB' ELSE 'OB' END
 --   FROM OWHS w WHERE w.WhsCode = @WhsCode;
 
