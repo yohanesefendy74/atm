@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react';
 import { useAuth } from './auth';
+import { AdminMaster, AdminSetup } from './pages/AdminMaster';
+import { PlanDetail, PlanList, PlanNew } from './pages/AdminRencana';
+import { AdminJadwal, AdminKendaraan, AdminSuratJalan } from './pages/AdminOps';
 import { Link, match, navigate, usePath } from './router';
 import { Icon, Spinner } from './ui';
 import Login from './pages/Login';
@@ -34,6 +37,15 @@ function route(path: string, isAdmin: boolean): ReactNode {
   if (path === '/reports/stock-container') return <StockContainerReport />;
   if (path === '/reports/stock-card') return <StockCardReport />;
   if (path === '/reports/kpi') return <KpiReport />;
+  if (path === '/admin/plan') return isAdmin ? <PlanList /> : <Forbidden />;
+  if (path === '/admin/plan/baru') return isAdmin ? <PlanNew /> : <Forbidden />;
+  const pp = match('/admin/plan/:id', path);
+  if (pp) return isAdmin ? <PlanDetail id={pp.id} /> : <Forbidden />;
+  if (path === '/admin/jadwal') return isAdmin ? <AdminJadwal /> : <Forbidden />;
+  if (path === '/admin/surat-jalan') return isAdmin ? <AdminSuratJalan /> : <Forbidden />;
+  if (path === '/admin/kendaraan') return isAdmin ? <AdminKendaraan /> : <Forbidden />;
+  if (path === '/admin/master') return isAdmin ? <AdminMaster /> : <Forbidden />;
+  if (path === '/admin/setup') return isAdmin ? <AdminSetup /> : <Forbidden />;
   if (path === '/cms') return isAdmin ? <CmsList /> : <Forbidden />;
   p = match('/cms/:objType/:docEntry', path);
   if (p) return isAdmin ? <CmsDetail objType={p.objType} docEntry={p.docEntry} /> : <Forbidden />;
@@ -77,6 +89,12 @@ export default function App() {
             <Link to="/cms" current={on('/cms')}>
               <Icon name="cms" /> CMS · Cek input krani
             </Link>
+            <Link to="/admin/plan" current={on('/admin/plan')}>Rencana SPBB / SPMB</Link>
+            <Link to="/admin/jadwal" current={on('/admin/jadwal')}>Jadwal</Link>
+            <Link to="/admin/surat-jalan" current={on('/admin/surat-jalan')}>Surat Jalan</Link>
+            <Link to="/admin/kendaraan" current={on('/admin/kendaraan')}>Kendaraan & Berat</Link>
+            <Link to="/admin/master" current={on('/admin/master')}>Master Data</Link>
+            <Link to="/admin/setup" current={on('/admin/setup')}>Setup</Link>
           </>
         )}
         <div className="who">

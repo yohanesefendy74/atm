@@ -113,7 +113,7 @@ public static class KraniEndpoints
                 var src = outLines.Sum(l => l.Qty); var hasil = inLines.Sum(l => l.Qty);
                 if (inLines.Count == 0) return Bad("Repacking harus punya item hasil");
                 selisih = src <= 0 ? 0 : Math.Round(Math.Abs(src - hasil) / src * 100, 2);
-                var lim = await db.ExecuteScalarAsync<decimal?>("SELECT Nilai FROM WHS_Setup WHERE Kode = 'REPACK_WARN'") ?? 2m;
+                var lim = await db.ExecuteScalarAsync<decimal?>("SELECT Nilai FROM WHS_Setup WHERE Kode = 'REPACK_WARN_PCT'") ?? 2m;
                 if (selisih > lim) return Bad($"Selisih berat Repacking {selisih:N2}% melebihi batas {lim:N0}% · periksa timbangan");
             }
             var trxCode = isTitipan.Value ? "BT" : jenis;
