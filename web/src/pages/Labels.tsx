@@ -3,7 +3,7 @@ import { ApiError, get, type Row } from '../api';
 import { ErrorBox, Icon, Page, Spinner, fmt, fmtDate, isInbound, useLoad } from '../ui';
 import { qrSvgPath } from '../qr';
 
-type LabelItem = { itemCode: string; itemName: string; brand: string | null; packKg: number; sakPerPalet: number; qtyPalet: number; qr: string };
+type LabelItem = { itemCode: string; itemName: string; brand: string | null; kodeRuangan?: string | null; packKg: number; sakPerPalet: number; qtyPalet: number; qr: string };
 
 const contDisplay = (c: string | null) => {
   const s = (c ?? '').replace(/\s/g, '');
@@ -31,6 +31,7 @@ function Label({ head, item }: { head: Row; item: LabelItem }) {
         <div>{item.brand ?? ''}</div>
         <div>@{fmt(item.packKg)}</div>
         <div>{head.ptName}</div>
+        {item.kodeRuangan && <div><strong>RUANG {item.kodeRuangan}</strong></div>}
         <div className="qrtext">{item.qr}</div>
       </div>
       <div className="r">

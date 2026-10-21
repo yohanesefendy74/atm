@@ -3,7 +3,7 @@ import { get, post, type Row } from '../api';
 import { useAuth } from '../auth';
 import { navigate } from '../router';
 import {
-  ErrorBox, Icon, KV, LineForm, LineRow, Page, Steps, Totals, errText, fmt, fmtDate, num, todayIso, useToast,
+  ErrorBox, Icon, KV, LineForm, LineRow, Page, RuanganSelect, Steps, Totals, errText, fmt, fmtDate, num, todayIso, useToast,
   useWarehouses, WarehouseSelect, type Line, type Warehouse,
 } from '../ui';
 import Scanner from './Scanner';
@@ -22,6 +22,8 @@ type Pallet = {
   partial: boolean;
   sak: number;
   kgManual: number | null;
+  rooms: Row[]; // stok item+container per ruangan
+  kodeRuangan: string; // ruangan SUMBER (wajib)
 };
 const kgAuto = (p: Pallet) => p.sak * p.kgPerSak;
 const kgOf = (p: Pallet) => p.kgManual ?? kgAuto(p);
@@ -41,6 +43,7 @@ export default function OutboundNew() {
   const [container, setContainer] = useState<string | null>(null);
   const [pallets, setPallets] = useState<Pallet[]>([]);
   const [inLines, setInLines] = useState<Line[]>([]);
+  const [ruangIn, setRuangIn] = useState('');
   const [sel, setSel] = useState<number | null>(null);
   const [armed, setArmed] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -87,6 +90,8 @@ export default function OutboundNew() {
         partial: false,
         sak: num(r.sakPerPalet),
         kgManual: null,
+        rooms: (r.rooms as Row[]) ?? [],
+        kodeRuangan: ((r.rooms as Row[]) ?? []).length === 1 ? String((r.rooms as Row[])[0].kodeRuangan) : '',
       };
       const nth = pallets.filter((x) => x.itemCode === p.itemCode).length + 1;
       setContainer(r.containerNo);
@@ -113,7 +118,7 @@ export default function OutboundNew() {
   // palet digabung per item; tiap palet discan = 1 QtyPalet
   const outLines = Object.values(
     pallets.reduce<Record<string, Row>>((acc, p) => {
-      const l = (acc[p.itemCode] ??= { itemCode: p.itemCode, itemName: p.itemName, brand: p.brand, origin: p.origin, uom: 'KG', qty: 0, qty2: 0, qtyPalet: 0, partial: 0 });
+      const l = (acc[`${p.itemCode}|${p.kodeRuangan}`] ??= { itemCode: p.itemCode, itemName: p.itemName, brand: p.brand, origin: p.origin, kodeRuangan: p.kodeRuangan, uom: 'KG', qty: 0, qty2: 0, qtyPalet: 0, partial: 0 });
       l.qty += kgOf(p);
       l.qty2 += p.sak;
       l.qtyPalet += 1;
@@ -123,6 +128,7 @@ export default function OutboundNew() {
   );
 
   const save = async () => {
+    if (pallets.some((p) => !p.kodeRuangan)) return setErr(new Error('Pilih ruangan sumber untuk setiap palet'));
     setBusy(true);
     setErr(null);
     try {
@@ -132,8 +138,8 @@ export default function OutboundNew() {
         noMobil: mobil.trim().toUpperCase(),
         containerNo: container,
         docDate: todayIso(),
-        outLines: outLines.map((l) => ({ itemCode: l.itemCode, uom: 'KG', brand: l.brand, origin: l.origin, qty: Math.round(l.qty * 100) / 100, qty2: l.qty2, qtyPalet: l.qtyPalet })),
-        inLines: isAdj ? inLines.map((l) => ({ itemCode: l.itemCode, uom: l.uom, brand: l.brand || null, origin: l.origin || null, qty: l.qty, qty2: l.qty2, qtyPalet: l.qtyPalet })) : [],
+        outLines: outLines.map((l) => ({ itemCode: l.itemCode, uom: 'KG', brand: l.brand, origin: l.origin, qty: Math.round(l.qty * 100) / 100, qty2: l.qty2, qtyPalet: l.qtyPalet, kodeRuangan: l.kodeRuangan })),
+        inLines: isAdj ? inLines.map((l) => ({ itemCode: l.itemCode, uom: l.uom, brand: l.brand || null, origin: l.origin || null, qty: l.qty, qty2: l.qty2, qtyPalet: l.qtyPalet, kodeRuangan: l.kodeRuangan })) : [],
       });
       toast(`Outbound ${r.docEntry} (${r.trxCode}) tersimpan`);
       navigate('/outbound', true);
@@ -233,7 +239,11 @@ export default function OutboundNew() {
           </button>
         }
       >
-        <LineForm accent="green" sakLabel="Sak" onAdd={(l) => setInLines([...inLines, l])} />
+        <div className="field">
+          <label>Ruangan tujuan (item masuk) <span className="req">*</span></label>
+          <RuanganSelect whs={wh?.whsCode ?? ''} value={ruangIn} onChange={setRuangIn} titipan={false} />
+        </div>
+        <LineForm accent="green" sakLabel="Sak" onAdd={(l) => (ruangIn ? setInLines([...inLines, { ...l, kodeRuangan: ruangIn }]) : toast('Pilih ruangan tujuan dulu', true))} />
         <strong>Item Inbound · {inLines.length} baris</strong>
         {inLines.map((l, i) => (
           <LineRow key={i} l={l} sak="sak" badge={<span className="pill green">MASUK</span>} onDelete={() => setInLines(inLines.filter((_, j) => j !== i))} />
@@ -323,6 +333,21 @@ export default function OutboundNew() {
                 Batalkan
               </button>
             </div>
+            {p.rooms.length === 0 ? (
+              <div className="error">Stok item ini di container tersebut belum punya ruangan. Minta Admin mengisi ruangan stok lama dulu.</div>
+            ) : (
+              <div className="field">
+                <label>Ruangan sumber <span className="req">*</span></label>
+                <select className="input" value={p.kodeRuangan} onChange={(e) => update(p.id, { kodeRuangan: e.target.value })}>
+                  <option value="">Pilih ruangan</option>
+                  {p.rooms.map((r) => (
+                    <option key={String(r.kodeRuangan)} value={String(r.kodeRuangan)}>
+                      {r.kodeRuangan} · stok {fmt(r.stockKg)} kg · {fmt(r.stockSak)} krg
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="seg" role="radiogroup" aria-label="Jumlah keluar">
               <button role="radio" aria-checked={!p.partial} onClick={() => update(p.id, { partial: false, sak: p.sakPerPalet, kgManual: null })}>
                 <span className="lbl">Keluar utuh</span>

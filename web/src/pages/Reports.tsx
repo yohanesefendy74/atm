@@ -97,9 +97,10 @@ export function StockContainerReport() {
           </thead>
           <tbody>
             {data.map((r) => (
-              <tr key={`${r.containerNo}-${r.itemCode}`}>
+              <tr key={`${r.containerNo}-${r.kodeRuangan}-${r.itemCode}`}>
                 <td data-label="Container" className="mono">
                   <strong>{r.containerNo ?? 'tanpa kontainer'}</strong>
+                  <div className="small">{r.kodeRuangan ? `Ruangan ${r.kodeRuangan}` : <span className="pill amber">Tanpa ruangan</span>}</div>
                 </td>
                 <td data-label="Item">
                   <span className="mono">{r.itemCode}</span> · {r.itemName} {r.brand ? `· ${r.brand}` : ''}
@@ -173,7 +174,7 @@ export function StockCardReport() {
                 <td data-label="Dokumen" className="mono">
                   {r.trxCode} {r.docEntry}
                 </td>
-                <td data-label="Container" className="mono">{r.containerNo ?? '-'}</td>
+                <td data-label="Container" className="mono">{r.containerNo ?? '-'} · {r.kodeRuangan ?? '-'}</td>
                 <td className="num" data-label="Mutasi KG">
                   {Number(r.kg) > 0 ? '+' : ''}
                   {fmt(r.kg)}

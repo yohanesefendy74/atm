@@ -3,7 +3,7 @@ import { post, type Row } from '../api';
 import { useAuth } from '../auth';
 import { navigate } from '../router';
 import {
-  ErrorBox, Icon, KV, LineForm, LineRow, Page, Steps, Totals, fmt, fmtDate, todayIso, useToast, useWarehouses,
+  ErrorBox, Icon, KV, LineForm, LineRow, Page, RuanganSelect, Steps, Totals, fmt, fmtDate, todayIso, useToast, useWarehouses,
   WarehouseSelect, type Line, type Warehouse,
 } from '../ui';
 
@@ -19,6 +19,7 @@ export default function InboundNew() {
   const [mobil, setMobil] = useState('');
   const [cont, setCont] = useState('');
   const [lines, setLines] = useState<Line[]>([]);
+  const [ruang, setRuang] = useState('');
   const [err, setErr] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
@@ -45,7 +46,7 @@ export default function InboundNew() {
         noMobil: mobil.trim().toUpperCase(),
         containerNo: cont,
         docDate: todayIso(),
-        lines: lines.map((l) => ({ itemCode: l.itemCode, uom: l.uom, brand: l.brand || null, origin: l.origin || null, qty: l.qty, qty2: l.qty2, qtyPalet: l.qtyPalet })),
+        lines: lines.map((l) => ({ itemCode: l.itemCode, uom: l.uom, brand: l.brand || null, origin: l.origin || null, qty: l.qty, qty2: l.qty2, qtyPalet: l.qtyPalet, kodeRuangan: l.kodeRuangan })),
       });
       toast(`Inbound ${r.docEntry} (${r.trxCode}) tersimpan · Menunggu PT`);
       navigate('/inbound', true);
@@ -121,7 +122,12 @@ export default function InboundNew() {
           </button>
         }
       >
-        <LineForm onAdd={(l) => setLines([...lines, l])} />
+        <div className="field">
+          <label>Ruangan tujuan <span className="req">*</span></label>
+          <RuanganSelect whs={wh?.whsCode ?? ''} value={ruang} onChange={setRuang} titipan={wh?.isTitipan ? true : undefined} />
+          <p className="hint">Berlaku untuk barang yang ditambahkan berikutnya. Satu container boleh masuk ke beberapa ruangan.</p>
+        </div>
+        <LineForm onAdd={(l) => (ruang ? setLines([...lines, { ...l, kodeRuangan: ruang }]) : toast('Pilih ruangan tujuan dulu', true))} />
         <strong>Sudah ditambahkan · {lines.length} baris</strong>
         {lines.map((l, i) => (
           <LineRow key={i} l={l} onDelete={() => setLines(lines.filter((_, j) => j !== i))} />

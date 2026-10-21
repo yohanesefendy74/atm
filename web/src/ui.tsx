@@ -297,7 +297,7 @@ export function ItemSearch({ onPick, placeholder }: { onPick: (i: Item) => void;
 export const useBrands = () => useLoad(() => get<string[]>('/api/brands'), []);
 
 /** Baris barang (inbound / Item Inbound KR-RP). */
-export type Line = { itemCode: string; itemName: string; groupName: string; uom: string; brand: string; origin: string; qty: number; qty2: number; qtyPalet: number };
+export type Line = { itemCode: string; itemName: string; groupName: string; uom: string; brand: string; origin: string; qty: number; qty2: number; qtyPalet: number; kodeRuangan?: string };
 
 export function LineForm({ onAdd, sakLabel = 'Karung', accent = 'in' }: { onAdd: (l: Line) => void; sakLabel?: string; accent?: 'in' | 'green' }) {
   const brands = useBrands();
@@ -393,6 +393,7 @@ export function LineRow({ l, onDelete, badge, sak = 'krg' }: { l: Line | Row; on
       <div className="grow">
         <div className="mono">{l.itemCode}</div>
         <div className="small muted">{[l.itemName, l.brand, l.origin].filter(Boolean).join(' · ')}</div>
+        {l.kodeRuangan && <div className="small"><strong>Ruangan {l.kodeRuangan}</strong></div>}
       </div>
       <div className="num">
         {fmt(l.qty)} {l.uom ?? 'KG'}
@@ -480,3 +481,17 @@ export function SearchSelect(props: {
 }
 
 export const whsOpts = (list: Warehouse[] | null) => (list ?? []).map((w) => ({ value: w.whsCode, label: `${w.whsCode} · ${w.whsName}` }));
+
+
+// ---------------------------------------------------------------- ruangan (wajib di semua transaksi)
+export function RuanganSelect(props: { whs: string; value: string; onChange: (v: string) => void; titipan?: boolean; placeholder?: string; disabled?: boolean }) {
+  const { data } = useLoad(() => (props.whs ? get<Row[]>('/api/master/ruangan', { whs: props.whs }) : Promise.resolve([] as Row[])), [props.whs]);
+  const opts = (data ?? [])
+    .filter((r) => props.titipan === undefined || !!r.titipan === props.titipan)
+    .map((r) => ({ value: String(r.kodeRuangan), label: `${r.kodeRuangan} · ${r.namaRuangan ?? ''}${r.titipan ? ' (titipan)' : ''}` }));
+  useEffect(() => {
+    if (!props.value && opts.length === 1) props.onChange(opts[0].value);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opts.length]);
+  return <SearchSelect options={opts} value={props.value} onChange={props.onChange} placeholder={props.placeholder ?? 'Cari & pilih ruangan'} disabled={props.disabled} />;
+}
