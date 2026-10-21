@@ -6,7 +6,7 @@ const hm = (m?: number | null) => (m == null ? '-' : `${String(Math.floor(m / 60
 
 function WhsPick({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const wh = useWarehouses();
-  return <div style={{ flex: '1 1 240px', minWidth: 0 }}><SearchSelect options={whsOpts(wh.data)} value={value} onChange={onChange} placeholder="Cari & pilih gudang" /></div>;
+  return <div><SearchSelect options={whsOpts(wh.data)} value={value} onChange={onChange} placeholder="Cari & pilih gudang" /></div>;
 }
 
 export function AdminJadwal() {
@@ -134,7 +134,7 @@ export function AdminKendaraan() {
   const kg = (v: unknown) => (v == null ? '-' : fmt(v));
   async function buatKode() { try { const r = await post<Row>('/api/cms/kode-persetujuan', { WhsCode: whs, Tujuan: 'TIMBANG' }); setKode(r.kode); } catch (e) { toast(errText(e), true); } }
   const T = (cols: [string, string][], rows: Row[]) => (
-    <div className="tablewrap"><table className="table"><thead><tr>{cols.map(([, l]) => <th key={l}>{l}</th>)}</tr></thead><tbody>
+    <div className="tablewrap"><table className="table cards"><thead><tr>{cols.map(([, l]) => <th key={l}>{l}</th>)}</tr></thead><tbody>
       {rows.map((r, i) => <tr key={i}>{cols.map(([k, l]) => <td key={k} data-label={l}>{k.toLowerCase().includes('waktu') || k === 'jamMasuk' || k === 'jamKeluar' ? String(r[k] ?? '-').replace('T', ' ').slice(0, 16) : String(r[k] ?? '-')}</td>)}</tr>)}
     </tbody></table></div>
   );
@@ -146,7 +146,7 @@ export function AdminKendaraan() {
       {tab === 'dalam' && T([['tiket', 'Tiket'], ['noPolisi', 'Plat'], ['sopir', 'Sopir'], ['keperluan', 'Keperluan'], ['planNo', 'Dokumen'], ['jamMasuk', 'Masuk'], ['selesaiKrani', 'Krani selesai']], dalam.data ?? [])}
       {tab === 'sesi' && (<>
         <input className="input" placeholder="Cari kontainer / SPBB / plat" value={qs} onChange={(e) => setQs(e.target.value)} />
-        <div className="tablewrap"><table className="table"><thead><tr><th>Kontainer</th><th>SPBB</th><th>Status</th><th>Isi (T1-T2)</th><th>Kosong (T4-T3)</th><th>Net</th><th>Krani</th><th>Selisih</th><th /></tr></thead><tbody>
+        <div className="tablewrap"><table className="table cards"><thead><tr><th>Kontainer</th><th>SPBB</th><th>Status</th><th>Isi (T1-T2)</th><th>Kosong (T4-T3)</th><th>Net</th><th>Krani</th><th>Selisih</th><th /></tr></thead><tbody>
           {(ks.data ?? []).map((k) => (
             <tr key={k.sesiId}><td data-label="Kontainer" className="mono">{k.containerNo}</td><td data-label="SPBB" className="mono">{k.planNo ?? '-'}</td><td data-label="Status">{k.status}</td>
               <td data-label="Isi" className="num">{kg(k.beratIsi)}</td><td data-label="Kosong" className="num">{kg(k.beratKosong)}</td><td data-label="Net" className="num">{kg(k.net)}</td>
@@ -160,7 +160,7 @@ export function AdminKendaraan() {
             <div className="small">T3 {kg(sesi.header.t3)} ({sesi.header.plat3 ?? '-'}) · T4 {kg(sesi.header.t4)} → kosong <strong>{kg(sesi.header.beratKosong)}</strong> kg</div>
             <div>Net barang <strong>{kg(sesi.header.net)}</strong> kg · input krani {kg(sesi.header.netKrani)} kg{sesi.header.selisihPersen != null ? ` · selisih ${sesi.header.selisihPersen}%` : ''}</div>
             {sesi.header.peringatan && <div className="small muted">{sesi.header.peringatan}</div>}
-            <div className="tablewrap"><table className="table"><thead><tr><th>Barang</th><th>Karung</th><th>KG krani</th><th>Sampel</th><th>Estimasi sisa</th><th>Alokasi sisa</th><th>KG timbang</th></tr></thead><tbody>
+            <div className="tablewrap"><table className="table cards"><thead><tr><th>Barang</th><th>Karung</th><th>KG krani</th><th>Sampel</th><th>Estimasi sisa</th><th>Alokasi sisa</th><th>KG timbang</th></tr></thead><tbody>
               {((sesi.alokasi as Row[]).length ? (sesi.alokasi as Row[]) : (sesi.items as Row[])).map((a) => (
                 <tr key={a.planLine}><td data-label="Barang">{a.itemCode}</td><td data-label="Karung" className="num">{kg(a.sakTotal)}</td><td data-label="KG krani" className="num">{kg(a.kgKrani)}</td>
                   <td data-label="Sampel" className="num">{a.sakSampel ? `${a.sakSampel} krg / ${fmt(a.kgSampel)} kg` : 'belum'}</td>

@@ -61,7 +61,7 @@ function MasterTable({ cfg }: { cfg: Cfg }) {
       </div>
       {error !== null && <ErrorBox error={error} onRetry={reload} />}
       {loading && !data && <Spinner />}
-      <div className="tablewrap"><table className="table">
+      <div className="tablewrap"><table className="table cards">
         <thead><tr>{cfg.fields.map((f) => <th key={f.k}>{f.label}</th>)}<th /></tr></thead>
         <tbody>
           {(data ?? []).map((r) => (
@@ -121,7 +121,7 @@ function Gateways() {
     <div className="stack">
       {error !== null && <ErrorBox error={error} onRetry={reload} />}
       {key && <div className="card amber stack"><strong>Simpan key ini sekarang (tidak ditampilkan lagi)</strong><code className="mono">{key}</code></div>}
-      <div className="tablewrap"><table className="table"><thead><tr><th>ID</th><th>Gudang</th><th>Keterangan</th><th>Status</th><th>Versi</th><th /></tr></thead><tbody>
+      <div className="tablewrap"><table className="table cards"><thead><tr><th>ID</th><th>Gudang</th><th>Keterangan</th><th>Status</th><th>Versi</th><th /></tr></thead><tbody>
         {(data ?? []).map((g) => (
           <tr key={g.gatewayId}><td data-label="ID" className="mono">{g.gatewayId}</td><td data-label="Gudang">{g.whsCode}</td><td data-label="Keterangan">{g.keterangan}</td>
             <td data-label="Status">{g.online ? <span className="pill green">Online</span> : <span className="pill grey">Offline</span>}</td><td data-label="Versi">{g.versi ?? '-'}</td>
@@ -173,7 +173,7 @@ function SaldoPanel() {
       </div>
       {res && (sel.length === 0
         ? <div className="small"><span className="pill green">Cocok</span> {res.barisSaldo} baris saldo sama dengan transaksi</div>
-        : <div className="tablewrap"><table className="table"><thead><tr><th>Gudang</th><th>Ruangan</th><th>Item</th><th>Container</th><th className="num">Saldo kg</th><th className="num">Transaksi kg</th></tr></thead><tbody>
+        : <div className="tablewrap"><table className="table cards"><thead><tr><th>Gudang</th><th>Ruangan</th><th>Item</th><th>Container</th><th className="num">Saldo kg</th><th className="num">Transaksi kg</th></tr></thead><tbody>
             {sel.map((r, i) => <tr key={i}><td>{r.whsCode}</td><td>{r.kodeRuangan || '-'}</td><td className="mono">{r.itemCode}</td><td className="mono">{r.containerNo || '-'}</td><td className="num">{r.saldoKg}</td><td className="num">{r.transaksiKg}</td></tr>)}
           </tbody></table></div>)}
     </div>

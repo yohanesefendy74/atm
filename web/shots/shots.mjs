@@ -42,7 +42,7 @@ const server = http.createServer((req, res) => {
 await new Promise((r) => server.listen(5179, r));
 
 const pages = [
-  ['plan-baru', '/admin/plan/baru', async (p) => { await p.click('text=SPBB'); }],
+  ['plan-baru', '/admin/plan/baru', async (p) => { await p.click('button.chip:has-text("SPBB")'); }],
   ['plan-list', '/admin/plan'],
   ['master', '/admin/master'],
   ['jadwal', '/admin/jadwal'],

@@ -277,3 +277,4 @@ a.list-item { text-decoration: none; color: inherit; }
 .formrow > .narrow { flex: 0 1 120px; }
 .formrow > .btn, .formrow > button { flex: 0 0 auto; width: auto; min-height: 50px; }
 .formrow > .spacer { flex: 1 1 0; min-width: 0; }
+.tablewrap { overflow-x: auto; max-width: 100%; }

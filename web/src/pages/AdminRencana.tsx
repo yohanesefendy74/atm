@@ -175,7 +175,7 @@ export function PlanDetail({ id }: { id: string }) {
           </div>
           <div className="card stack tight"><strong>Dokumen sumber</strong>
             {(data!.docs as Row[]).map((d) => <div key={`${d.baseType}${d.baseDocEntry}`} className="small">{d.baseType} {d.baseDocNum} · {d.cardName} {d.numAtCard ? `· PO ${d.numAtCard}` : ''}</div>)}</div>
-          <div className="tablewrap"><table className="table"><thead><tr><th>Item</th><th>Container</th><th>Ruangan</th><th>Rencana</th><th>Realisasi</th><th>Sisa</th></tr></thead><tbody>
+          <div className="tablewrap"><table className="table cards"><thead><tr><th>Item</th><th>Container</th><th>Ruangan</th><th>Rencana</th><th>Realisasi</th><th>Sisa</th></tr></thead><tbody>
             {(data!.lines as Row[]).map((l) => <tr key={l.PlanLine}><td data-label="Item">{l.ItemCode}<div className="small muted">{l.Dscription}</div></td><td data-label="Container" className="mono">{l.ContainerNo ?? '-'}</td><td data-label="Ruangan" className="mono">{l.KodeRuangan ?? h.KodeRuangan ?? '-'}</td>
               <td data-label="Rencana" className="num">{fmt(l.QtyPlan)}</td><td data-label="Realisasi" className="num">{fmt(l.QtyDone)}</td><td data-label="Sisa" className="num">{fmt(l.QtyOutstanding)}</td></tr>)}
           </tbody></table></div>
