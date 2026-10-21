@@ -30,6 +30,7 @@ class LabelPdf {
                 pw.Text(l.brand.toUpperCase(), style: pw.TextStyle(fontSize: body)),
                 pw.Text('@$pack', style: pw.TextStyle(fontSize: body)),
                 pw.Text(l.ptName.toUpperCase(), style: pw.TextStyle(fontSize: body)),
+                if (l.ruangan.isNotEmpty) pw.Text('RUANG ${l.ruangan.toUpperCase()}', style: pw.TextStyle(fontSize: body, fontWeight: pw.FontWeight.bold)),
                 pw.Spacer(),
                 pw.Text(l.qr, style: const pw.TextStyle(fontSize: 6)),
               ]),

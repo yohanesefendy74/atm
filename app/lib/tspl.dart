@@ -23,7 +23,9 @@ class LabelData {
     required this.qr,
     required this.sakPerPalet,
     required this.copies,
+    this.ruangan = '',
   });
+  final String ruangan;
   final String containerNo;
   final DateTime date;
   final String itemName;
@@ -83,6 +85,7 @@ class Tspl {
         ..writeln('BOX ${x(584)},${x(216)},${x(776)},${x(286)},3')
         ..writeln('TEXT ${x(610)},${x(240)},"$body",0,1,1,"${fmt(l.sakPerPalet)} SAK"')
         ..writeln('BOX ${x(584)},${x(304)},${x(776)},${x(374)},3')
+        ..writeln('TEXT ${x(600)},${x(328)},"$body",0,1,1,"${_clean(l.ruangan, 10)}"')
         ..writeln('BOX ${x(584)},${x(392)},${x(776)},${x(462)},3')
         ..writeln('PRINT 1,${l.copies}');
     }

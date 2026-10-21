@@ -199,6 +199,7 @@ class _StockContainerScreenState extends State<StockContainerScreen> {
                       Text('masuk ${fmtDate(toDate(r['inboundDate']))}', style: const TextStyle(fontSize: 12, color: C.muted)),
                     ]),
                     Text('${r['itemCode']} · ${r['itemName'] ?? ''} · ${r['brand'] ?? ''}', style: const TextStyle(fontSize: 13, color: C.muted)),
+                    Text('Ruangan ${r['kodeRuangan'] ?? 'BELUM ADA'}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: r['kodeRuangan'] == null ? C.outbound : C.ink)),
                     const SizedBox(height: 8),
                     Row(children: [
                       Expanded(child: KV('KG', fmt(toD(r['kg'])))),
@@ -298,7 +299,7 @@ class _StockCardScreenState extends State<StockCardScreen> {
                       [
                         for (final r in rows)
                           [
-                            '${fmtDate(toDate(r['docDate']))}\n${r['trxCode']} ${r['docEntry']}${r['containerNo'] == null ? '' : ' · ${r['containerNo']}'}',
+                            '${fmtDate(toDate(r['docDate']))}\n${r['trxCode']} ${r['docEntry']}${r['containerNo'] == null ? '' : ' · ${r['containerNo']}'} · ${r['kodeRuangan'] ?? '-'}',
                             '${toD(r['kg']) > 0 ? '+' : ''}${fmt(toD(r['kg']))}',
                             fmt(toD(r['saldoKg'])),
                           ]

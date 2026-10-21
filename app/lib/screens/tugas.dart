@@ -363,15 +363,14 @@ class _TugasDetailState extends State<TugasDetail> {
               const SizedBox(width: 8),
               Expanded(child: TextField(controller: _pal[k], keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Palet'))),
             ]),
-            if (_ruang.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: _ruang.any((r) => r['kodeRuangan'] == _room[k]) ? _room[k] : null,
-                decoration: const InputDecoration(labelText: 'Ruangan'),
-                items: [for (final r in _ruang) DropdownMenuItem(value: r['kodeRuangan'].toString(), child: Text('${r['kodeRuangan']} · ${r['namaRuangan']}'))],
-                onChanged: (v) => setState(() => _room[k] = v),
-              ),
-            ],
+            const SizedBox(height: 8),
+            RuanganField(
+              whs: _h!['whsCode'].toString(),
+              value: _room[k],
+              titipan: _h!['titipan'] as bool?,
+              label: spbb ? 'Ruangan tujuan' : 'Ruangan sumber',
+              onChanged: (v) => setState(() => _room[k] = v),
+            ),
           ],
         ]),
       ),

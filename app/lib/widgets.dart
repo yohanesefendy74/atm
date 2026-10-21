@@ -496,6 +496,7 @@ class LineTile extends StatelessWidget {
               Text(line.itemCode, style: const TextStyle(fontFamily: mono, fontSize: 14, fontWeight: FontWeight.w600)),
               Text([line.itemName, line.brand, line.origin].whereType<String>().where((s) => s.isNotEmpty).join(' · '),
                   style: const TextStyle(fontSize: 12, color: C.muted)),
+              if (line.kodeRuangan != null) Text('Ruangan ${line.kodeRuangan}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
             ]),
           ),
           Text('${fmt(line.qty)} ${line.uom}\n${fmt(line.qty2)} $sakLabel · ${fmt(line.qtyPalet)} plt',
@@ -503,4 +504,83 @@ class LineTile extends StatelessWidget {
           if (onDelete != null) IconButton(onPressed: onDelete, icon: const Icon(Icons.close, size: 20), tooltip: 'Hapus baris'),
         ]),
       );
+}
+
+
+/// Ruangan dari master (per gudang). Cari lalu pilih dari daftar; teks bebas tidak diterima.
+/// [titipan]: null = semua, true/false = hanya ruangan titipan / non-titipan.
+class RuanganField extends StatefulWidget {
+  const RuanganField({super.key, required this.whs, required this.value, required this.onChanged, this.titipan, this.label = 'Ruangan'});
+  final String whs;
+  final String? value;
+  final ValueChanged<String?> onChanged;
+  final bool? titipan;
+  final String label;
+  @override
+  State<RuanganField> createState() => _RuanganFieldState();
+}
+
+class _RuanganFieldState extends State<RuanganField> {
+  static final _cache = <String, List<Map<String, dynamic>>>{};
+  List<Map<String, dynamic>> _rooms = [];
+  String? _err;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(RuanganField old) {
+    super.didUpdateWidget(old);
+    if (old.whs != widget.whs) _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final list = _cache[widget.whs] ??
+          (await Api.get('/api/master/ruangan', {'whs': widget.whs}) as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      _cache[widget.whs] = list;
+      if (!mounted) return;
+      setState(() {
+        _err = null;
+        _rooms = list.where((r) => widget.titipan == null || (r['titipan'] == true) == widget.titipan).toList();
+      });
+      if (widget.value == null && _rooms.length == 1) widget.onChanged(_rooms.first['kodeRuangan'].toString());
+    } catch (e) {
+      if (mounted) setState(() => _err = e.toString());
+    }
+  }
+
+  String _label(Map<String, dynamic> r) => '${r['kodeRuangan']} · ${r['namaRuangan'] ?? ''}${r['titipan'] == true ? ' (titipan)' : ''}';
+
+  @override
+  Widget build(BuildContext context) {
+    if (_err != null) return Hint('Gagal memuat ruangan: $_err', color: C.outbound);
+    final cur = _rooms.where((r) => r['kodeRuangan'].toString() == widget.value).firstOrNull;
+    return Autocomplete<Map<String, dynamic>>(
+      key: ValueKey('${widget.whs}|${widget.value}|${_rooms.length}'),
+      initialValue: TextEditingValue(text: cur == null ? '' : _label(cur)),
+      displayStringForOption: _label,
+      optionsBuilder: (v) {
+        final q = v.text.trim().toUpperCase();
+        if (cur != null && v.text == _label(cur)) return _rooms;
+        return _rooms.where((r) => q.isEmpty || _label(r).toUpperCase().contains(q));
+      },
+      onSelected: (r) => widget.onChanged(r['kodeRuangan'].toString()),
+      fieldViewBuilder: (context, ctrl, focus, onSubmit) => TextField(
+        controller: ctrl,
+        focusNode: focus,
+        decoration: InputDecoration(
+          labelText: '${widget.label} (wajib)',
+          helperText: widget.value == null ? 'Ketik untuk mencari, lalu pilih dari daftar' : null,
+          suffixIcon: const Icon(Icons.arrow_drop_down),
+        ),
+        onChanged: (_) {
+          if (widget.value != null) widget.onChanged(null);
+        },
+      ),
+    );
+  }
 }

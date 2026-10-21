@@ -125,6 +125,8 @@ class InboundDetailScreen extends StatefulWidget {
 }
 
 class _InboundDetailScreenState extends State<InboundDetailScreen> {
+  String? _ruang;
+
   @override
   Widget build(BuildContext context) {
     final d = widget.draft;
@@ -141,7 +143,22 @@ class _InboundDetailScreenState extends State<InboundDetailScreen> {
         ),
         Expanded(
           child: ListView(padding: const EdgeInsets.all(20), children: [
-            LineForm(accent: C.inbound, onAdd: (l) => setState(() => d.lines.add(l))),
+            RuanganField(
+              whs: d.warehouse!.code,
+              value: _ruang,
+              titipan: d.warehouse!.isTitipan ? true : null,
+              label: 'Ruangan tujuan',
+              onChanged: (v) => setState(() => _ruang = v),
+            ),
+            const Hint('Ruangan berlaku untuk barang yang ditambahkan berikutnya. Satu container boleh masuk ke beberapa ruangan.'),
+            const SizedBox(height: 12),
+            LineForm(
+              accent: C.inbound,
+              onAdd: (l) {
+                if (_ruang == null) return showError(context, 'Pilih ruangan tujuan dulu');
+                setState(() => d.lines.add(l.withRuangan(_ruang)));
+              },
+            ),
             const SizedBox(height: 16),
             Text('Sudah ditambahkan · ${d.lines.length} baris', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
@@ -227,6 +244,7 @@ class _InboundSummaryScreenState extends State<InboundSummaryScreen> {
                     Pill(l.uom, monoFont: true),
                   ]),
                   Text([l.itemName, l.brand, l.origin].whereType<String>().join(' · '), style: const TextStyle(fontSize: 13, color: C.muted)),
+                  Text('Ruangan ${l.kodeRuangan ?? '-'}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   Row(children: [
                     Expanded(child: KV('Qty (${l.uom})', fmt(l.qty))),

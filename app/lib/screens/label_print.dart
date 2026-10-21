@@ -66,6 +66,7 @@ class _LabelPrintScreenState extends State<LabelPrintScreen> {
               qr: (i['qr'] ?? '').toString(),
               sakPerPalet: toD(i['sakPerPalet']),
               copies: toI(i['qtyPalet']),
+              ruangan: (i['kodeRuangan'] ?? '').toString(),
             ))
         .toList();
   }
@@ -138,7 +139,7 @@ class _LabelPrintScreenState extends State<LabelPrintScreen> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               onTap: () => setState(() => _pick = i),
                               title: Text('${items[i]['itemCode']}', style: const TextStyle(fontFamily: mono, fontWeight: FontWeight.w600, color: C.ink)),
-                              subtitle: Text('${items[i]['itemName']}'),
+                              subtitle: Text('${items[i]['itemName']} · ruang ${items[i]['kodeRuangan'] ?? '-'}'),
                               trailing: Text('${toI(items[i]['qtyPalet'])} label',
                                   style: const TextStyle(fontFamily: mono, fontWeight: FontWeight.w600, fontSize: 15, color: C.ink)),
                             ),
@@ -222,6 +223,7 @@ class _LabelPreview extends StatelessWidget {
               Text(data.brand.toUpperCase(), style: t),
               Text('@$pack', style: t),
               Text(data.ptName.toUpperCase(), style: t, maxLines: 1, overflow: TextOverflow.ellipsis),
+              if (data.ruangan.isNotEmpty) Text('RUANG ${data.ruangan.toUpperCase()}', style: t.copyWith(fontWeight: FontWeight.w700)),
               const Spacer(),
               Text(data.qr, style: const TextStyle(fontFamily: mono, fontSize: 8, color: C.muted)),
             ]),

@@ -202,6 +202,7 @@ public static class KraniEndpoints
                 r.ItemCode,
                 r.ItemName,
                 r.Brand,
+                r.KodeRuangan,
                 packKg = r.Qty2 > 0 ? Math.Round(r.Qty / r.Qty2, 2) : 0,
                 sakPerPalet = r.QtyPalet > 0 ? Math.Ceiling(r.Qty2 / r.QtyPalet) : 0,
                 qtyPalet = (int)r.QtyPalet,

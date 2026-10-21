@@ -204,27 +204,7 @@ class OutboundAddItemScreen extends StatefulWidget {
 }
 
 class _OutboundAddItemScreenState extends State<OutboundAddItemScreen> {
-  List<Map<String, dynamic>> _rooms = [];
   String? _ruang;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadRooms();
-  }
-
-  Future<void> _loadRooms() async {
-    try {
-      final r = await Api.get('/api/master/ruangan', {'whs': widget.draft.warehouse!.code}) as List;
-      if (!mounted) return;
-      setState(() {
-        _rooms = r.map((e) => Map<String, dynamic>.from(e as Map)).where((x) => x['titipan'] != true).toList();
-        if (_rooms.length == 1) _ruang = _rooms.first['kodeRuangan'].toString();
-      });
-    } catch (e) {
-      if (mounted) showError(context, e);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -242,12 +222,7 @@ class _OutboundAddItemScreenState extends State<OutboundAddItemScreen> {
         ),
         Expanded(
           child: ListView(padding: const EdgeInsets.all(20), children: [
-            DropdownButtonFormField<String>(
-              value: _ruang,
-              decoration: const InputDecoration(labelText: 'Ruangan tujuan (item masuk)'),
-              items: [for (final r in _rooms) DropdownMenuItem(value: r['kodeRuangan'].toString(), child: Text('${r['kodeRuangan']} · ${r['namaRuangan']}'))],
-              onChanged: (v) => setState(() => _ruang = v),
-            ),
+            RuanganField(whs: d.warehouse!.code, value: _ruang, titipan: false, label: 'Ruangan tujuan (item masuk)', onChanged: (v) => setState(() => _ruang = v)),
             const SizedBox(height: 12),
             LineForm(
               accent: C.green,
@@ -580,7 +555,7 @@ class _PalletEditorState extends State<_PalletEditor> {
         ]),
         const SizedBox(height: 12),
         if (p.rooms.isEmpty)
-          const Hint('Stok item ini di container tersebut belum tercatat per ruangan', color: C.amberText)
+          const Hint('Stok item ini di container tersebut belum punya ruangan. Minta Admin mengisi ruangan stok lama dulu.', color: C.outbound)
         else
           DropdownButtonFormField<String>(
             value: p.kodeRuangan,
@@ -699,7 +674,7 @@ class _OutboundSummaryScreenState extends State<OutboundSummaryScreen> {
 
   Future<void> _save() async {
     final d = widget.draft;
-    if (d.isAdj && d.pallets.any((p) => p.kodeRuangan == null)) return showError(context, 'Pilih ruangan sumber untuk setiap palet (Penyesuaian / Repacking)');
+    if (d.pallets.any((p) => p.kodeRuangan == null)) return showError(context, 'Pilih ruangan sumber untuk setiap palet');
     setState(() => _busy = true);
     try {
       final r = await Api.saveOutbound(d.toJson());
