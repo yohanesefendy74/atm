@@ -51,6 +51,10 @@ GO
 /* 4. (Opsional) Posting ke SaldoWhs / ItemHistoryWhs.
       Isi appsettings "Posting:StockProcedure": "dbo.usp_WHS_PostStock" untuk mengaktifkan.
       Kolom disesuaikan dengan struktur asli SaldoWhs / ItemHistoryWhs (Okt 2026). Belum diuji dengan data. */
+-- Stok per ruangan: SaldoWhs & ItemHistoryWhs ikut menyimpan ruangan
+IF COL_LENGTH('dbo.ItemHistoryWhs','KodeRuangan') IS NULL ALTER TABLE dbo.ItemHistoryWhs ADD KodeRuangan NVARCHAR(30) NULL;
+IF COL_LENGTH('dbo.SaldoWhs','KodeRuangan')       IS NULL ALTER TABLE dbo.SaldoWhs ADD KodeRuangan NVARCHAR(30) NULL;
+GO
 CREATE OR ALTER PROCEDURE dbo.usp_WHS_PostStock
     @ObjType  NVARCHAR(20),
     @DocEntry BIGINT
@@ -59,10 +63,10 @@ BEGIN
     SET NOCOUNT ON;
     -- Riwayat mutasi per baris: Qty bertanda (qty x flags: +masuk / -keluar)
     INSERT INTO dbo.ItemHistoryWhs (ItemCode, BPLId, WhsCode, DocDate, ObjType, DocEntry, DocNum, LineNum, DistNumber,
-                                    Qty, Qty2, QtyPalet, CardCode, ItemName, CreateDate, U_IDU_Kode_PT, Brand_name, ContainerNo)
+                                    Qty, Qty2, QtyPalet, CardCode, ItemName, CreateDate, U_IDU_Kode_PT, Brand_name, ContainerNo, KodeRuangan)
     SELECT d.ItemCode, h.BPLId, h.WhsCode, h.DocDate, h.ObjType, h.DocEntry, h.DocEntry, d.LineNum, d.DistNumber,
            d.qty * d.flags, d.Qty2 * d.flags, d.QtyPalet * d.flags, h.cardcode, i.ItemName, GETDATE(), h.U_IDU_Kode_PT, d.brand_name,
-           COALESCE(d.ContainerNo, h.ContainerNo)
+           COALESCE(d.ContainerNo, h.ContainerNo), d.KodeRuangan
     FROM   dbo.OKRN h JOIN dbo.KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
            LEFT JOIN dbo.OITM i ON i.ItemCode = d.ItemCode
     WHERE  h.ObjType = @ObjType AND h.DocEntry = @DocEntry;
@@ -70,16 +74,17 @@ BEGIN
     -- Saldo per warehouse + item + container + DistNumber
     MERGE dbo.SaldoWhs AS s
     USING (
-        SELECT h.WhsCode, d.ItemCode, ISNULL(COALESCE(d.ContainerNo, h.ContainerNo), '') AS ContainerNo, ISNULL(d.DistNumber, '') AS DistNumber,
+        SELECT h.WhsCode, d.ItemCode, ISNULL(COALESCE(d.ContainerNo, h.ContainerNo), '') AS ContainerNo, ISNULL(d.DistNumber, '') AS DistNumber, d.KodeRuangan,
                MAX(h.U_IDU_Kode_PT) AS PT, MAX(h.cardcode) AS CardCode,
                SUM(d.qty * d.flags) AS Qty, SUM(d.Qty2 * d.flags) AS Qty2, SUM(d.QtyPalet * d.flags) AS QtyPalet
         FROM   dbo.OKRN h JOIN dbo.KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
         WHERE  h.ObjType = @ObjType AND h.DocEntry = @DocEntry
-        GROUP BY h.WhsCode, d.ItemCode, ISNULL(COALESCE(d.ContainerNo, h.ContainerNo), ''), ISNULL(d.DistNumber, '')
+        GROUP BY h.WhsCode, d.ItemCode, ISNULL(COALESCE(d.ContainerNo, h.ContainerNo), ''), ISNULL(d.DistNumber, ''), d.KodeRuangan
     ) AS m
     ON s.WhsCode = m.WhsCode AND s.ItemCode = m.ItemCode AND ISNULL(s.ContainerNo, '') = m.ContainerNo AND ISNULL(s.DistNumber, '') = m.DistNumber
+       AND ISNULL(s.KodeRuangan, '') = ISNULL(m.KodeRuangan, '')
     WHEN MATCHED THEN UPDATE SET s.Qty = s.Qty + m.Qty, s.Qty2 = s.Qty2 + m.Qty2, s.QtyPalet = s.QtyPalet + m.QtyPalet
-    WHEN NOT MATCHED THEN INSERT (ItemCode, DistNumber, WhsCode, Qty, Qty2, QtyPalet, cardcode, DocDate, U_IDU_Kode_PT, ObjType, DocEntry, ContainerNo)
-                          VALUES (m.ItemCode, NULLIF(m.DistNumber, ''), m.WhsCode, m.Qty, m.Qty2, m.QtyPalet, m.CardCode, GETDATE(), m.PT, @ObjType, @DocEntry, NULLIF(m.ContainerNo, ''));
+    WHEN NOT MATCHED THEN INSERT (ItemCode, DistNumber, WhsCode, Qty, Qty2, QtyPalet, cardcode, DocDate, U_IDU_Kode_PT, ObjType, DocEntry, ContainerNo, KodeRuangan)
+                          VALUES (m.ItemCode, NULLIF(m.DistNumber, ''), m.WhsCode, m.Qty, m.Qty2, m.QtyPalet, m.CardCode, GETDATE(), m.PT, @ObjType, @DocEntry, NULLIF(m.ContainerNo, ''), m.KodeRuangan);
 END
 GO
