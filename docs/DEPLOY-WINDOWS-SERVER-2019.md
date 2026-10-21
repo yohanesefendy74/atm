@@ -171,3 +171,15 @@ Kalau gagal, lihat tabel masalah di bawah dan Event Viewer › Windows Logs › 
 
 Server cloud tidak bisa menjangkau timbangan RS232 dan printer TSC di gudang, dan browser HP Krani tidak boleh memanggil alat lokal
 dari halaman HTTPS. Solusinya **PC Gateway** di gudang (koneksi keluar saja ke server). Panduan lengkap: [GATEWAY.md](GATEWAY.md).
+
+
+## Saldo stok (WHS_Saldo)
+
+Jalankan `database/saldo.sql` sekali (akun admin), beri hak ke `gudang_app` (contoh GRANT di akhir file), lalu isi awal:
+
+```sql
+EXEC dbo.usp_WHS_SaldoRebuild;
+SELECT * FROM dbo.vw_WHS_SaldoSelisih;   -- harus kosong
+```
+
+Sesudah itu saldo diperbarui otomatis setiap Admin memposting dokumen di CMS. Pengecekan & bangun ulang juga tersedia di web Admin → Setup.

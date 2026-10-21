@@ -207,6 +207,7 @@ api.MapKontainer(Db);
 
 var cms = app.MapGroup("/api/cms").RequireAuthorization("Admin");
 cms.MapCms(Db, cfg);
+cms.MapSaldo(Db);
 cms.MapMaster(Db);
 cms.MapPlan(Db);
 cms.MapJadwal(Db);

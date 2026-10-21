@@ -149,6 +149,37 @@ export function AdminMaster() {
   );
 }
 
+function SaldoPanel() {
+  const toast = useToast();
+  const [res, setRes] = useState<Row | null>(null);
+  const [busy, setBusy] = useState(false);
+  async function cek() {
+    setBusy(true);
+    try { setRes(await get<Row>('/api/cms/saldo/selisih')); } catch (e) { toast(errText(e), true); } finally { setBusy(false); }
+  }
+  async function rebuild() {
+    if (!confirm('Bangun ulang saldo dari semua dokumen yang sudah diposting? Lakukan saat tidak ada posting berjalan.')) return;
+    setBusy(true);
+    try { const r = await post<Row>('/api/cms/saldo/rebuild'); toast(`Saldo dibangun ulang · ${r.barisSaldo} baris`); await cek(); } catch (e) { toast(errText(e), true); } finally { setBusy(false); }
+  }
+  const sel = (res?.selisih as Row[] | undefined) ?? [];
+  return (
+    <div className="card stack">
+      <strong>Saldo stok (WHS_Saldo)</strong>
+      <div className="small muted">Diperbarui otomatis saat dokumen diposting di CMS. Laporan stok membaca saldo ini; kartu stok tetap dari transaksi.</div>
+      <div className="row">
+        <button className="btn small outline" disabled={busy} onClick={cek}>Cek selisih</button>
+        <button className="btn small ghost" disabled={busy} onClick={rebuild}>Bangun ulang saldo</button>
+      </div>
+      {res && (sel.length === 0
+        ? <div className="small"><span className="pill green">Cocok</span> {res.barisSaldo} baris saldo sama dengan transaksi</div>
+        : <div className="tablewrap"><table className="table"><thead><tr><th>Gudang</th><th>Ruangan</th><th>Item</th><th>Container</th><th className="num">Saldo kg</th><th className="num">Transaksi kg</th></tr></thead><tbody>
+            {sel.map((r, i) => <tr key={i}><td>{r.whsCode}</td><td>{r.kodeRuangan || '-'}</td><td className="mono">{r.itemCode}</td><td className="mono">{r.containerNo || '-'}</td><td className="num">{r.saldoKg}</td><td className="num">{r.transaksiKg}</td></tr>)}
+          </tbody></table></div>)}
+    </div>
+  );
+}
+
 export function AdminSetup() {
   const toast = useToast();
   const { data, error, loading, reload } = useLoad(() => get<Row[]>('/api/cms/setup'), []);
@@ -162,6 +193,7 @@ export function AdminSetup() {
     <Page eyebrow="Admin" title="Setup" accent="ink" footer={<button className="btn" disabled={!Object.keys(edit).length} onClick={simpan}>Simpan perubahan</button>}>
       {error !== null && <ErrorBox error={error} onRetry={reload} />}
       {loading && !data && <Spinner />}
+      <SaldoPanel />
       <div className="stack">
         {(data ?? []).map((s) => (
           <label key={s.kode} className="card pad-s stack tight">

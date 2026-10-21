@@ -120,8 +120,7 @@ public static class KraniEndpoints
             var cont = (req.ContainerNo ?? "").Replace(" ", "").ToUpperInvariant();
             foreach (var g in outLines.Where(l => !string.IsNullOrWhiteSpace(l.KodeRuangan)).GroupBy(l => (l.ItemCode, Ruang: l.KodeRuangan!.Trim())))
             {
-                var stokKg = await db.ExecuteScalarAsync<decimal?>(@"SELECT SUM(d.qty * d.flags) FROM OKRN h JOIN KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
-                    WHERE h.DocStatus = 'C' AND h.WhsCode = @w AND d.ItemCode = @i AND d.KodeRuangan = @r AND ISNULL(COALESCE(d.ContainerNo, h.ContainerNo), '') = @c",
+                var stokKg = await db.ExecuteScalarAsync<decimal?>("SELECT Kg FROM WHS_Saldo WHERE WhsCode = @w AND ItemCode = @i AND KodeRuangan = @r AND ContainerNo = @c",
                     new { w = req.WhsCode, i = g.Key.ItemCode, r = g.Key.Ruang, c = cont }) ?? 0;
                 var keluar = g.Sum(l => l.Qty);
                 if (keluar > stokKg + 0.01m) return Bad($"{g.Key.ItemCode} di ruangan {g.Key.Ruang}: keluar {keluar:N0} kg melebihi stok {stokKg:N0} kg");

@@ -248,6 +248,9 @@ ORDER BY LogTime DESC", new { objType, docEntry, bplId = u.BplId() }));
                     return Results.BadRequest(new { message = "Belum bisa diposting", errors });
                 }
 
+                // Saldo stok (WHS_Saldo) diperbarui dalam transaksi yang sama dengan posting
+                await db.ExecuteAsync("dbo.usp_WHS_SaldoPosting", new { ObjType = objType, DocEntry = docEntry }, tx, commandType: CommandType.StoredProcedure);
+
                 // Mutasi ke SaldoWhs / ItemHistoryWhs lewat stored procedure (opsional, lihat database/web_security.sql)
                 var stockProc = cfg["Posting:StockProcedure"];
                 if (!string.IsNullOrWhiteSpace(stockProc))
@@ -269,6 +272,26 @@ ORDER BY LogTime DESC", new { objType, docEntry, bplId = u.BplId() }));
                 try { await tx.RollbackAsync(); } catch { }
                 throw;
             }
+        });
+    }
+
+    public static void MapSaldo(this RouteGroupBuilder cms, Func<SqlConnection> dbf)
+    {
+        // Selisih saldo vs transaksi yang sudah diposting (harus kosong)
+        cms.MapGet("/saldo/selisih", async () =>
+        {
+            await using var db = dbf();
+            var rows = await db.QueryAsync("SELECT TOP 200 WhsCode AS whsCode, KodeRuangan AS kodeRuangan, ItemCode AS itemCode, ContainerNo AS containerNo, SaldoKg AS saldoKg, TransaksiKg AS transaksiKg FROM vw_WHS_SaldoSelisih ORDER BY WhsCode, ItemCode", commandTimeout: 120);
+            var total = await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WHS_Saldo");
+            return Results.Ok(new { barisSaldo = total, selisih = rows });
+        });
+        cms.MapPost("/saldo/rebuild", async (ClaimsPrincipal u, HttpContext ctx) =>
+        {
+            await using var db = dbf();
+            await db.ExecuteAsync("dbo.usp_WHS_SaldoRebuild", commandType: CommandType.StoredProcedure, commandTimeout: 600);
+            var total = await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WHS_Saldo");
+            await Audit.Safe(db, u, ctx, "SALDO_REBUILD", "SALDO", null, $"{total} baris");
+            return Results.Ok(new { barisSaldo = total });
         });
     }
 

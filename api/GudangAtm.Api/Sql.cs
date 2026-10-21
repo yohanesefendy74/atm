@@ -139,16 +139,12 @@ VALUES (@objType, @docEntry, @lineNum, @itemCode, @brand, @origin, @qty, @qty2, 
 
     /// Stok per ruangan untuk item + container di warehouse (dokumen yang sudah diposting).
     public const string StockPerRuangan = @"
-SELECT  d.KodeRuangan AS kodeRuangan, r.NamaRuangan AS namaRuangan, CAST(ISNULL(r.Titipan, 0) AS bit) AS titipan,
-        SUM(d.qty * d.flags) AS stockKg, SUM(d.Qty2 * d.flags) AS stockSak, SUM(d.QtyPalet * d.flags) AS stockPalet
-FROM    OKRN h
-JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
-LEFT JOIN WHS_MasterRuangan r ON r.KodeRuangan = d.KodeRuangan
-WHERE   h.DocStatus = 'C' AND h.WhsCode = @whsCode AND d.ItemCode = @itemCode
-  AND   ISNULL(COALESCE(d.ContainerNo, h.ContainerNo), '') = @containerNo
-GROUP BY d.KodeRuangan, r.NamaRuangan, r.Titipan
-HAVING  SUM(d.qty * d.flags) > 0
-ORDER BY d.KodeRuangan";
+SELECT  NULLIF(s.KodeRuangan, '') AS kodeRuangan, r.NamaRuangan AS namaRuangan, CAST(ISNULL(r.Titipan, 0) AS bit) AS titipan,
+        s.Kg AS stockKg, s.Sak AS stockSak, s.Palet AS stockPalet
+FROM    WHS_Saldo s
+LEFT JOIN WHS_MasterRuangan r ON r.KodeRuangan = s.KodeRuangan
+WHERE   s.WhsCode = @whsCode AND s.ItemCode = @itemCode AND s.ContainerNo = ISNULL(@containerNo, '') AND s.Kg > 0
+ORDER BY s.KodeRuangan";
 
     /// Baris inbound asal untuk QR yymmdd-itemcode-container (sumber brand, origin, isi per sak / per palet).
     public const string PalletSource = @"
@@ -162,14 +158,11 @@ JOIN    OITM i ON i.ItemCode = d.ItemCode
 WHERE   d.flags = 1 AND d.ItemCode = @itemCode AND ISNULL(h.ContainerNo, '') = @containerNo AND h.BPLId = @bplId
 ORDER BY CASE WHEN CONVERT(char(6), h.DocDate, 12) = @yymmdd THEN 0 ELSE 1 END, h.DocDate";
 
-    /// Stok = jumlah qty × Flag dari dokumen yang sudah diposting (Close).
+    /// Stok dari WHS_Saldo (diperbarui saat Admin posting di CMS; lihat database/saldo.sql).
     public const string StockForPallet = @"
-SELECT  ISNULL(SUM(d.qty * d.flags), 0) AS stockKg,
-        ISNULL(SUM(d.Qty2     * d.flags), 0) AS stockSak,
-        ISNULL(SUM(d.QtyPalet * d.flags), 0) AS stockPalet
-FROM    OKRN h
-JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
-WHERE   h.DocStatus = 'C' AND h.WhsCode = @whsCode AND d.ItemCode = @itemCode AND ISNULL(h.ContainerNo, '') = @containerNo";
+SELECT  ISNULL(SUM(s.Kg), 0) AS stockKg, ISNULL(SUM(s.Sak), 0) AS stockSak, ISNULL(SUM(s.Palet), 0) AS stockPalet
+FROM    WHS_Saldo s
+WHERE   s.WhsCode = @whsCode AND s.ItemCode = @itemCode AND s.ContainerNo = ISNULL(@containerNo, '')";
 
     /// Data label: hanya baris masuk (Flag 1). PT dicetak dari OPRC.PrcName.
     public const string LabelLines = @"
@@ -181,30 +174,28 @@ WHERE   d.ObjType = @objType AND d.DocEntry = @docEntry AND d.flags = 1
 ORDER BY d.LineNum";
 
     public const string StockPerItem = @"
-SELECT  d.ItemCode AS itemCode, i.ItemName AS itemName,
-        SUM(d.qty * d.flags) AS kg, SUM(d.Qty2 * d.flags) AS sak, SUM(d.QtyPalet * d.flags) AS palet,
-        COUNT(DISTINCT h.ContainerNo) AS containers, COUNT(DISTINCT d.KodeRuangan) AS ruangan
-FROM    OKRN h
-JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
-JOIN    OITM i ON i.ItemCode = d.ItemCode
-WHERE   h.DocStatus = 'C' AND h.BPLId = @bplId AND (@whsCode IS NULL OR h.WhsCode = @whsCode) AND (@ruangan IS NULL OR d.KodeRuangan = @ruangan)
-  AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = h.WhsCode)
-GROUP BY d.ItemCode, i.ItemName
-HAVING  SUM(d.qty * d.flags) <> 0
-ORDER BY d.ItemCode";
+SELECT  s.ItemCode AS itemCode, i.ItemName AS itemName,
+        SUM(s.Kg) AS kg, SUM(s.Sak) AS sak, SUM(s.Palet) AS palet,
+        COUNT(DISTINCT NULLIF(s.ContainerNo, '')) AS containers, COUNT(DISTINCT NULLIF(s.KodeRuangan, '')) AS ruangan
+FROM    WHS_Saldo s
+JOIN    OWHS w ON w.WhsCode = s.WhsCode
+JOIN    OITM i ON i.ItemCode = s.ItemCode
+WHERE   w.BPLid = @bplId AND (@whsCode IS NULL OR s.WhsCode = @whsCode) AND (@ruangan IS NULL OR s.KodeRuangan = @ruangan)
+  AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = s.WhsCode)
+GROUP BY s.ItemCode, i.ItemName
+HAVING  SUM(s.Kg) <> 0
+ORDER BY s.ItemCode";
 
     public const string StockPerContainer = @"
-SELECT  h.ContainerNo AS containerNo, d.KodeRuangan AS kodeRuangan, d.ItemCode AS itemCode, i.ItemName AS itemName, MAX(d.brand_name) AS brand,
-        MIN(CASE WHEN d.flags = 1 THEN h.DocDate END) AS inboundDate,
-        SUM(d.qty * d.flags) AS kg, SUM(d.Qty2 * d.flags) AS sak, SUM(d.QtyPalet * d.flags) AS palet
-FROM    OKRN h
-JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
-JOIN    OITM i ON i.ItemCode = d.ItemCode
-WHERE   h.DocStatus = 'C' AND h.BPLId = @bplId AND (@whsCode IS NULL OR h.WhsCode = @whsCode) AND (@ruangan IS NULL OR d.KodeRuangan = @ruangan)
-  AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = h.WhsCode)
-GROUP BY h.ContainerNo, d.KodeRuangan, d.ItemCode, i.ItemName
-HAVING  SUM(d.qty * d.flags) <> 0
-ORDER BY h.ContainerNo, d.KodeRuangan, d.ItemCode";
+SELECT  NULLIF(s.ContainerNo, '') AS containerNo, NULLIF(s.KodeRuangan, '') AS kodeRuangan, s.ItemCode AS itemCode, i.ItemName AS itemName, s.Brand AS brand,
+        s.TglMasuk AS inboundDate, s.Kg AS kg, s.Sak AS sak, s.Palet AS palet, s.WhsCode AS whsCode
+FROM    WHS_Saldo s
+JOIN    OWHS w ON w.WhsCode = s.WhsCode
+JOIN    OITM i ON i.ItemCode = s.ItemCode
+WHERE   w.BPLid = @bplId AND (@whsCode IS NULL OR s.WhsCode = @whsCode) AND (@ruangan IS NULL OR s.KodeRuangan = @ruangan)
+  AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = s.WhsCode)
+  AND   s.Kg <> 0
+ORDER BY s.ContainerNo, s.KodeRuangan, s.ItemCode";
 
     public const string StockCard = @"
 SELECT  h.DocDate AS docDate, h.ObjType AS objType, h.DocEntry AS docEntry, h.TrxCode AS trxCode,
