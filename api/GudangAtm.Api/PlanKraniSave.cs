@@ -89,6 +89,12 @@ public static class PlanKraniSave
                 await db.ExecuteAsync(Sql.InsertHeader, new { objType, docEntry, docDate = date, bplId = u.BplId(), whsCode = pl.WhsCode, userId = u.UserId(), trxCode = trx, noMobil, containerNo = string.IsNullOrEmpty(cont) ? null : cont }, tx);
                 var ke = await db.ExecuteScalarAsync<int>("SELECT ISNULL(MAX(PenerimaanKe), 0) + 1 FROM OKRN WHERE PlanId = @id", new { id }, tx);
                 await db.ExecuteAsync("UPDATE OKRN SET PlanId = @id, PenerimaanKe = @ke, RegId = @reg, SesiId = @sesi WHERE ObjType = @objType AND DocEntry = @docEntry", new { id, ke, reg = regId, sesi = sesiId, objType, docEntry }, tx);
+                // Data dari SPBB/SPMB ikut ke dokumen krani supaya Admin tinggal mengecek & memposting stok di CMS
+                await db.ExecuteAsync(@"UPDATE h SET U_IDU_Kode_PT = p.U_IDU_Kode_PT, cardcode = COALESCE(NULLIF(p.CardCodeTitipan, ''), p.CardCode),
+                        NumAtCard = LEFT(d.NumAtCard, COL_LENGTH('OKRN', 'NumAtCard')), BaseType = d.BaseType, BaseDocEntry = d.BaseDocEntry, BaseDocNum = d.BaseDocNum
+                    FROM OKRN h JOIN WHS_Plan p ON p.PlanId = @id
+                    OUTER APPLY (SELECT TOP 1 BaseType, BaseDocEntry, BaseDocNum, NumAtCard FROM WHS_PlanDoc WHERE PlanId = @id ORDER BY BaseDocEntry) d
+                    WHERE h.ObjType = @objType AND h.DocEntry = @docEntry", new { id, objType, docEntry }, tx);
 
                 var lineNum = 0;
                 foreach (var l in r.Lines)

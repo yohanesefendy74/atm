@@ -26,7 +26,7 @@ export function PlanList() {
   );
 }
 
-type Src = Row; type SrcLine = Row & { pick?: boolean; qtyPlan?: number; kontainer?: string; palet?: string; paletPlan?: number };
+type Src = Row; type SrcLine = Row & { pick?: boolean; qtyPlan?: number; kontainer?: string; palet?: string; paletPlan?: number; ruang?: string };
 
 export function PlanNew() {
   const toast = useToast();
@@ -72,11 +72,14 @@ export function PlanNew() {
   }
   const upd = (di: number, li: number, patch: Partial<SrcLine>) => setDocs(docs.map((d, i) => (i !== di ? d : { ...d, lines: d.lines.map((l, j) => (j !== li ? l : { ...l, ...patch })) })));
   const room = ruangList.find((r) => r.kodeRuangan === ruang);
+  const roomOpts = ruangList
+    .filter((r) => r.aktif && (!room || !!r.titipan === !!room.titipan))
+    .map((r) => ({ value: r.kodeRuangan, label: `${r.kodeRuangan} · ${r.namaRuangan}${r.titipan ? ' (titipan)' : ''}` }));
   const paletOpts = paletList.filter((p) => p.aktif).map((p) => ({ value: p.paletCode, label: `${p.paletCode} · ${p.beratKg} kg` }));
 
   async function terbit() {
     const lines = docs.flatMap((d) => d.lines.filter((l) => l.pick && (l.qtyPlan ?? 0) > 0).map((l) => ({
-      BaseDocEntry: d.head.docEntry, BaseLineNum: l.lineNum, QtyPlan: l.qtyPlan, ContainerNo: l.kontainer || null, KodeRuangan: ruang,
+      BaseDocEntry: d.head.docEntry, BaseLineNum: l.lineNum, QtyPlan: l.qtyPlan, ContainerNo: l.kontainer || null, KodeRuangan: l.ruang || ruang,
       PaletCode: l.palet || null, PaletPlan: l.paletPlan ?? null, FreeTxt: l.freeTxt ?? null })));
     if (!lines.length) return toast('Pilih minimal satu baris dengan qty', true);
     setBusy(true);
@@ -114,6 +117,9 @@ export function PlanNew() {
                 <input className="input" type="number" value={l.qtyPlan ?? 0} onChange={(e) => upd(di, li, { qtyPlan: Number(e.target.value) })} aria-label="Qty rencana kg" />
                 <input className="input" placeholder="Container" value={l.kontainer ?? ''} onChange={(e) => upd(di, li, { kontainer: e.target.value.toUpperCase() })} />
               </div>
+              <label className="stack tight"><span className="small muted">Ruangan {jenis === 'SPBB' ? 'tujuan' : 'sumber'} item ini</span>
+                <SearchSelect options={roomOpts} value={l.ruang ?? ''} onChange={(v) => upd(di, li, { ruang: v })} allowEmpty={ruang ? `Ikut ruangan dokumen (${ruang})` : '(pilih ruangan dokumen dulu)'} placeholder="Ruangan" />
+              </label>
               {jenis === 'SPBB' && (
                 <div className="row">
                   <SearchSelect options={paletOpts} value={l.palet ?? ''} onChange={(v) => upd(di, li, { palet: v })} allowEmpty="(tanpa palet)" placeholder="Jenis palet" />
@@ -125,7 +131,7 @@ export function PlanNew() {
         </div>
       ))}
       <div className="card stack">
-        <label className="stack tight"><span className="small muted">Ruangan</span><SearchSelect options={ruangList.filter((r) => r.aktif).map((r) => ({ value: r.kodeRuangan, label: `${r.kodeRuangan} · ${r.namaRuangan}${r.titipan ? ' (titipan)' : ''}` }))} value={ruang} onChange={setRuang} placeholder="Cari & pilih ruangan" /></label>
+        <label className="stack tight"><span className="small muted">Ruangan dokumen (default semua item; bisa diganti per item di atas, krani juga bisa mengubah saat input)</span><SearchSelect options={ruangList.filter((r) => r.aktif).map((r) => ({ value: r.kodeRuangan, label: `${r.kodeRuangan} · ${r.namaRuangan}${r.titipan ? ' (titipan)' : ''}` }))} value={ruang} onChange={setRuang} placeholder="Cari & pilih ruangan" /></label>
         {room?.titipan && <label className="stack tight"><span className="small muted">Kode customer titipan (pemilik barang)</span><input className="input" value={titipanCard} onChange={(e) => setTitipanCard(e.target.value)} /></label>}
         {jenis === 'SPBB' && <label className="stack tight"><span className="small muted">Kode PT (opsional)</span><input className="input" value={pt} onChange={(e) => setPt(e.target.value)} /></label>}
         <div className="row"><label className="stack tight grow"><span className="small muted">Tanggal jadwal</span><input className="input" type="date" value={tgl} onChange={(e) => setTgl(e.target.value)} /></label>
@@ -169,8 +175,8 @@ export function PlanDetail({ id }: { id: string }) {
           </div>
           <div className="card stack tight"><strong>Dokumen sumber</strong>
             {(data!.docs as Row[]).map((d) => <div key={`${d.baseType}${d.baseDocEntry}`} className="small">{d.baseType} {d.baseDocNum} · {d.cardName} {d.numAtCard ? `· PO ${d.numAtCard}` : ''}</div>)}</div>
-          <div className="tablewrap"><table className="table"><thead><tr><th>Item</th><th>Container</th><th>Rencana</th><th>Realisasi</th><th>Sisa</th></tr></thead><tbody>
-            {(data!.lines as Row[]).map((l) => <tr key={l.PlanLine}><td data-label="Item">{l.ItemCode}<div className="small muted">{l.Dscription}</div></td><td data-label="Container" className="mono">{l.ContainerNo ?? '-'}</td>
+          <div className="tablewrap"><table className="table"><thead><tr><th>Item</th><th>Container</th><th>Ruangan</th><th>Rencana</th><th>Realisasi</th><th>Sisa</th></tr></thead><tbody>
+            {(data!.lines as Row[]).map((l) => <tr key={l.PlanLine}><td data-label="Item">{l.ItemCode}<div className="small muted">{l.Dscription}</div></td><td data-label="Container" className="mono">{l.ContainerNo ?? '-'}</td><td data-label="Ruangan" className="mono">{l.KodeRuangan ?? h.KodeRuangan ?? '-'}</td>
               <td data-label="Rencana" className="num">{fmt(l.QtyPlan)}</td><td data-label="Realisasi" className="num">{fmt(l.QtyDone)}</td><td data-label="Sisa" className="num">{fmt(l.QtyOutstanding)}</td></tr>)}
           </tbody></table></div>
           {aktif && (
