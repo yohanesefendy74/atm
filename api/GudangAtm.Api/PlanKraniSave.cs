@@ -96,7 +96,7 @@ public static class PlanKraniSave
                     var pr = plan1[l.PlanLine];
                     var ruang = l.KodeRuangan ?? pr.KodeRuangan ?? pl.KodeRuangan;
                     var brand = Helpers.Empty(l.Brand) ?? pr.BrandName;
-                    await db.ExecuteAsync(Sql.InsertLine, new { objType, docEntry, lineNum, itemCode = pr.ItemCode, uom = "KG", brand, origin = (string?)null, qty = l.Qty, qty2 = l.Qty2, qtyPalet = l.QtyPalet, flag }, tx);
+                    await db.ExecuteAsync(Sql.InsertLine, new { objType, docEntry, lineNum, itemCode = pr.ItemCode, uom = "KG", brand, origin = (string?)null, qty = l.Qty, qty2 = l.Qty2, qtyPalet = l.QtyPalet, flag, ruang = (string?)null }, tx);
                     await db.ExecuteAsync(@"UPDATE KRN1 SET PlanLine = @pl, ContainerNo = @c, KodeRuangan = @ru, PaletCode = @pc, Size = @sz, [Type] = @ty, Crop = @cr,
                         brand_asli = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN @asli END,
                         brand_diubah_oleh = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN @uid END,

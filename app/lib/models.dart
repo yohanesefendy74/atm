@@ -27,7 +27,9 @@ class LineDraft {
     required this.qty,
     required this.qty2,
     required this.qtyPalet,
+    this.kodeRuangan,
   });
+  final String? kodeRuangan; // ruangan TUJUAN (Item Inbound KR/RP)
   final String itemCode;
   final String itemName;
   final String groupName;
@@ -46,7 +48,11 @@ class LineDraft {
         'qty': qty,
         'qty2': qty2,
         'qtyPalet': qtyPalet,
+        'kodeRuangan': kodeRuangan,
       };
+
+  LineDraft withRuangan(String? r) => LineDraft(
+      itemCode: itemCode, itemName: itemName, groupName: groupName, uom: uom, brand: brand, origin: origin, qty: qty, qty2: qty2, qtyPalet: qtyPalet, kodeRuangan: r);
 }
 
 class InboundDraft {
@@ -82,9 +88,15 @@ class ScannedPallet {
         kgPerSak = toD(j['kgPerSak']),
         sakPerPalet = toD(j['sakPerPalet']),
         stockKg = toD(j['stockKg']),
-        stockSak = toD(j['stockSak']) {
+        stockSak = toD(j['stockSak']),
+        rooms = ((j['rooms'] as List?) ?? const []).map((e) => Map<String, dynamic>.from(e as Map)).toList() {
     sak = sakPerPalet;
+    if (rooms.length == 1) kodeRuangan = rooms.first['kodeRuangan']?.toString();
   }
+
+  /// Stok item+container per ruangan. Satu container bisa tersebar di beberapa ruangan -> krani memilih ruangan SUMBER.
+  final List<Map<String, dynamic>> rooms;
+  String? kodeRuangan;
 
   final String qr;
   final String itemCode;
@@ -133,8 +145,9 @@ class OutboundDraft {
   List<Map<String, dynamic>> outLines() {
     final map = <String, Map<String, dynamic>>{};
     for (final p in pallets) {
-      final m = map.putIfAbsent(p.itemCode, () => {
+      final m = map.putIfAbsent('${p.itemCode}|${p.kodeRuangan ?? ''}', () => {
             'itemCode': p.itemCode,
+            'kodeRuangan': p.kodeRuangan,
             'itemName': p.itemName,
             'uom': 'KG',
             'brand': p.brand,
@@ -167,6 +180,7 @@ class OutboundDraft {
                   'qty': l['qty'],
                   'qty2': l['qty2'],
                   'qtyPalet': l['qtyPalet'],
+                  'kodeRuangan': l['kodeRuangan'],
                 })
             .toList(),
         'inLines': isAdj ? inLines.map((l) => l.toJson()).toList() : <Map<String, dynamic>>[],

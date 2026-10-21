@@ -204,6 +204,28 @@ class OutboundAddItemScreen extends StatefulWidget {
 }
 
 class _OutboundAddItemScreenState extends State<OutboundAddItemScreen> {
+  List<Map<String, dynamic>> _rooms = [];
+  String? _ruang;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRooms();
+  }
+
+  Future<void> _loadRooms() async {
+    try {
+      final r = await Api.get('/api/master/ruangan', {'whs': widget.draft.warehouse!.code}) as List;
+      if (!mounted) return;
+      setState(() {
+        _rooms = r.map((e) => Map<String, dynamic>.from(e as Map)).where((x) => x['titipan'] != true).toList();
+        if (_rooms.length == 1) _ruang = _rooms.first['kodeRuangan'].toString();
+      });
+    } catch (e) {
+      if (mounted) showError(context, e);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final d = widget.draft;
@@ -220,14 +242,28 @@ class _OutboundAddItemScreenState extends State<OutboundAddItemScreen> {
         ),
         Expanded(
           child: ListView(padding: const EdgeInsets.all(20), children: [
-            LineForm(accent: C.green, sakLabel: 'Sak', onAdd: (l) => setState(() => d.inLines.add(l))),
+            DropdownButtonFormField<String>(
+              value: _ruang,
+              decoration: const InputDecoration(labelText: 'Ruangan tujuan (item masuk)'),
+              items: [for (final r in _rooms) DropdownMenuItem(value: r['kodeRuangan'].toString(), child: Text('${r['kodeRuangan']} · ${r['namaRuangan']}'))],
+              onChanged: (v) => setState(() => _ruang = v),
+            ),
+            const SizedBox(height: 12),
+            LineForm(
+              accent: C.green,
+              sakLabel: 'Sak',
+              onAdd: (l) {
+                if (_ruang == null) return showError(context, 'Pilih ruangan tujuan dulu');
+                setState(() => d.inLines.add(l.withRuangan(_ruang)));
+              },
+            ),
             const SizedBox(height: 16),
             Text('Item Inbound · ${d.inLines.length} baris', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             for (var i = 0; i < d.inLines.length; i++) ...[
               LineTile(d.inLines[i],
                   sakLabel: 'sak',
-                  badge: const Pill('MASUK', bg: C.greenTint, fg: C.greenText),
+                  badge: Pill('MASUK · ${d.inLines[i].kodeRuangan ?? '-'}', bg: C.greenTint, fg: C.greenText),
                   onDelete: () => setState(() => d.inLines.removeAt(i))),
               const SizedBox(height: 8),
             ],
@@ -294,6 +330,12 @@ class _OutboundScanScreenState extends State<OutboundScanScreen> {
       final p = ScannedPallet.fromJson(await Api.pallet(qr.trim(), d.warehouse!.code));
       if (d.containerNo != null && d.containerNo != p.containerNo) {
         throw ApiException('QR container lain ditolak. Outbound ini untuk container ${d.containerNo}.');
+      }
+      if (!mounted) return;
+      if (p.rooms.length > 1) {
+        final r = await pilihRuanganSumber(context, p);
+        if (r == null) return;
+        p.kodeRuangan = r;
       }
       if (!mounted) return;
       d.containerNo ??= p.containerNo;
@@ -537,6 +579,22 @@ class _PalletEditorState extends State<_PalletEditor> {
           OutlinedButton(onPressed: widget.onDelete, child: const Text('Batalkan')),
         ]),
         const SizedBox(height: 12),
+        if (p.rooms.isEmpty)
+          const Hint('Stok item ini di container tersebut belum tercatat per ruangan', color: C.amberText)
+        else
+          DropdownButtonFormField<String>(
+            value: p.kodeRuangan,
+            decoration: const InputDecoration(labelText: 'Ruangan sumber'),
+            items: [
+              for (final r in p.rooms)
+                DropdownMenuItem(value: r['kodeRuangan']?.toString(), child: Text('${r['kodeRuangan'] ?? '-'} · stok ${fmt(toD(r['stockKg']))} kg · ${fmt(toD(r['stockSak']))} krg')),
+            ],
+            onChanged: (v) {
+              setState(() => p.kodeRuangan = v);
+              widget.onChanged();
+            },
+          ),
+        const SizedBox(height: 12),
         SegmentedButton<bool>(
           segments: const [
             ButtonSegment(value: false, label: Text('Keluar utuh')),
@@ -641,6 +699,7 @@ class _OutboundSummaryScreenState extends State<OutboundSummaryScreen> {
 
   Future<void> _save() async {
     final d = widget.draft;
+    if (d.isAdj && d.pallets.any((p) => p.kodeRuangan == null)) return showError(context, 'Pilih ruangan sumber untuk setiap palet (Penyesuaian / Repacking)');
     setState(() => _busy = true);
     try {
       final r = await Api.saveOutbound(d.toJson());
@@ -737,3 +796,25 @@ class _OutboundSummaryScreenState extends State<OutboundSummaryScreen> {
     );
   }
 }
+
+
+/// Satu container bisa tersebar di beberapa ruangan: krani memilih ruangan SUMBER palet ini.
+Future<String?> pilihRuanganSumber(BuildContext context, ScannedPallet p) => showModalBottomSheet<String>(
+      context: context,
+      builder: (c) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+            child: Text('Ruangan sumber · ${p.itemCode}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+          ),
+          const Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('Barang dari container ini ada di beberapa ruangan. Pilih asal palet yang discan.', style: TextStyle(color: C.muted))),
+          for (final r in p.rooms)
+            ListTile(
+              title: Text('${r['kodeRuangan'] ?? '-'}${r['namaRuangan'] != null ? ' · ${r['namaRuangan']}' : ''}'),
+              subtitle: Text('Stok ${fmt(toD(r['stockKg']))} kg · ${fmt(toD(r['stockSak']))} karung'),
+              onTap: () => Navigator.of(c).pop(r['kodeRuangan']?.toString()),
+            ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );

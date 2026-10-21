@@ -19,7 +19,8 @@ public record DocLine(
     string? Origin,
     decimal Qty,
     decimal Qty2,
-    decimal QtyPalet);
+    decimal QtyPalet,
+    string? KodeRuangan = null);   // keluar: ruangan SUMBER stok; masuk: ruangan TUJUAN
 
 /// Inbound: header + baris detail (semua Flag 1). TrxCode IB/BT ditentukan server dari OWHS.External.
 public record InboundRequest(

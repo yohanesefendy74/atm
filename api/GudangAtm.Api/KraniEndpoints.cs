@@ -102,11 +102,29 @@ public static class KraniEndpoints
             decimal? selisih = null;
             if (jenis == "KR" && string.IsNullOrWhiteSpace(req.AlasanKode)) return Bad("Alasan penyesuaian wajib dipilih");
             if (req.AlasanKode == "lain" && (req.Catatan ?? "").Trim().Length < 5) return Bad("Catatan minimal 5 huruf bila alasan 'lain'");
-            if (jenis != "OB" && !string.IsNullOrWhiteSpace(req.KodeRuangan))
+            // Ruangan: keluar = ruangan SUMBER (stok item+container per ruangan), masuk = ruangan TUJUAN.
+            // KR/RP wajib per baris; OB opsional (bila diisi tetap dicek).
+            if (!string.IsNullOrWhiteSpace(req.KodeRuangan))
+                inLines = inLines.Select(l => string.IsNullOrWhiteSpace(l.KodeRuangan) ? l with { KodeRuangan = req.KodeRuangan } : l).ToList();
+            if (jenis != "OB")
             {
-                var rt = await db.QueryFirstOrDefaultAsync<(bool Titipan, string WhsCode)?>("SELECT Titipan, WhsCode FROM WHS_MasterRuangan WHERE KodeRuangan = @k AND Aktif = 1", new { k = req.KodeRuangan });
-                if (rt is null || rt.Value.WhsCode != req.WhsCode) return Bad("Ruangan tidak valid untuk gudang ini");
-                if (rt.Value.Titipan) return Bad("KR dan RP tidak boleh di ruangan titipan");
+                if (outLines.Any(l => string.IsNullOrWhiteSpace(l.KodeRuangan))) return Bad("Pilih ruangan sumber untuk setiap palet keluar");
+                if (inLines.Any(l => string.IsNullOrWhiteSpace(l.KodeRuangan))) return Bad("Pilih ruangan tujuan untuk setiap item masuk");
+            }
+            var cont = (req.ContainerNo ?? "").Replace(" ", "").ToUpperInvariant();
+            foreach (var kode in outLines.Concat(inLines).Select(l => Helpers.Empty(l.KodeRuangan)).Where(k => k is not null).Distinct())
+            {
+                var rt = await db.QueryFirstOrDefaultAsync<(bool Titipan, string WhsCode)?>("SELECT Titipan, WhsCode FROM WHS_MasterRuangan WHERE KodeRuangan = @k AND Aktif = 1", new { k = kode });
+                if (rt is null || rt.Value.WhsCode != req.WhsCode) return Bad($"Ruangan {kode} tidak valid untuk gudang ini");
+                if (jenis != "OB" && rt.Value.Titipan) return Bad($"KR dan RP tidak boleh di ruangan titipan ({kode})");
+            }
+            foreach (var g in outLines.Where(l => !string.IsNullOrWhiteSpace(l.KodeRuangan)).GroupBy(l => (l.ItemCode, Ruang: l.KodeRuangan!.Trim())))
+            {
+                var stokKg = await db.ExecuteScalarAsync<decimal?>(@"SELECT SUM(d.qty * d.flags) FROM OKRN h JOIN KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
+                    WHERE h.DocStatus = 'C' AND h.WhsCode = @w AND d.ItemCode = @i AND d.KodeRuangan = @r AND ISNULL(COALESCE(d.ContainerNo, h.ContainerNo), '') = @c",
+                    new { w = req.WhsCode, i = g.Key.ItemCode, r = g.Key.Ruang, c = cont }) ?? 0;
+                var keluar = g.Sum(l => l.Qty);
+                if (keluar > stokKg + 0.01m) return Bad($"{g.Key.ItemCode} di ruangan {g.Key.Ruang}: keluar {keluar:N0} kg melebihi stok {stokKg:N0} kg");
             }
             if (jenis == "RP")
             {
@@ -145,6 +163,7 @@ public static class KraniEndpoints
             var src = await db.QueryFirstOrDefaultAsync<PalletSourceRow>(Sql.PalletSource, new { itemCode, containerNo, yymmdd, bplId = u.BplId() });
             if (src is null) return Results.NotFound(new { message = $"Palet {itemCode} container {containerNo} tidak ditemukan" });
             var stock = await db.QueryFirstAsync<StockRow>(Sql.StockForPallet, new { whsCode, itemCode, containerNo });
+            var rooms = await db.QueryAsync(Sql.StockPerRuangan, new { whsCode, itemCode, containerNo });
 
             decimal kgPerSak = src.Qty2 > 0 ? Math.Round(src.Qty / src.Qty2, 2) : 0;
             decimal sakPerPalet = src.QtyPalet > 0 ? Math.Ceiling(src.Qty2 / src.QtyPalet) : 0;
@@ -162,6 +181,7 @@ public static class KraniEndpoints
                 stock.StockKg,
                 stock.StockSak,
                 stock.StockPalet,
+                rooms,   // stok per ruangan: krani memilih ruangan SUMBER (satu container bisa tersebar di beberapa ruangan)
             });
         });
 
@@ -315,6 +335,7 @@ public static class Helpers
                     qty2 = l.Qty2,
                     qtyPalet = l.QtyPalet,
                     flag,
+                    ruang = Helpers.Empty(l.KodeRuangan),
                 }, tx);
             }
 

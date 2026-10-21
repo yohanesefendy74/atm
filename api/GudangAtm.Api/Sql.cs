@@ -113,7 +113,7 @@ WHERE   h.ObjType = @objType AND h.DocEntry = @docEntry AND h.BPLId = @bplId
 
     public const string DocLines = @"
 SELECT  d.LineNum AS lineNum, d.ItemCode AS itemCode, i.ItemName AS itemName, 'KG' AS uom,
-        d.brand_name AS brand, d.Origin AS origin, d.qty AS qty, d.Qty2 AS qty2,
+        d.brand_name AS brand, d.Origin AS origin, d.KodeRuangan AS kodeRuangan, d.qty AS qty, d.Qty2 AS qty2,
         d.QtyPalet AS qtyPalet, d.flags AS flag
 FROM    KRN1 d
 JOIN    OITM i ON i.ItemCode = d.ItemCode
@@ -134,8 +134,21 @@ FROM    OKRN h OUTER APPLY (SELECT SUM(d.qty) q, SUM(d.Qty2) s, SUM(d.QtyPalet) 
 WHERE   h.ObjType = @objType AND h.DocEntry = @docEntry";
 
     public const string InsertLine = @"
-INSERT INTO KRN1 (ObjType, DocEntry, LineNum, ItemCode, brand_name, Origin, qty, Qty2, QtyPalet, flags, LineStatus)
-VALUES (@objType, @docEntry, @lineNum, @itemCode, @brand, @origin, @qty, @qty2, @qtyPalet, @flag, 'O')";
+INSERT INTO KRN1 (ObjType, DocEntry, LineNum, ItemCode, brand_name, Origin, qty, Qty2, QtyPalet, flags, LineStatus, KodeRuangan)
+VALUES (@objType, @docEntry, @lineNum, @itemCode, @brand, @origin, @qty, @qty2, @qtyPalet, @flag, 'O', @ruang)";
+
+    /// Stok per ruangan untuk item + container di warehouse (dokumen yang sudah diposting).
+    public const string StockPerRuangan = @"
+SELECT  d.KodeRuangan AS kodeRuangan, r.NamaRuangan AS namaRuangan, CAST(ISNULL(r.Titipan, 0) AS bit) AS titipan,
+        SUM(d.qty * d.flags) AS stockKg, SUM(d.Qty2 * d.flags) AS stockSak, SUM(d.QtyPalet * d.flags) AS stockPalet
+FROM    OKRN h
+JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
+LEFT JOIN WHS_MasterRuangan r ON r.KodeRuangan = d.KodeRuangan
+WHERE   h.DocStatus = 'C' AND h.WhsCode = @whsCode AND d.ItemCode = @itemCode
+  AND   ISNULL(COALESCE(d.ContainerNo, h.ContainerNo), '') = @containerNo
+GROUP BY d.KodeRuangan, r.NamaRuangan, r.Titipan
+HAVING  SUM(d.qty * d.flags) > 0
+ORDER BY d.KodeRuangan";
 
     /// Baris inbound asal untuk QR yymmdd-itemcode-container (sumber brand, origin, isi per sak / per palet).
     public const string PalletSource = @"
@@ -271,7 +284,7 @@ WHERE   h.ObjType = @objType AND h.DocEntry = @docEntry AND h.BPLId = @bplId";
 
     public const string CmsLines = @"
 SELECT  d.LineNum AS lineNum, d.ItemCode AS itemCode, i.ItemName AS itemName, g.ItmsGrpNam AS groupName,
-        'KG' AS uom, d.brand_name AS brand, d.Origin AS origin, d.flags AS flag,
+        'KG' AS uom, d.brand_name AS brand, d.Origin AS origin, d.KodeRuangan AS kodeRuangan, d.flags AS flag,
         d.qty AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet,
         d.qty_scan AS qtyScan, d.qty2_scan AS qty2Scan, d.QtyPalet_scan AS qtyPaletScan,
         d.NumAtCard AS numAtCard, d.LineStatus AS lineStatus
