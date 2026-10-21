@@ -96,11 +96,11 @@ export function PlanNew() {
       <div className="card stack">
         <div className="chips">{(['SPBB', 'SPMB'] as const).map((j) => <button key={j} className="chip" aria-pressed={jenis === j} onClick={() => { setJenis(j); setSrc(j === 'SPBB' ? 'BL' : 'SO'); setDocs([]); setFound([]); }}>{j}</button>)}</div>
         <SearchSelect options={whsOpts(wh.data)} value={whs} onChange={pilihWhs} placeholder="Cari & pilih gudang" />
-        <div className="row">
-          {srcOpts.length > 1 && <select className="input" value={src} onChange={(e) => { setSrc(e.target.value); setFound([]); setDocs([]); }}>{srcOpts.map((s) => <option key={s}>{s}</option>)}</select>}
-          <input className="input grow" placeholder={src === 'BL' ? 'Supplier' : 'Customer'} aria-label={src === 'BL' ? 'Cari supplier' : 'Cari customer'} value={nama} onChange={(e) => setNama(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && cari()} />
-          <input className="input grow" placeholder={src === 'BL' ? 'Nomor BL' : `Nomor ${src}`} aria-label={src === 'BL' ? 'Cari nomor BL' : `Cari nomor ${src}`} value={nomor} onChange={(e) => setNomor(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && cari()} />
-          <button className="btn small" onClick={cari}>Cari</button>
+        <div className="formrow">
+          {srcOpts.length > 1 && <select className="input narrow" value={src} onChange={(e) => { setSrc(e.target.value); setFound([]); setDocs([]); }}>{srcOpts.map((s) => <option key={s}>{s}</option>)}</select>}
+          <input className="input" placeholder={src === 'BL' ? 'Supplier' : 'Customer'} aria-label={src === 'BL' ? 'Cari supplier' : 'Cari customer'} value={nama} onChange={(e) => setNama(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && cari()} />
+          <input className="input" placeholder={src === 'BL' ? 'Nomor BL' : `Nomor ${src}`} aria-label={src === 'BL' ? 'Cari nomor BL' : `Cari nomor ${src}`} value={nomor} onChange={(e) => setNomor(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && cari()} />
+          <button className="btn" onClick={cari}>Cari</button>
         </div>
         {found.map((d) => (
           <button key={d.docEntry} className="card pad-s click" onClick={() => tambah(d)}><span className="mono">{src === 'BL' ? `BL ${d.numAtCard ?? '-'}` : `${src} ${d.docNum}`}</span> · {d.cardName} · {fmtDate(d.docDate)}{src !== 'BL' && d.numAtCard ? ` · PO ${d.numAtCard}` : ''}</button>
@@ -113,7 +113,7 @@ export function PlanNew() {
             <div key={l.lineNum} className="card pad-s stack tight">
               <label className="row"><input type="checkbox" checked={!!l.pick} onChange={(e) => upd(di, li, { pick: e.target.checked })} /> <span className="grow">{l.itemCode} · {l.dscription}</span></label>
               <div className="small muted">Open {fmt(l.openQty)} · teralokasi {fmt(l.teralokasi)} · tersedia {fmt(l.tersedia)} kg {l.brandName ? `· ${l.brandName}` : ''}</div>
-              <div className="row">
+              <div className="formrow">
                 <input className="input" type="number" value={l.qtyPlan ?? 0} onChange={(e) => upd(di, li, { qtyPlan: Number(e.target.value) })} aria-label="Qty rencana kg" />
                 <input className="input" placeholder="Container" value={l.kontainer ?? ''} onChange={(e) => upd(di, li, { kontainer: e.target.value.toUpperCase() })} />
               </div>
@@ -121,7 +121,7 @@ export function PlanNew() {
                 <SearchSelect options={roomOpts} value={l.ruang ?? ''} onChange={(v) => upd(di, li, { ruang: v })} allowEmpty={ruang ? `Ikut ruangan dokumen (${ruang})` : '(pilih ruangan dokumen dulu)'} placeholder="Ruangan" />
               </label>
               {jenis === 'SPBB' && (
-                <div className="row">
+                <div className="formrow">
                   <SearchSelect options={paletOpts} value={l.palet ?? ''} onChange={(v) => upd(di, li, { palet: v })} allowEmpty="(tanpa palet)" placeholder="Jenis palet" />
                   <input className="input" type="number" placeholder="Jml palet" value={l.paletPlan ?? ''} onChange={(e) => upd(di, li, { paletPlan: Number(e.target.value) })} />
                 </div>
@@ -134,8 +134,8 @@ export function PlanNew() {
         <label className="stack tight"><span className="small muted">Ruangan dokumen (default semua item; bisa diganti per item di atas, krani juga bisa mengubah saat input)</span><SearchSelect options={ruangList.filter((r) => r.aktif).map((r) => ({ value: r.kodeRuangan, label: `${r.kodeRuangan} · ${r.namaRuangan}${r.titipan ? ' (titipan)' : ''}` }))} value={ruang} onChange={setRuang} placeholder="Cari & pilih ruangan" /></label>
         {room?.titipan && <label className="stack tight"><span className="small muted">Kode customer titipan (pemilik barang)</span><input className="input" value={titipanCard} onChange={(e) => setTitipanCard(e.target.value)} /></label>}
         {jenis === 'SPBB' && <label className="stack tight"><span className="small muted">Kode PT (opsional)</span><input className="input" value={pt} onChange={(e) => setPt(e.target.value)} /></label>}
-        <div className="row"><label className="stack tight grow"><span className="small muted">Tanggal jadwal</span><input className="input" type="date" value={tgl} onChange={(e) => setTgl(e.target.value)} /></label>
-          <label className="stack tight grow"><span className="small muted">ETA (HH:MM, opsional)</span><input className="input" type="time" value={eta} onChange={(e) => setEta(e.target.value)} /></label></div>
+        <div className="formrow"><label className="stack tight"><span className="small muted">Tanggal jadwal</span><input className="input" type="date" value={tgl} onChange={(e) => setTgl(e.target.value)} /></label>
+          <label className="stack tight"><span className="small muted">ETA (HH:MM, opsional)</span><input className="input" type="time" value={eta} onChange={(e) => setEta(e.target.value)} /></label></div>
         <div className="stack tight"><span className="small muted">Krani</span>
           {kraniList.map((k) => <label key={k.userId} className="row"><input type="checkbox" checked={kranis.includes(k.userId)} onChange={(e) => setKranis(e.target.checked ? [...kranis, k.userId] : kranis.filter((x) => x !== k.userId))} /> {k.userCode} · {k.name}</label>)}
         </div>

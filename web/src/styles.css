@@ -270,3 +270,10 @@ a.list-item { text-decoration: none; color: inherit; }
 .ssel-opt.hi { background: var(--accent-tint); }
 .ssel-opt.on { font-weight: 600; }
 .ssel-empty { padding: 10px 12px; color: var(--muted); font-size: 14px; }
+
+/* baris form responsif: field berbagi lebar, turun ke baris baru di layar sempit; tombol tetap selebar isinya */
+.formrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.formrow > * { flex: 1 1 180px; min-width: 0; }
+.formrow > .narrow { flex: 0 1 120px; }
+.formrow > .btn, .formrow > button { flex: 0 0 auto; width: auto; min-height: 50px; }
+.formrow > .spacer { flex: 1 1 0; min-width: 0; }

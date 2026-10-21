@@ -1,0 +1,30 @@
+name: Web - gambar layar
+on:
+  workflow_dispatch:
+  push:
+    paths: ['web/**', '.github/workflows/web-screens.yml']
+permissions:
+  contents: write
+jobs:
+  screens:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Build web
+        working-directory: web
+        run: npm install --no-audit --no-fund && npm run build
+      - name: Gambar layar
+        working-directory: web/shots
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          node shots.mjs out 2>&1 | tee shots.log
+          echo "::warning title=hasil::$(head -40 shots.log | tr '\n' '|')"
+      - name: Simpan ke branch layar-web
+        working-directory: web/shots/out
+        run: |
+          git init -q -b layar-web && git add -A
+          git -c user.name=ci -c user.email=ci@local commit -qm "layar ${{ github.sha }}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" layar-web

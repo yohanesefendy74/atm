@@ -6,7 +6,7 @@ const hm = (m?: number | null) => (m == null ? '-' : `${String(Math.floor(m / 60
 
 function WhsPick({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const wh = useWarehouses();
-  return <div style={{ minWidth: 260 }}><SearchSelect options={whsOpts(wh.data)} value={value} onChange={onChange} placeholder="Cari & pilih gudang" /></div>;
+  return <div style={{ flex: '1 1 240px', minWidth: 0 }}><SearchSelect options={whsOpts(wh.data)} value={value} onChange={onChange} placeholder="Cari & pilih gudang" /></div>;
 }
 
 export function AdminJadwal() {
@@ -22,7 +22,7 @@ export function AdminJadwal() {
   const out = (id: number) => hasil?.find((h) => h.planId === id);
   return (
     <Page eyebrow="Admin" title="Jadwal Bongkar / Muat" accent="ink"
-      extra={<div className="row"><WhsPick value={whs} onChange={setWhs} /><input className="input" type="date" value={tgl} onChange={(e) => setTgl(e.target.value)} /></div>}
+      extra={<div className="formrow"><WhsPick value={whs} onChange={setWhs} /><input className="input" type="date" value={tgl} onChange={(e) => setTgl(e.target.value)} /></div>}
       footer={whs && <div className="row"><button className="btn outline" onClick={hitung}>Hitung</button><button className="btn" onClick={terapkan}>Terapkan & kirim</button></div>}>
       {error !== null && <ErrorBox error={error} onRetry={reload} />}
       {loading && <Spinner />}
@@ -34,9 +34,9 @@ export function AdminJadwal() {
             <div key={p.planId} className="card stack tight">
               <div className="row"><strong className="mono grow">{p.planNo}</strong><StatusPill status={p.status} /></div>
               <div className="small">{p.party} · {fmt(p.kg)} kg · {p.noPolisi ?? 'belum datang'}</div>
-              <div className="row">
-                <input className="input" type="time" value={ed[p.planId]?.eta ?? p.eta ?? ''} onChange={(e) => setEd({ ...ed, [p.planId]: { ...ed[p.planId], eta: e.target.value } })} aria-label="ETA" />
-                <div className="grow"><SearchSelect options={(data.docks as string[]).map((d) => ({ value: d, label: d }))} value={ed[p.planId]?.dock ?? p.dock ?? ''} onChange={(v) => setEd({ ...ed, [p.planId]: { ...ed[p.planId], dock: v } })} allowEmpty="Otomatis" placeholder="Jalur" /></div>
+              <div className="formrow">
+                <input className="input narrow" type="time" value={ed[p.planId]?.eta ?? p.eta ?? ''} onChange={(e) => setEd({ ...ed, [p.planId]: { ...ed[p.planId], eta: e.target.value } })} aria-label="ETA" />
+                <div><SearchSelect options={(data.docks as string[]).map((d) => ({ value: d, label: d }))} value={ed[p.planId]?.dock ?? p.dock ?? ''} onChange={(v) => setEd({ ...ed, [p.planId]: { ...ed[p.planId], dock: v } })} allowEmpty="Otomatis" placeholder="Jalur" /></div>
               </div>
               {o && <div className={'small ' + (o.lewat ? 'pill amber' : '')}>Jalur {o.dock ?? '-'} · {hm(o.mulai)}-{hm(o.selesai)} · {o.durasi} mnt{o.tunggu > 0 ? ` · tunggu ${o.tunggu} mnt` : ''}{o.lewat ? ' · MELEWATI JAM KERJA' : ''}</div>}
               {!o && p.jadwalMulai && <div className="small muted">Terjadwal {p.dock} · {String(p.jadwalMulai).slice(11, 16)}-{String(p.jadwalSelesai).slice(11, 16)}</div>}

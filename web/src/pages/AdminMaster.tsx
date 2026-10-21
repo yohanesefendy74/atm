@@ -52,11 +52,11 @@ function MasterTable({ cfg }: { cfg: Cfg }) {
 
   return (
     <div className="stack">
-      <div className="row">
+      <div className="formrow">
         {cfg.whsFilter && (
-          <div style={{ minWidth: 260 }}><SearchSelect options={whsOpts(wh.data)} value={whs} onChange={setWhs} allowEmpty="Semua gudang" placeholder="Filter gudang" /></div>
+          <div><SearchSelect options={whsOpts(wh.data)} value={whs} onChange={setWhs} allowEmpty="Semua gudang" placeholder="Filter gudang" /></div>
         )}
-        <span className="grow" />
+        <span className="spacer" />
         {cfg.createable && <button className="btn small" onClick={() => { setIsNew(true); setForm({ aktif: true }); }}>+ Baru</button>}
       </div>
       {error !== null && <ErrorBox error={error} onRetry={reload} />}

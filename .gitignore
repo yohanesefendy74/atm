@@ -22,3 +22,5 @@ Thumbs.db
 .vs/
 .vscode/
 *.user
+web/shots/node_modules
+web/shots/out
