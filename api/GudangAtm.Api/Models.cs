@@ -74,6 +74,7 @@ public class StockRow
 
 public class LabelLineRow
 {
+    public string? KodeRuangan { get; set; }
     public string ItemCode { get; set; } = "";
     public string ItemName { get; set; } = "";
     public string? Brand { get; set; }
@@ -103,6 +104,7 @@ public class StockCardRow
     public long DocEntry { get; set; }
     public string TrxCode { get; set; } = "";
     public string? ContainerNo { get; set; }
+    public string? KodeRuangan { get; set; }
     public int Flag { get; set; }
     public decimal Kg { get; set; }
     public decimal Sak { get; set; }
@@ -114,7 +116,7 @@ public class StockCardRow
 
 // ---------------------------------------------------------------- CMS
 
-public record CmsLineEdit(int LineNum, decimal Qty, decimal Qty2, decimal QtyPalet, string? NumAtCard);
+public record CmsLineEdit(int LineNum, decimal Qty, decimal Qty2, decimal QtyPalet, string? NumAtCard, string? KodeRuangan = null);
 
 /// Simpan perubahan Admin. TrxCode menentukan ObjType tujuan (SS = 6710, KR/RP = 6720).
 public record CmsSaveRequest(
@@ -143,6 +145,7 @@ public class CmsHeaderRow
 
 public class CmsLineRow
 {
+    public string? KodeRuangan { get; set; }
     public int LineNum { get; set; }
     public string ItemCode { get; set; } = "";
     public int Flag { get; set; }

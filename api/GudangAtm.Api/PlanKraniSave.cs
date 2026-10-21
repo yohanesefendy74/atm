@@ -64,7 +64,7 @@ public static class PlanKraniSave
                     var sisa = pr.QtyPlan - pr.QtyDone;
                     if (l.Qty > sisa + 0.0001m) return Bad($"{pr.ItemCode}: qty {l.Qty:N0} melebihi sisa dokumen {sisa:N0} kg");
                     var ruang = l.KodeRuangan ?? pr.KodeRuangan ?? pl.KodeRuangan;
-                    if (pl.Jenis == "SPBB" && ruang is null) return Bad($"{pr.ItemCode}: pilih ruangan tujuan");
+                    if (ruang is null) return Bad(pl.Jenis == "SPBB" ? $"{pr.ItemCode}: pilih ruangan tujuan" : $"{pr.ItemCode}: pilih ruangan sumber");
                     if (ruang is not null)
                     {
                         var rt = await db.QueryFirstOrDefaultAsync<(bool Titipan, string WhsCode)?>("SELECT Titipan, WhsCode FROM WHS_MasterRuangan WHERE KodeRuangan = @k AND Aktif = 1", new { k = ruang }, tx);
@@ -96,7 +96,7 @@ public static class PlanKraniSave
                     var pr = plan1[l.PlanLine];
                     var ruang = l.KodeRuangan ?? pr.KodeRuangan ?? pl.KodeRuangan;
                     var brand = Helpers.Empty(l.Brand) ?? pr.BrandName;
-                    await db.ExecuteAsync(Sql.InsertLine, new { objType, docEntry, lineNum, itemCode = pr.ItemCode, uom = "KG", brand, origin = (string?)null, qty = l.Qty, qty2 = l.Qty2, qtyPalet = l.QtyPalet, flag, ruang = (string?)null }, tx);
+                    await db.ExecuteAsync(Sql.InsertLine, new { objType, docEntry, lineNum, itemCode = pr.ItemCode, uom = "KG", brand, origin = (string?)null, qty = l.Qty, qty2 = l.Qty2, qtyPalet = l.QtyPalet, flag, ruang }, tx);
                     await db.ExecuteAsync(@"UPDATE KRN1 SET PlanLine = @pl, ContainerNo = @c, KodeRuangan = @ru, PaletCode = @pc, Size = @sz, [Type] = @ty, Crop = @cr,
                         brand_asli = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN @asli END,
                         brand_diubah_oleh = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN @uid END,

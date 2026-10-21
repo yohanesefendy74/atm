@@ -173,7 +173,7 @@ WHERE   h.DocStatus = 'C' AND h.WhsCode = @whsCode AND d.ItemCode = @itemCode AN
 
     /// Data label: hanya baris masuk (Flag 1). PT dicetak dari OPRC.PrcName.
     public const string LabelLines = @"
-SELECT  d.ItemCode AS itemCode, i.ItemName AS itemName, d.brand_name AS brand,
+SELECT  d.ItemCode AS itemCode, i.ItemName AS itemName, d.brand_name AS brand, d.KodeRuangan AS kodeRuangan,
         d.qty AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet
 FROM    KRN1 d
 JOIN    OITM i ON i.ItemCode = d.ItemCode
@@ -183,38 +183,39 @@ ORDER BY d.LineNum";
     public const string StockPerItem = @"
 SELECT  d.ItemCode AS itemCode, i.ItemName AS itemName,
         SUM(d.qty * d.flags) AS kg, SUM(d.Qty2 * d.flags) AS sak, SUM(d.QtyPalet * d.flags) AS palet,
-        COUNT(DISTINCT h.ContainerNo) AS containers
+        COUNT(DISTINCT h.ContainerNo) AS containers, COUNT(DISTINCT d.KodeRuangan) AS ruangan
 FROM    OKRN h
 JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
 JOIN    OITM i ON i.ItemCode = d.ItemCode
-WHERE   h.DocStatus = 'C' AND h.BPLId = @bplId AND (@whsCode IS NULL OR h.WhsCode = @whsCode)
+WHERE   h.DocStatus = 'C' AND h.BPLId = @bplId AND (@whsCode IS NULL OR h.WhsCode = @whsCode) AND (@ruangan IS NULL OR d.KodeRuangan = @ruangan)
   AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = h.WhsCode)
 GROUP BY d.ItemCode, i.ItemName
 HAVING  SUM(d.qty * d.flags) <> 0
 ORDER BY d.ItemCode";
 
     public const string StockPerContainer = @"
-SELECT  h.ContainerNo AS containerNo, d.ItemCode AS itemCode, i.ItemName AS itemName, MAX(d.brand_name) AS brand,
+SELECT  h.ContainerNo AS containerNo, d.KodeRuangan AS kodeRuangan, d.ItemCode AS itemCode, i.ItemName AS itemName, MAX(d.brand_name) AS brand,
         MIN(CASE WHEN d.flags = 1 THEN h.DocDate END) AS inboundDate,
         SUM(d.qty * d.flags) AS kg, SUM(d.Qty2 * d.flags) AS sak, SUM(d.QtyPalet * d.flags) AS palet
 FROM    OKRN h
 JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
 JOIN    OITM i ON i.ItemCode = d.ItemCode
-WHERE   h.DocStatus = 'C' AND h.BPLId = @bplId AND (@whsCode IS NULL OR h.WhsCode = @whsCode)
+WHERE   h.DocStatus = 'C' AND h.BPLId = @bplId AND (@whsCode IS NULL OR h.WhsCode = @whsCode) AND (@ruangan IS NULL OR d.KodeRuangan = @ruangan)
   AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = h.WhsCode)
-GROUP BY h.ContainerNo, d.ItemCode, i.ItemName
+GROUP BY h.ContainerNo, d.KodeRuangan, d.ItemCode, i.ItemName
 HAVING  SUM(d.qty * d.flags) <> 0
-ORDER BY h.ContainerNo, d.ItemCode";
+ORDER BY h.ContainerNo, d.KodeRuangan, d.ItemCode";
 
     public const string StockCard = @"
 SELECT  h.DocDate AS docDate, h.ObjType AS objType, h.DocEntry AS docEntry, h.TrxCode AS trxCode,
-        h.ContainerNo AS containerNo, d.flags AS flag,
+        h.ContainerNo AS containerNo, d.KodeRuangan AS kodeRuangan, d.flags AS flag,
         d.qty * d.flags AS kg, d.Qty2 * d.flags AS sak, d.QtyPalet * d.flags AS palet
 FROM    OKRN h
 JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
 WHERE   h.DocStatus = 'C' AND h.BPLId = @bplId AND d.ItemCode = @itemCode
   AND   (@whsCode IS NULL OR h.WhsCode = @whsCode)
   AND   (@containerNo IS NULL OR h.ContainerNo = @containerNo)
+  AND   (@ruangan IS NULL OR d.KodeRuangan = @ruangan)
   AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = h.WhsCode)
 ORDER BY h.DocDate, h.DocEntry, d.LineNum";
 
@@ -320,7 +321,7 @@ UPDATE  KRN1
 SET     qty_scan      = CASE WHEN qty_scan      IS NULL AND qty      <> @qty      THEN qty      ELSE qty_scan END,
         qty2_scan     = CASE WHEN qty2_scan     IS NULL AND Qty2     <> @qty2     THEN Qty2     ELSE qty2_scan END,
         QtyPalet_scan = CASE WHEN QtyPalet_scan IS NULL AND QtyPalet <> @qtyPalet THEN QtyPalet ELSE QtyPalet_scan END,
-        qty = @qty, Qty2 = @qty2, QtyPalet = @qtyPalet, NumAtCard = @numAtCard
+        qty = @qty, Qty2 = @qty2, QtyPalet = @qtyPalet, NumAtCard = @numAtCard, KodeRuangan = COALESCE(@ruang, KodeRuangan)
 WHERE   ObjType = @objType AND DocEntry = @docEntry AND LineNum = @lineNum AND LineStatus = 'O'";
 
     public const string CmsUpdateHeader = @"

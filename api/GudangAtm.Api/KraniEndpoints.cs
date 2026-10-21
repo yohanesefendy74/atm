@@ -71,8 +71,11 @@ public static class KraniEndpoints
             var isTitipan = await db.QueryFirstOrDefaultAsync<bool?>(Sql.WarehouseAccess,
                 new { userId = u.UserId(), whsCode = req.WhsCode });
             if (isTitipan is null) return Bad($"Warehouse {req.WhsCode} tidak ada di hak akses Anda");
+            var (rerr, roomTitipan) = await Helpers.CekRuangan(db, req.WhsCode, req.Lines.Select(l => l.KodeRuangan), "tujuan");
+            if (rerr is not null) return Bad(rerr);
+            if (isTitipan.Value && !roomTitipan) return Bad("Gudang titipan harus memakai ruangan titipan");
 
-            var saved = await SaveDoc(db, u, "6730", isTitipan.Value ? "BT" : "IB", req.WhsCode, req.NoMobil,
+            var saved = await SaveDoc(db, u, "6730", isTitipan.Value || roomTitipan ? "BT" : "IB", req.WhsCode, req.NoMobil,
                 req.ContainerNo, req.DocDate, req.Lines.Select(l => (l, 1)).ToList());
             await Audit.Safe(db, u, ctx, "CREATE", saved.ObjType, saved.DocEntry, $"{saved.TrxCode} {req.Lines.Count} baris");
             return Results.Ok(saved);
@@ -102,22 +105,19 @@ public static class KraniEndpoints
             decimal? selisih = null;
             if (jenis == "KR" && string.IsNullOrWhiteSpace(req.AlasanKode)) return Bad("Alasan penyesuaian wajib dipilih");
             if (req.AlasanKode == "lain" && (req.Catatan ?? "").Trim().Length < 5) return Bad("Catatan minimal 5 huruf bila alasan 'lain'");
-            // Ruangan: keluar = ruangan SUMBER (stok item+container per ruangan), masuk = ruangan TUJUAN.
-            // KR/RP wajib per baris; OB opsional (bila diisi tetap dicek).
+            // Ruangan wajib: keluar = ruangan SUMBER (stok item+container per ruangan), masuk = ruangan TUJUAN.
             if (!string.IsNullOrWhiteSpace(req.KodeRuangan))
                 inLines = inLines.Select(l => string.IsNullOrWhiteSpace(l.KodeRuangan) ? l with { KodeRuangan = req.KodeRuangan } : l).ToList();
-            if (jenis != "OB")
+            var (rerr, roomTitipan) = await Helpers.CekRuangan(db, req.WhsCode, outLines.Select(l => l.KodeRuangan), "sumber");
+            if (rerr is not null) return Bad(rerr);
+            if (inLines.Count > 0)
             {
-                if (outLines.Any(l => string.IsNullOrWhiteSpace(l.KodeRuangan))) return Bad("Pilih ruangan sumber untuk setiap palet keluar");
-                if (inLines.Any(l => string.IsNullOrWhiteSpace(l.KodeRuangan))) return Bad("Pilih ruangan tujuan untuk setiap item masuk");
+                var (rerr2, inTitipan) = await Helpers.CekRuangan(db, req.WhsCode, inLines.Select(l => l.KodeRuangan), "tujuan");
+                if (rerr2 is not null) return Bad(rerr2);
+                if (inTitipan != roomTitipan) return Bad("Titipan dan non-titipan tidak boleh dicampur dalam satu dokumen");
             }
+            if (jenis != "OB" && roomTitipan) return Bad("KR dan RP tidak boleh di ruangan titipan");
             var cont = (req.ContainerNo ?? "").Replace(" ", "").ToUpperInvariant();
-            foreach (var kode in outLines.Concat(inLines).Select(l => Helpers.Empty(l.KodeRuangan)).Where(k => k is not null).Distinct())
-            {
-                var rt = await db.QueryFirstOrDefaultAsync<(bool Titipan, string WhsCode)?>("SELECT Titipan, WhsCode FROM WHS_MasterRuangan WHERE KodeRuangan = @k AND Aktif = 1", new { k = kode });
-                if (rt is null || rt.Value.WhsCode != req.WhsCode) return Bad($"Ruangan {kode} tidak valid untuk gudang ini");
-                if (jenis != "OB" && rt.Value.Titipan) return Bad($"KR dan RP tidak boleh di ruangan titipan ({kode})");
-            }
             foreach (var g in outLines.Where(l => !string.IsNullOrWhiteSpace(l.KodeRuangan)).GroupBy(l => (l.ItemCode, Ruang: l.KodeRuangan!.Trim())))
             {
                 var stokKg = await db.ExecuteScalarAsync<decimal?>(@"SELECT SUM(d.qty * d.flags) FROM OKRN h JOIN KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
@@ -134,7 +134,7 @@ public static class KraniEndpoints
                 var lim = await db.ExecuteScalarAsync<decimal?>("SELECT Nilai FROM WHS_Setup WHERE Kode = 'REPACK_WARN_PCT'") ?? 2m;
                 if (selisih > lim) return Bad($"Selisih berat Repacking {selisih:N2}% melebihi batas {lim:N0}% · periksa timbangan");
             }
-            var trxCode = isTitipan.Value ? "BT" : jenis;
+            var trxCode = isTitipan.Value || roomTitipan ? "BT" : jenis;
             var objType = jenis == "OB" ? "6710" : "6720";
             var lines = outLines.Select(l => (l, -1)).Concat(inLines.Select(l => (l, 1))).ToList();
             var saved = await SaveDoc(db, u, objType, trxCode, req.WhsCode, req.NoMobil ?? "", req.ContainerNo, req.DocDate, lines);
@@ -219,23 +219,23 @@ public static class KraniEndpoints
         });
 
         // ---------------------------------------------------------------- Laporan
-        api.MapGet("/reports/stock-item", async (string? whsCode, ClaimsPrincipal u) =>
+        api.MapGet("/reports/stock-item", async (string? whsCode, string? ruangan, ClaimsPrincipal u) =>
         {
             await using var db = dbf();
-            return Results.Ok(await db.QueryAsync(Sql.StockPerItem, new { bplId = u.BplId(), userId = u.UserId(), whsCode = Empty(whsCode) }));
+            return Results.Ok(await db.QueryAsync(Sql.StockPerItem, new { bplId = u.BplId(), userId = u.UserId(), whsCode = Empty(whsCode), ruangan = Empty(ruangan) }));
         });
 
-        api.MapGet("/reports/stock-container", async (string? whsCode, ClaimsPrincipal u) =>
+        api.MapGet("/reports/stock-container", async (string? whsCode, string? ruangan, ClaimsPrincipal u) =>
         {
             await using var db = dbf();
-            return Results.Ok(await db.QueryAsync(Sql.StockPerContainer, new { bplId = u.BplId(), userId = u.UserId(), whsCode = Empty(whsCode) }));
+            return Results.Ok(await db.QueryAsync(Sql.StockPerContainer, new { bplId = u.BplId(), userId = u.UserId(), whsCode = Empty(whsCode), ruangan = Empty(ruangan) }));
         });
 
-        api.MapGet("/reports/stock-card", async (string itemCode, string? whsCode, string? containerNo, ClaimsPrincipal u) =>
+        api.MapGet("/reports/stock-card", async (string itemCode, string? whsCode, string? containerNo, string? ruangan, ClaimsPrincipal u) =>
         {
             await using var db = dbf();
             var rows = (await db.QueryAsync<StockCardRow>(Sql.StockCard,
-                new { bplId = u.BplId(), userId = u.UserId(), itemCode, whsCode = Empty(whsCode), containerNo = Empty(containerNo) })).ToList();
+                new { bplId = u.BplId(), userId = u.UserId(), itemCode, whsCode = Empty(whsCode), containerNo = Empty(containerNo), ruangan = Empty(ruangan) })).ToList();
             decimal kg = 0, sak = 0, pal = 0;
             foreach (var r in rows)
             {
@@ -258,6 +258,25 @@ public static class KraniEndpoints
 
 public static class Helpers
 {
+    /// Semua stok dan transaksi wajib punya ruangan. Cek: terisi, ada & aktif, milik gudang ini, dan tidak mencampur titipan dengan non-titipan.
+    /// Mengembalikan (pesan salah, apakah ruangan titipan).
+    public static async Task<(string? Err, bool Titipan)> CekRuangan(SqlConnection db, string whs, IEnumerable<string?> kodes, string konteks)
+    {
+        var list = kodes.ToList();
+        if (list.Count == 0) return ("Tidak ada baris", false);
+        if (list.Any(string.IsNullOrWhiteSpace)) return ($"Pilih ruangan {konteks} untuk setiap baris", false);
+        var flags = new HashSet<bool>();
+        foreach (var k in list.Select(x => x!.Trim()).Distinct())
+        {
+            var r = await db.QueryFirstOrDefaultAsync<(string WhsCode, bool Titipan)?>("SELECT WhsCode, Titipan FROM WHS_MasterRuangan WHERE KodeRuangan = @k AND Aktif = 1", new { k });
+            if (r is null) return ($"Ruangan {k} tidak ditemukan atau nonaktif", false);
+            if (r.Value.WhsCode != whs) return ($"Ruangan {k} bukan milik gudang {whs}", false);
+            flags.Add(r.Value.Titipan);
+        }
+        if (flags.Count > 1) return ("Titipan dan non-titipan tidak boleh dicampur dalam satu dokumen", false);
+        return (null, flags.Single());
+    }
+
     public static string? Empty(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
     static readonly Regex Container = new(@"^[A-Z]{4}\d{7}$", RegexOptions.Compiled);
