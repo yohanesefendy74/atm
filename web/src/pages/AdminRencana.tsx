@@ -26,7 +26,7 @@ export function PlanList() {
   );
 }
 
-type Src = Row; type SrcLine = Row & { pick?: boolean; qtyPlan?: number; kontainer?: string; palet?: string; paletPlan?: number; ruang?: string };
+type Src = Row; type SrcLine = Row & { pick?: boolean; qtyPlan?: number; kontainer?: string; palet?: string; paletPlan?: number; ruang?: string; bls?: Row[]; bl?: string };
 
 export function PlanNew() {
   const toast = useToast();
@@ -67,8 +67,11 @@ export function PlanNew() {
     if (docs.some((x) => x.head.docEntry === d.docEntry)) return;
     if (jenis === 'SPMB' && docs.length > 0 && docs[0].head.cardCode !== d.cardCode) return toast('SPMB hanya untuk satu customer', true);
     try {
-      const r = await get<{ header: Src; lines: SrcLine[] }>(`/api/cms/plan/sumber/${src}/${d.docEntry}`);
-      setDocs([...docs, { head: r.header, lines: r.lines.map((l) => ({ ...l, pick: true, qtyPlan: Math.max(0, Number(l.tersedia)), kontainer: l.containerNo ?? '' })) }]);
+      const r = await get<{ header: Src; lines: SrcLine[]; blDo?: Row[] }>(`/api/cms/plan/sumber/${src}/${d.docEntry}`);
+      setDocs([...docs, { head: r.header, lines: r.lines.map((l) => {
+        const bls = (r.blDo ?? []).filter((b) => b.lineNum === l.lineNum);
+        return { ...l, pick: true, qtyPlan: Math.max(0, Number(l.tersedia)), kontainer: l.containerNo ?? '', bls, bl: bls.length === 1 ? String(bls[0].noBL) : '' };
+      }) }]);
     } catch (e) { toast(errText(e), true); }
   }
   const upd = (di: number, li: number, patch: Partial<SrcLine>) => setDocs(docs.map((d, i) => (i !== di ? d : { ...d, lines: d.lines.map((l, j) => (j !== li ? l : { ...l, ...patch })) })));
@@ -81,7 +84,7 @@ export function PlanNew() {
   async function terbit() {
     const lines = docs.flatMap((d) => d.lines.filter((l) => l.pick && (l.qtyPlan ?? 0) > 0).map((l) => ({
       BaseDocEntry: d.head.docEntry, BaseLineNum: l.lineNum, QtyPlan: l.qtyPlan, ContainerNo: l.kontainer || null, KodeRuangan: l.ruang || ruang,
-      PaletCode: l.palet || null, PaletPlan: l.paletPlan ?? null, FreeTxt: l.freeTxt ?? null })));
+      PaletCode: l.palet || null, PaletPlan: l.paletPlan ?? null, FreeTxt: l.freeTxt ?? null, NoBL: l.bl || null })));
     if (!lines.length) return toast('Pilih minimal satu baris dengan qty', true);
     setBusy(true);
     try {
@@ -118,6 +121,17 @@ export function PlanNew() {
                 <input className="input" type="number" value={l.qtyPlan ?? 0} onChange={(e) => upd(di, li, { qtyPlan: Number(e.target.value) })} aria-label="Qty rencana kg" />
                 <input className="input" placeholder="Container" value={l.kontainer ?? ''} onChange={(e) => upd(di, li, { kontainer: e.target.value.toUpperCase() })} />
               </div>
+              {jenis === 'SPBB' && src === 'DO' && !room?.titipan && (
+                (l.bls ?? []).length === 0
+                  ? <div className="small muted">BL: tidak ada catatan stok keluar untuk DO ini · isi No. BL manual di bawah</div>
+                  : (l.bls ?? []).length === 1
+                    ? <div className="small">BL (dari stok keluar DO): <strong className="mono">{l.bl}</strong></div>
+                    : <label className="stack tight"><span className="small muted">BL (DO ini keluar dari beberapa BL) <span className="req">*</span></span>
+                        <select className="input" value={l.bl ?? ''} onChange={(e) => upd(di, li, { bl: e.target.value })}>
+                          <option value="">Pilih BL</option>
+                          {(l.bls ?? []).map((b) => <option key={String(b.noBL)} value={String(b.noBL)}>{b.noBL} · {fmt(b.kg)} kg keluar</option>)}
+                        </select></label>
+              )}
               <label className="stack tight"><span className="small muted">Ruangan {jenis === 'SPBB' ? 'tujuan' : 'sumber'} item ini</span>
                 <SearchSelect options={roomOpts} value={l.ruang ?? ''} onChange={(v) => upd(di, li, { ruang: v })} allowEmpty={ruang ? `Ikut ruangan dokumen (${ruang})` : '(pilih ruangan dokumen dulu)'} placeholder="Ruangan" />
               </label>
@@ -135,7 +149,7 @@ export function PlanNew() {
         <label className="stack tight"><span className="small muted">Ruangan dokumen (default semua item; bisa diganti per item di atas, krani juga bisa mengubah saat input)</span><SearchSelect options={ruangList.filter((r) => r.aktif).map((r) => ({ value: r.kodeRuangan, label: `${r.kodeRuangan} · ${r.namaRuangan}${r.titipan ? ' (titipan)' : ''}` }))} value={ruang} onChange={setRuang} placeholder="Cari & pilih ruangan" /></label>
         {room?.titipan && <label className="stack tight"><span className="small muted">Kode customer titipan (pemilik barang)</span><input className="input" value={titipanCard} onChange={(e) => setTitipanCard(e.target.value)} /></label>}
         {jenis === 'SPBB' && !room?.titipan && (
-          <label className="stack tight"><span className="small muted">No. BL {src === 'BL' ? '(otomatis dari nomor BL dokumen; isi hanya bila dokumen BL tidak punya nomor)' : '(wajib · stok disimpan per BL)'}</span>
+          <label className="stack tight"><span className="small muted">No. BL {src === 'BL' ? '(otomatis dari nomor BL dokumen; isi hanya bila dokumen BL tidak punya nomor)' : '(otomatis dari catatan stok keluar DO; isi hanya bila tidak ditemukan)'}</span>
             <input className="input" value={noBL} onChange={(e) => setNoBL(e.target.value.toUpperCase())} placeholder={src === 'BL' ? docs.map((d) => d.head.numAtCard).filter(Boolean).join(', ') || 'No. BL' : 'No. BL'} />
           </label>
         )}

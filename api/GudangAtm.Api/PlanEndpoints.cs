@@ -7,7 +7,7 @@ using Microsoft.Data.SqlClient;
 
 namespace GudangAtm.Api;
 
-public record PlanLineReq(int BaseDocEntry, int BaseLineNum, decimal QtyPlan, string? ContainerNo, string? KodeRuangan, string? PaletCode, int? PaletPlan, string? FreeTxt);
+public record PlanLineReq(int BaseDocEntry, int BaseLineNum, decimal QtyPlan, string? ContainerNo, string? KodeRuangan, string? PaletCode, int? PaletPlan, string? FreeTxt, string? NoBL = null);
 public record PlanCreateReq(string Jenis, string WhsCode, string Src, List<int> Docs, string KodeRuangan, string? CardCodeTitipan,
     string? PtCode, string? JenisContainer, string? EtaDatang, DateTime? TglJadwal, List<int>? Kranis, List<PlanLineReq> Lines, string? NoBL = null);
 public record PlanKraniReq(List<int> Kranis);
@@ -16,6 +16,22 @@ public record PlanTutupReq(string Alasan);
 /// SPBB (inbound dari BL/DO) dan SPMB (outbound dari SO): sumber SAP, terbit, alokasi qty, ruangan/titipan, penugasan krani, tutup sisa.
 public static class PlanEndpoints
 {
+    /// Retur (SPBB dari DO): No. BL diambil dari catatan stok KELUAR untuk DO tersebut.
+    /// Hubungan: KRN1/OKRN.NumAtCard = No. DO (diisi di CMS), atau baris SPMB (WHS_Plan1 sumber SO) = dasar baris DO (DLN1.BaseEntry/BaseLine).
+    public static async Task<List<(string NoBL, decimal Kg)>> BlDariDo(SqlConnection db, SqlTransaction? tx, int doEntry, int lineNum)
+    {
+        return (await db.QueryAsync<(string NoBL, decimal Kg)>(@"
+SELECT d.NoBL, SUM(d.qty) AS Kg
+FROM DLN1 dl JOIN ODLN dh ON dh.DocEntry = dl.DocEntry
+JOIN KRN1 d ON d.ItemCode = dl.ItemCode AND d.flags = -1 AND ISNULL(d.NoBL, '') <> ''
+JOIN OKRN h ON h.ObjType = d.ObjType AND h.DocEntry = d.DocEntry AND h.DocStatus = 'C'
+WHERE dl.DocEntry = @doEntry AND dl.LineNum = @lineNum
+  AND (   d.NumAtCard = CAST(dh.DocNum AS NVARCHAR(30)) OR h.NumAtCard = CAST(dh.DocNum AS NVARCHAR(30))
+       OR (dl.BaseType = 17 AND EXISTS (SELECT 1 FROM WHS_Plan1 p1 WHERE p1.PlanId = h.PlanId AND p1.PlanLine = d.PlanLine
+                                         AND p1.BaseType = 'SO' AND p1.BaseDocEntry = dl.BaseEntry AND p1.BaseLineNum = dl.BaseLine)))
+GROUP BY d.NoBL ORDER BY SUM(d.qty) DESC", new { doEntry, lineNum }, tx)).ToList();
+    }
+
     static IResult Bad(string m) => Results.BadRequest(new { message = m });
     static string? Clean(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
@@ -89,7 +105,13 @@ ORDER BY h.DocDate DESC, h.DocNum DESC";
                       l.ShipToCode AS containerNo, l.StgDesc AS brandName, l.SerialNum AS size, l.BaseAtCard AS [type], l.BlockNum AS crop
                   FROM {t.Value.L} l LEFT JOIN vw_WHS_PlanAlokasi a ON a.BaseType = @src AND a.BaseDocEntry = l.DocEntry AND a.BaseLineNum = l.LineNum
                   WHERE l.DocEntry = @docEntry AND l.OpenQty > 0 ORDER BY l.LineNum", new { docEntry, src });
-            return Results.Ok(new { header = head, lines });
+            // Retur dari DO: daftar BL yang tercatat saat barang keluar untuk tiap baris DO
+            var blDo = new List<object>();
+            if (src == "DO")
+                foreach (var l in lines)
+                    foreach (var b in await BlDariDo(db, null, docEntry, (int)l.lineNum))
+                        blDo.Add(new { lineNum = (int)l.lineNum, noBL = b.NoBL, kg = b.Kg });
+            return Results.Ok(new { header = head, lines, blDo });
         });
 
         // Krani yang punya akses ke warehouse (untuk penugasan)
@@ -244,10 +266,24 @@ VALUES (@no, @jenis, @whs, @bpl, @src, @jc, @batas, @total, @cc, @cn, @pt, 'Terb
                 // No. BL per baris SPBB = sumber info BL stok. Sumber BL: NumAtCard dokumen BL; sumber DO: diisi Admin. Titipan: tanpa BL.
                 var blManual = Clean(r.NoBL)?.ToUpperInvariant();
                 if ((blManual?.Length ?? 0) > 50) return Bad("No. BL terlalu panjang");
-                string? BlLine(int baseDoc) => jenis != "SPBB" || titipan ? null
-                    : src == "BL" ? Clean(heads.First(x => x.DocEntry == baseDoc).NumAtCard) ?? blManual : blManual;
-                if (jenis == "SPBB" && !titipan && rows.Any(x => BlLine(x.Item1.BaseDocEntry) is null))
-                    return Bad(src == "BL" ? "Dokumen BL tanpa nomor BL (NumAtCard) · isi No. BL" : "No. BL wajib diisi untuk SPBB (stok disimpan per BL)");
+                // DO (retur): BL dari catatan stok keluar DO tsb. Satu BL -> otomatis; beberapa -> Admin memilih per baris; tidak ada -> isi manual.
+                var blDo = new Dictionary<(int, int), string?>();
+                if (jenis == "SPBB" && !titipan && src == "DO")
+                    foreach (var (q, sap, _, _) in rows)
+                    {
+                        var cand = (await BlDariDo(db, tx, q.BaseDocEntry, q.BaseLineNum)).Select(x => x.NoBL).ToList();
+                        var pilih = Clean(q.NoBL)?.ToUpperInvariant();
+                        if (pilih is not null && cand.Count > 0 && !cand.Contains(pilih, StringComparer.OrdinalIgnoreCase))
+                            return Bad($"{sap.ItemCode}: BL {pilih} tidak tercatat keluar untuk DO ini (tercatat: {string.Join(", ", cand)})");
+                        var bl = pilih ?? (cand.Count == 1 ? cand[0] : cand.Count == 0 ? blManual : null);
+                        if (bl is null) return Bad($"{sap.ItemCode}: DO ini keluar dari beberapa BL ({string.Join(", ", cand)}) · pilih BL per baris");
+                        blDo[(q.BaseDocEntry, q.BaseLineNum)] = bl;
+                    }
+                string? BlLine(PlanLineReq q) => jenis != "SPBB" || titipan ? null
+                    : src == "BL" ? Clean(heads.First(x => x.DocEntry == q.BaseDocEntry).NumAtCard) ?? blManual
+                    : blDo.GetValueOrDefault((q.BaseDocEntry, q.BaseLineNum));
+                if (jenis == "SPBB" && !titipan && rows.Any(x => BlLine(x.Item1) is null))
+                    return Bad(src == "BL" ? "Dokumen BL tanpa nomor BL (NumAtCard) · isi No. BL" : "BL tidak ditemukan dari catatan stok keluar DO ini · isi No. BL manual");
                 var line = 0;
                 foreach (var (q, sap, lineRoom, karung) in rows)
                 {
@@ -264,7 +300,7 @@ VALUES (@planId, @line, @src, @de, @ln, @cont, @item, @desc, @free, @brand, @siz
                             brand = (string?)sap.StgDesc, size = (string?)sap.SerialNum, type = (string?)sap.BaseAtCard, crop = (string?)sap.BlockNum,
                             qb = (decimal)sap.Quantity, oq = (decimal)sap.OpenQty, qp = q.QtyPlan, q2 = karung,
                             pal = jenis == "SPBB" ? q.PaletCode : null, palN = jenis == "SPBB" ? q.PaletPlan : null, room = lineRoom,
-                            bl = BlLine(q.BaseDocEntry),
+                            bl = BlLine(q),
                         }, tx);
                 }
 
