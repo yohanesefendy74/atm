@@ -116,7 +116,7 @@ public class StockCardRow
 
 // ---------------------------------------------------------------- CMS
 
-public record CmsLineEdit(int LineNum, decimal Qty, decimal Qty2, decimal QtyPalet, string? NumAtCard, string? KodeRuangan = null);
+public record CmsLineEdit(int LineNum, decimal Qty, decimal Qty2, decimal QtyPalet, string? NumAtCard, string? KodeRuangan = null, string? PtCode = null);
 
 /// Simpan perubahan Admin. TrxCode menentukan ObjType tujuan (SS = 6710, KR/RP = 6720).
 public record CmsSaveRequest(
@@ -146,6 +146,7 @@ public class CmsHeaderRow
 public class CmsLineRow
 {
     public string? KodeRuangan { get; set; }
+    public string? PtCode { get; set; }   // PT per baris (SPMB: dipilih krani, boleh campur)
     public int LineNum { get; set; }
     public string ItemCode { get; set; } = "";
     public int Flag { get; set; }

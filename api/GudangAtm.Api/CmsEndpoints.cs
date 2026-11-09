@@ -147,9 +147,11 @@ ORDER BY LogTime DESC", new { objType, docEntry, bplId = u.BplId() }));
                     var ruang = Clean(e.KodeRuangan);
                     if (ruang is not null && await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WHS_MasterRuangan WHERE KodeRuangan = @r AND WhsCode = @w AND Aktif = 1", new { r = ruang, w = h.WhsCode }, tx) == 0)
                         return Bad($"Ruangan {ruang} bukan milik gudang {h.WhsCode}");
+                    var ptLine = Clean(e.PtCode);
+                    if (ptLine is not null && await db.ExecuteScalarAsync<int>(Sql.PtExists, new { ptCode = ptLine }, tx) == 0) return Bad($"PT {ptLine} tidak ada di OPRC");
                     await db.ExecuteAsync(Sql.CmsUpdateLine, new
                     {
-                        objType, docEntry, lineNum = e.LineNum, qty = e.Qty, qty2 = e.Qty2, qtyPalet = e.QtyPalet, ruang,
+                        objType, docEntry, lineNum = e.LineNum, qty = e.Qty, qty2 = e.Qty2, qtyPalet = e.QtyPalet, ruang, ptLine,
                         numAtCard = trx == "RC" ? Clean(e.NumAtCard) : null,
                     }, tx);
                 }
@@ -205,7 +207,9 @@ ORDER BY LogTime DESC", new { objType, docEntry, bplId = u.BplId() }));
                 var errors = new List<string>();
                 var group = Group(h.ObjType, h.TrxCode);
                 if (!AllowedTrx(group, h.IsTitipan).Contains(h.TrxCode)) errors.Add($"TrxCode {h.TrxCode} belum dipilah dengan benar");
-                if (string.IsNullOrWhiteSpace(h.PtCode)) errors.Add("PT belum diisi");
+                // PT: di header, atau per baris (SPMB: krani memilih PT per baris, boleh campur)
+                if (string.IsNullOrWhiteSpace(h.PtCode))
+                    foreach (var l in lines.Where(l => string.IsNullOrWhiteSpace(l.PtCode))) errors.Add($"Baris {l.LineNum + 1} ({l.ItemCode}) belum punya PT");
                 if (lines.Count == 0) errors.Add("Dokumen tanpa baris");
                 foreach (var l in lines.Where(l => string.IsNullOrWhiteSpace(l.KodeRuangan))) errors.Add($"Baris {l.LineNum + 1} ({l.ItemCode}) belum punya ruangan");
 

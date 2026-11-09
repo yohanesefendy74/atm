@@ -147,3 +147,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_WHS_SamplingSak' AND o
     CREATE INDEX IX_WHS_SamplingSak ON dbo.WHS_SamplingSak (SesiId, PlanLine);
 GO
 -- GRANT SELECT, INSERT, DELETE ON dbo.WHS_SamplingSak TO gudang_app;
+
+/* SPMB: PT tidak diisi Admin; krani memilih PT per baris (boleh campur) -> PT disimpan di detail */
+IF COL_LENGTH('dbo.KRN1','U_IDU_Kode_PT') IS NULL ALTER TABLE dbo.KRN1 ADD U_IDU_Kode_PT NVARCHAR(30) NULL;
+GO

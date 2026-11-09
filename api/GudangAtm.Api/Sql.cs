@@ -276,7 +276,7 @@ WHERE   h.ObjType = @objType AND h.DocEntry = @docEntry AND h.BPLId = @bplId";
 
     public const string CmsLines = @"
 SELECT  d.LineNum AS lineNum, d.ItemCode AS itemCode, i.ItemName AS itemName, g.ItmsGrpNam AS groupName,
-        'KG' AS uom, d.brand_name AS brand, d.Origin AS origin, d.KodeRuangan AS kodeRuangan, d.flags AS flag,
+        'KG' AS uom, d.brand_name AS brand, d.Origin AS origin, d.KodeRuangan AS kodeRuangan, d.U_IDU_Kode_PT AS ptCode, d.flags AS flag,
         d.qty AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet,
         d.qty_scan AS qtyScan, d.qty2_scan AS qty2Scan, d.QtyPalet_scan AS qtyPaletScan,
         d.NumAtCard AS numAtCard, d.LineStatus AS lineStatus
@@ -312,7 +312,7 @@ UPDATE  KRN1
 SET     qty_scan      = CASE WHEN qty_scan      IS NULL AND qty      <> @qty      THEN qty      ELSE qty_scan END,
         qty2_scan     = CASE WHEN qty2_scan     IS NULL AND Qty2     <> @qty2     THEN Qty2     ELSE qty2_scan END,
         QtyPalet_scan = CASE WHEN QtyPalet_scan IS NULL AND QtyPalet <> @qtyPalet THEN QtyPalet ELSE QtyPalet_scan END,
-        qty = @qty, Qty2 = @qty2, QtyPalet = @qtyPalet, NumAtCard = @numAtCard, KodeRuangan = COALESCE(@ruang, KodeRuangan)
+        qty = @qty, Qty2 = @qty2, QtyPalet = @qtyPalet, NumAtCard = @numAtCard, KodeRuangan = COALESCE(@ruang, KodeRuangan), U_IDU_Kode_PT = COALESCE(@ptLine, U_IDU_Kode_PT)
 WHERE   ObjType = @objType AND DocEntry = @docEntry AND LineNum = @lineNum AND LineStatus = 'O'";
 
     public const string CmsUpdateHeader = @"
