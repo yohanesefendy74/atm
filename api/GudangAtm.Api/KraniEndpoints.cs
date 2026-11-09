@@ -219,6 +219,13 @@ public static class KraniEndpoints
         });
 
         // ---------------------------------------------------------------- Laporan
+        // Daftar PT (krani memilih PT per baris pada SPMB)
+        api.MapGet("/master/pt", async (string? q) =>
+        {
+            await using var db = dbf();
+            return Results.Ok(await db.QueryAsync(Sql.PtLookup, new { q = $"%{(q ?? "").Trim()}%" }));
+        });
+
         api.MapGet("/reports/stock-item", async (string? whsCode, string? ruangan, ClaimsPrincipal u) =>
         {
             await using var db = dbf();

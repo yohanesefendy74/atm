@@ -166,7 +166,8 @@ ORDER BY CASE WHEN p.Status IN ('Terbit','Proses','Partial') THEN 0 ELSE 1 END, 
                 if (heads.Count != docs.Count) return Bad("Ada dokumen yang sudah tertutup/batal/bukan cabang Anda");
                 if (jenis == "SPMB" && heads.Select(h => h.CardCode).Distinct().Count() > 1) return Bad("Satu SPMB hanya untuk satu customer");
 
-                string? pt = Clean(r.PtCode);
+                // SPMB: PT tidak diisi Admin; krani memilih PT per baris saat memuat (boleh campur)
+                string? pt = jenis == "SPMB" ? null : Clean(r.PtCode);
                 if (jenis == "SPBB")
                 {
                     pt ??= await db.ExecuteScalarAsync<string?>($"SELECT U_IDU_KODE_PT FROM {t.H} WHERE DocEntry = @d", new { d = docs[0] }, tx);

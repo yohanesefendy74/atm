@@ -5,7 +5,7 @@ using Microsoft.Data.SqlClient;
 
 namespace GudangAtm.Api;
 
-public record TerimaLine(int PlanLine, decimal Qty, decimal Qty2, decimal QtyPalet, string? Brand, string? KodeRuangan);
+public record TerimaLine(int PlanLine, decimal Qty, decimal Qty2, decimal QtyPalet, string? Brand, string? KodeRuangan, string? PtCode = null);
 public record TerimaReq(long? RegId, DateTime? DocDate, List<TerimaLine> Lines, long? SesiId = null);
 
 /// Krani menyimpan penerimaan (SPBB) / pengiriman (SPMB) terhadap dokumen rencana. Satu simpan = satu OKRN (penerimaan ke-N).
@@ -19,7 +19,8 @@ public static class PlanKraniSave
         {
             if (r.Lines is null || r.Lines.Count == 0) return Bad("Belum ada baris yang diisi");
             if (r.Lines.Any(l => l.Qty <= 0 || l.Qty > 10_000_000 || l.Qty2 < 0 || l.QtyPalet < 0)) return Bad("Qty tidak valid");
-            if (r.Lines.Select(l => l.PlanLine).Distinct().Count() != r.Lines.Count) return Bad("Baris dokumen dobel");
+            // SPMB: krani memilih PT per baris (boleh campur) -> satu baris dokumen boleh dipecah per PT / ruangan
+            if (r.Lines.GroupBy(l => (l.PlanLine, Pt: (l.PtCode ?? "").Trim(), R: (l.KodeRuangan ?? "").Trim())).Any(g => g.Count() > 1)) return Bad("Baris dokumen dobel (item + PT + ruangan sama)");
             await using var db = dbf();
             await db.OpenAsync();
             await using var tx = (SqlTransaction)await db.BeginTransactionAsync(IsolationLevel.Serializable);
@@ -58,11 +59,23 @@ public static class PlanKraniSave
 
                 var plan1 = (await db.QueryAsync<(int PlanLine, string ItemCode, string? Dscription, string? ContainerNo, string? BrandName, decimal QtyPlan, decimal QtyDone, string? PaletCode, string? KodeRuangan, string? Size, string? Type, string? Crop)>(
                     "SELECT PlanLine, ItemCode, Dscription, ContainerNo, BrandName, QtyPlan, QtyDone, PaletCode, KodeRuangan, Size, [Type], Crop FROM WHS_Plan1 WITH (UPDLOCK) WHERE PlanId = @id", new { id }, tx)).ToDictionary(x => x.PlanLine);
+                foreach (var g in r.Lines.GroupBy(l => l.PlanLine))
+                {
+                    if (!plan1.TryGetValue(g.Key, out var pg)) return Bad($"Baris {g.Key} tidak ada di dokumen");
+                    var sisaG = pg.QtyPlan - pg.QtyDone;
+                    if (g.Sum(x => x.Qty) > sisaG + 0.0001m) return Bad($"{pg.ItemCode}: qty {g.Sum(x => x.Qty):N0} melebihi sisa dokumen {sisaG:N0} kg");
+                }
+                var ptCache = new Dictionary<string, bool>();
                 foreach (var l in r.Lines)
                 {
-                    if (!plan1.TryGetValue(l.PlanLine, out var pr)) return Bad($"Baris {l.PlanLine} tidak ada di dokumen");
-                    var sisa = pr.QtyPlan - pr.QtyDone;
-                    if (l.Qty > sisa + 0.0001m) return Bad($"{pr.ItemCode}: qty {l.Qty:N0} melebihi sisa dokumen {sisa:N0} kg");
+                    var pr = plan1[l.PlanLine];
+                    if (pl.Jenis == "SPMB")
+                    {
+                        var ptc = (l.PtCode ?? "").Trim();
+                        if (ptc == "") return Bad($"{pr.ItemCode}: pilih PT");
+                        if (!ptCache.TryGetValue(ptc, out var ok)) ptCache[ptc] = ok = await db.ExecuteScalarAsync<int>(Sql.PtExists, new { ptCode = ptc }, tx) > 0;
+                        if (!ok) return Bad($"PT {ptc} tidak ada di OPRC");
+                    }
                     var ruang = l.KodeRuangan ?? pr.KodeRuangan ?? pl.KodeRuangan;
                     if (ruang is null) return Bad(pl.Jenis == "SPBB" ? $"{pr.ItemCode}: pilih ruangan tujuan" : $"{pr.ItemCode}: pilih ruangan sumber");
                     if (ruang is not null)
@@ -81,48 +94,54 @@ public static class PlanKraniSave
                 var flag = pl.Jenis == "SPBB" ? 1 : -1;
                 var trx = (pl.Titipan ?? false) ? "BT" : pl.Jenis == "SPBB" ? "IB" : "OB";
 
-                var dp = new DynamicParameters();
-                dp.Add("@ObjType", objType); dp.Add("@DocDate", date, DbType.Date);
-                dp.Add("@DocEntry", dbType: DbType.Int64, direction: ParameterDirection.Output);
-                await db.ExecuteAsync(Sql.NextDocEntry, dp, tx, commandType: CommandType.StoredProcedure);
-                var docEntry = dp.Get<long>("@DocEntry");
-                await db.ExecuteAsync(Sql.InsertHeader, new { objType, docEntry, docDate = date, bplId = u.BplId(), whsCode = pl.WhsCode, userId = u.UserId(), trxCode = trx, noMobil, containerNo = string.IsNullOrEmpty(cont) ? null : cont }, tx);
-                var ke = await db.ExecuteScalarAsync<int>("SELECT ISNULL(MAX(PenerimaanKe), 0) + 1 FROM OKRN WHERE PlanId = @id", new { id }, tx);
-                await db.ExecuteAsync("UPDATE OKRN SET PlanId = @id, PenerimaanKe = @ke, RegId = @reg, SesiId = @sesi WHERE ObjType = @objType AND DocEntry = @docEntry", new { id, ke, reg = regId, sesi = sesiId, objType, docEntry }, tx);
-                // Data dari SPBB/SPMB ikut ke dokumen krani supaya Admin tinggal mengecek & memposting stok di CMS
-                await db.ExecuteAsync(@"UPDATE h SET U_IDU_Kode_PT = p.U_IDU_Kode_PT, cardcode = COALESCE(NULLIF(p.CardCodeTitipan, ''), p.CardCode),
-                        NumAtCard = LEFT(d.NumAtCard, COL_LENGTH('OKRN', 'NumAtCard')), BaseType = d.BaseType, BaseDocEntry = d.BaseDocEntry, BaseDocNum = d.BaseDocNum
-                    FROM OKRN h JOIN WHS_Plan p ON p.PlanId = @id
-                    OUTER APPLY (SELECT TOP 1 BaseType, BaseDocEntry, BaseDocNum, NumAtCard FROM WHS_PlanDoc WHERE PlanId = @id ORDER BY BaseDocEntry) d
-                    WHERE h.ObjType = @objType AND h.DocEntry = @docEntry", new { id, objType, docEntry }, tx);
-
-                var lineNum = 0;
-                foreach (var l in r.Lines)
+                // SPBB: satu dokumen. SPMB: satu dokumen per PT (PT dipilih krani, boleh campur) -> Admin mengecek & posting per PT di CMS
+                var docs = new List<object>(); var ke = 0;
+                foreach (var grp in r.Lines.GroupBy(l => pl.Jenis == "SPMB" ? (l.PtCode ?? "").Trim() : ""))
                 {
-                    var pr = plan1[l.PlanLine];
-                    var ruang = l.KodeRuangan ?? pr.KodeRuangan ?? pl.KodeRuangan;
-                    var brand = Helpers.Empty(l.Brand) ?? pr.BrandName;
-                    await db.ExecuteAsync(Sql.InsertLine, new { objType, docEntry, lineNum, itemCode = pr.ItemCode, uom = "KG", brand, origin = (string?)null, qty = l.Qty, qty2 = l.Qty2, qtyPalet = l.QtyPalet, flag, ruang }, tx);
-                    await db.ExecuteAsync(@"UPDATE KRN1 SET PlanLine = @pl, ContainerNo = @c, KodeRuangan = @ru, PaletCode = @pc, Size = @sz, [Type] = @ty, Crop = @cr,
-                        brand_asli = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN @asli END,
-                        brand_diubah_oleh = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN @uid END,
-                        brand_diubah_at = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN SYSDATETIME() END
-                        WHERE ObjType = @objType AND DocEntry = @docEntry AND LineNum = @lineNum",
-                        new { pl = l.PlanLine, c = pr.ContainerNo, ru = ruang, pc = pr.PaletCode, sz = pr.Size, ty = pr.Type, cr = pr.Crop, brand, asli = pr.BrandName, uid = u.UserId(), objType, docEntry, lineNum }, tx);
-                    if (brand != pr.BrandName)
-                        await db.ExecuteAsync("INSERT WHS_BrandChangeLog (OKRN_DocEntry, LineNum, BrandLama, BrandBaru, ChangedBy) VALUES (@de, @ln, @a, @b, @uid)",
-                            new { de = docEntry, ln = lineNum, a = pr.BrandName, b = brand ?? "", uid = u.UserId() }, tx);
-                    await db.ExecuteAsync("UPDATE WHS_Plan1 SET QtyDone = QtyDone + @q, Qty2Done = Qty2Done + @q2, PaletDone = PaletDone + @pa WHERE PlanId = @id AND PlanLine = @pl",
-                        new { q = l.Qty, q2 = l.Qty2, pa = (int)Math.Ceiling(l.QtyPalet), id, pl = l.PlanLine }, tx);
-                    lineNum++;
+                    var dp = new DynamicParameters();
+                    dp.Add("@ObjType", objType); dp.Add("@DocDate", date, DbType.Date);
+                    dp.Add("@DocEntry", dbType: DbType.Int64, direction: ParameterDirection.Output);
+                    await db.ExecuteAsync(Sql.NextDocEntry, dp, tx, commandType: CommandType.StoredProcedure);
+                    var docEntry = dp.Get<long>("@DocEntry");
+                    await db.ExecuteAsync(Sql.InsertHeader, new { objType, docEntry, docDate = date, bplId = u.BplId(), whsCode = pl.WhsCode, userId = u.UserId(), trxCode = trx, noMobil, containerNo = string.IsNullOrEmpty(cont) ? null : cont }, tx);
+                    ke = await db.ExecuteScalarAsync<int>("SELECT ISNULL(MAX(PenerimaanKe), 0) + 1 FROM OKRN WHERE PlanId = @id", new { id }, tx);
+                    await db.ExecuteAsync("UPDATE OKRN SET PlanId = @id, PenerimaanKe = @ke, RegId = @reg, SesiId = @sesi WHERE ObjType = @objType AND DocEntry = @docEntry", new { id, ke, reg = regId, sesi = sesiId, objType, docEntry }, tx);
+                    // Data dari SPBB/SPMB ikut ke dokumen krani supaya Admin tinggal mengecek & memposting stok di CMS
+                    await db.ExecuteAsync(@"UPDATE h SET U_IDU_Kode_PT = COALESCE(@ptLine, p.U_IDU_Kode_PT), cardcode = COALESCE(NULLIF(p.CardCodeTitipan, ''), p.CardCode),
+                            NumAtCard = LEFT(d.NumAtCard, COL_LENGTH('OKRN', 'NumAtCard')), BaseType = d.BaseType, BaseDocEntry = d.BaseDocEntry, BaseDocNum = d.BaseDocNum
+                        FROM OKRN h JOIN WHS_Plan p ON p.PlanId = @id
+                        OUTER APPLY (SELECT TOP 1 BaseType, BaseDocEntry, BaseDocNum, NumAtCard FROM WHS_PlanDoc WHERE PlanId = @id ORDER BY BaseDocEntry) d
+                        WHERE h.ObjType = @objType AND h.DocEntry = @docEntry", new { id, objType, docEntry, ptLine = grp.Key == "" ? null : grp.Key }, tx);
+
+                    var lineNum = 0;
+                    foreach (var l in grp)
+                    {
+                        var pr = plan1[l.PlanLine];
+                        var ruang = l.KodeRuangan ?? pr.KodeRuangan ?? pl.KodeRuangan;
+                        var brand = Helpers.Empty(l.Brand) ?? pr.BrandName;
+                        await db.ExecuteAsync(Sql.InsertLine, new { objType, docEntry, lineNum, itemCode = pr.ItemCode, uom = "KG", brand, origin = (string?)null, qty = l.Qty, qty2 = l.Qty2, qtyPalet = l.QtyPalet, flag, ruang }, tx);
+                        await db.ExecuteAsync(@"UPDATE KRN1 SET PlanLine = @pl, ContainerNo = @c, KodeRuangan = @ru, PaletCode = @pc, Size = @sz, [Type] = @ty, Crop = @cr,
+                            brand_asli = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN @asli END,
+                            brand_diubah_oleh = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN @uid END,
+                            brand_diubah_at = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN SYSDATETIME() END
+                            WHERE ObjType = @objType AND DocEntry = @docEntry AND LineNum = @lineNum",
+                            new { pl = l.PlanLine, c = pr.ContainerNo, ru = ruang, pc = pr.PaletCode, sz = pr.Size, ty = pr.Type, cr = pr.Crop, brand, asli = pr.BrandName, uid = u.UserId(), objType, docEntry, lineNum }, tx);
+                        if (brand != pr.BrandName)
+                            await db.ExecuteAsync("INSERT WHS_BrandChangeLog (OKRN_DocEntry, LineNum, BrandLama, BrandBaru, ChangedBy) VALUES (@de, @ln, @a, @b, @uid)",
+                                new { de = docEntry, ln = lineNum, a = pr.BrandName, b = brand ?? "", uid = u.UserId() }, tx);
+                        await db.ExecuteAsync("UPDATE WHS_Plan1 SET QtyDone = QtyDone + @q, Qty2Done = Qty2Done + @q2, PaletDone = PaletDone + @pa WHERE PlanId = @id AND PlanLine = @pl",
+                            new { q = l.Qty, q2 = l.Qty2, pa = (int)Math.Ceiling(l.QtyPalet), id, pl = l.PlanLine }, tx);
+                        lineNum++;
+                    }
+                    await db.ExecuteAsync(Sql.UpdateTotals, new { objType, docEntry }, tx);
+                    docs.Add(new { objType, docEntry, ptCode = grp.Key, penerimaanKe = ke });
                 }
-                await db.ExecuteAsync(Sql.UpdateTotals, new { objType, docEntry }, tx);
                 var sisaTotal = await db.ExecuteScalarAsync<decimal>("SELECT SUM(QtyPlan - QtyDone) FROM WHS_Plan1 WHERE PlanId = @id", new { id }, tx);
                 var status = sisaTotal <= 0.0001m ? "Selesai" : "Proses";
                 await db.ExecuteAsync("UPDATE WHS_Plan SET Status = @s WHERE PlanId = @id", new { s = status, id }, tx);
-                await Audit.Write(db, tx, u, ctx, "PLAN_SIMPAN", objType, docEntry, $"{pl.PlanNo} penerimaan ke-{ke} {r.Lines.Count} baris");
+                await Audit.Write(db, tx, u, ctx, "PLAN_SIMPAN", objType, null, $"{pl.PlanNo} penerimaan ke-{ke} {r.Lines.Count} baris {docs.Count} dokumen");
                 await tx.CommitAsync();
-                return Results.Ok(new { objType, docEntry, trxCode = trx, penerimaanKe = ke, status });
+                return Results.Ok(new { objType, trxCode = trx, penerimaanKe = ke, status, docs });
             }
             catch (SqlException ex) when (ex.Class == 16)
             {

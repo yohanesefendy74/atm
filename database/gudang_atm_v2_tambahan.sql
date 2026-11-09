@@ -128,3 +128,22 @@ IF COL_LENGTH('dbo.WHS_Kendaraan','JumlahPalet')   IS NULL ALTER TABLE dbo.WHS_K
 IF COL_LENGTH('dbo.WHS_Kendaraan','BeratPaletKg')  IS NULL ALTER TABLE dbo.WHS_Kendaraan ADD BeratPaletKg NUMERIC(12,2) NULL;
 IF COL_LENGTH('dbo.WHS_Kendaraan','PaletTimbangId') IS NULL ALTER TABLE dbo.WHS_Kendaraan ADD PaletTimbangId BIGINT NULL;
 GO
+
+/* Sampling per KARUNG (gudang dengan timbangan mobil / bongkar kontainer).
+   Krani menimbang 1 karung per kali, boleh berkali-kali per barang. Sampel hanya untuk rata-rata kg/karung,
+   TIDAK ikut dihitung: berat per barang = net kontainer x (karung x rata2) / total (karung x rata2). */
+IF OBJECT_ID('dbo.WHS_SamplingSak') IS NULL
+CREATE TABLE dbo.WHS_SamplingSak (
+    SampId    BIGINT IDENTITY(1,1) PRIMARY KEY,
+    SesiId    BIGINT NOT NULL REFERENCES dbo.WHS_KontainerSesi(SesiId),
+    PlanLine  INT NOT NULL,
+    ItemCode  NVARCHAR(50) NOT NULL,
+    KgSak     NUMERIC(10,2) NOT NULL CHECK (KgSak > 0 AND KgSak <= 200),
+    Sumber    NVARCHAR(8) NULL,             -- BLE / GATEWAY / MANUAL
+    UserId    INT NOT NULL, CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSDATETIME()
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_WHS_SamplingSak' AND object_id = OBJECT_ID('dbo.WHS_SamplingSak'))
+    CREATE INDEX IX_WHS_SamplingSak ON dbo.WHS_SamplingSak (SesiId, PlanLine);
+GO
+-- GRANT SELECT, INSERT, DELETE ON dbo.WHS_SamplingSak TO gudang_app;
