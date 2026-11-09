@@ -105,7 +105,7 @@ export function AdminSuratJalan() {
         <div className="card stack">
           <strong className="mono">{detail.header.sjNo}</strong>
           {(detail.plans as Row[]).map((p) => <div key={p.planId} className="small">{p.planNo} · {p.cardName} · PO {p.numAtCard ?? '-'}<br />{p.alamatKirim}</div>)}
-          {(detail.lines as Row[]).map((l) => <div key={l.sjLine} className="small">{l.itemCode} · muat {fmt(l.qtyMuat)} kg (rencana {fmt(l.qtyPlan)})</div>)}
+          {(detail.lines as Row[]).map((l) => <div key={l.sjLine} className="small">{l.itemCode} · muat {fmt(l.qtyMuat)} kg (rencana {fmt(l.qtyPlan)}){l.noBL ? ` · BL ${l.noBL}` : ''}{l.ptCode ? ` · PT ${l.ptCode}` : ''}</div>)}
           <div className="row">
             <button className="btn small outline" onClick={() => window.print()}>Cetak</button>
             {detail.header.status !== 'Batal' && <button className="btn small ghost" onClick={() => batal(detail.header.sjId)}>Batalkan</button>}

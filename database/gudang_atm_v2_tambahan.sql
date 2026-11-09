@@ -155,3 +155,9 @@ GO
 /* No. BL per baris SPBB: sumber info BL stok (non-titipan). Sumber BL = NumAtCard dokumen BL; sumber DO = diisi Admin. */
 IF COL_LENGTH('dbo.WHS_Plan1','NoBL') IS NULL ALTER TABLE dbo.WHS_Plan1 ADD NoBL NVARCHAR(50) NULL;
 GO
+
+/* Surat Jalan = dasar DO: baris per item + BL (+ PT) dari transaksi keluar SPMB, supaya retur bisa menelusuri BL */
+IF COL_LENGTH('dbo.WHS_SuratJalan1','PlanLine') IS NULL ALTER TABLE dbo.WHS_SuratJalan1 ADD PlanLine INT NULL;
+IF COL_LENGTH('dbo.WHS_SuratJalan1','NoBL')     IS NULL ALTER TABLE dbo.WHS_SuratJalan1 ADD NoBL NVARCHAR(50) NULL;
+IF COL_LENGTH('dbo.WHS_SuratJalan1','PtCode')   IS NULL ALTER TABLE dbo.WHS_SuratJalan1 ADD PtCode NVARCHAR(30) NULL;
+GO

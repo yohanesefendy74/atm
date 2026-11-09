@@ -46,7 +46,7 @@ WHERE EXISTS (SELECT 1 FROM WHS_SuratJalanPlan sp JOIN WHS_Plan p ON p.PlanId = 
             var h = await db.QueryFirstOrDefaultAsync("SELECT SjId AS sjId, SjNo AS sjNo, TglSj AS tglSj, RegId AS regId, NoPolisi AS noPolisi, ContainerNo AS containerNo, Sopir AS sopir, TotalKg AS totalKg, TotalSak AS totalSak, TotalPalet AS totalPalet, Catatan AS catatan, Status AS status FROM WHS_SuratJalan WHERE SjId = @id", new { id });
             if (h is null) return Results.NotFound();
             var plans = await db.QueryAsync("SELECT sp.PlanId AS planId, p.PlanNo AS planNo, sp.CardCode AS cardCode, sp.CardName AS cardName, sp.NumAtCard AS numAtCard, sp.AlamatKirim AS alamatKirim FROM WHS_SuratJalanPlan sp JOIN WHS_Plan p ON p.PlanId = sp.PlanId WHERE sp.SjId = @id", new { id });
-            var lines = await db.QueryAsync("SELECT SjLine AS sjLine, PlanId AS planId, ItemCode AS itemCode, Dscription AS dscription, QtyPlan AS qtyPlan, QtyMuat AS qtyMuat, QtySak AS qtySak, QtyPalet AS qtyPalet FROM WHS_SuratJalan1 WHERE SjId = @id ORDER BY SjLine", new { id });
+            var lines = await db.QueryAsync("SELECT SjLine AS sjLine, PlanId AS planId, ItemCode AS itemCode, Dscription AS dscription, QtyPlan AS qtyPlan, QtyMuat AS qtyMuat, QtySak AS qtySak, QtyPalet AS qtyPalet, NoBL AS noBL, PtCode AS ptCode FROM WHS_SuratJalan1 WHERE SjId = @id ORDER BY SjLine", new { id });
             return Results.Ok(new { header = h, plans, lines });
         });
 
@@ -92,9 +92,14 @@ WHERE EXISTS (SELECT 1 FROM WHS_SuratJalanPlan sp JOIN WHS_Plan p ON p.PlanId = 
                         new { sjId, pid = pr.PlanId, cc = p.CardCode, cn = p.CardName, po = pr.NumAtCard, al = pr.AlamatKirim.Trim() }, tx);
                 }
                 // baris = qty yang benar-benar dimuat (hasil scan), bukan qty rencana
-                await db.ExecuteAsync(@"INSERT WHS_SuratJalan1 (SjId, SjLine, PlanId, ItemCode, Dscription, QtyPlan, QtyMuat, QtySak, QtyPalet)
-                    SELECT @sjId, ROW_NUMBER() OVER (ORDER BY PlanId, PlanLine), PlanId, ItemCode, Dscription, QtyPlan, QtyDone, CAST(Qty2Done AS INT), NULL
-                    FROM WHS_Plan1 WHERE PlanId IN @ids AND QtyDone > 0", new { sjId, ids }, tx);
+                // Surat Jalan = dasar DO: baris per item + No. BL + PT dari transaksi keluar SPMB (qty yang benar-benar dimuat)
+                await db.ExecuteAsync(@"INSERT WHS_SuratJalan1 (SjId, SjLine, PlanId, PlanLine, ItemCode, Dscription, QtyPlan, QtyMuat, QtySak, QtyPalet, NoBL, PtCode)
+                    SELECT @sjId, ROW_NUMBER() OVER (ORDER BY h.PlanId, d.PlanLine, d.NoBL), h.PlanId, d.PlanLine, d.ItemCode, MAX(p1.Dscription), MAX(p1.QtyPlan),
+                           SUM(d.qty), CAST(SUM(ISNULL(d.Qty2, 0)) AS INT), CAST(SUM(ISNULL(d.QtyPalet, 0)) AS INT), NULLIF(d.NoBL, ''), COALESCE(NULLIF(d.U_IDU_Kode_PT, ''), MAX(h.U_IDU_Kode_PT))
+                    FROM OKRN h JOIN KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
+                    LEFT JOIN WHS_Plan1 p1 ON p1.PlanId = h.PlanId AND p1.PlanLine = d.PlanLine
+                    WHERE h.PlanId IN @ids AND d.flags = -1
+                    GROUP BY h.PlanId, d.PlanLine, d.ItemCode, NULLIF(d.NoBL, ''), d.U_IDU_Kode_PT", new { sjId, ids }, tx);
                 await db.ExecuteAsync("UPDATE WHS_SuratJalan SET TotalKg = (SELECT ISNULL(SUM(QtyMuat),0) FROM WHS_SuratJalan1 WHERE SjId = @sjId), TotalSak = (SELECT SUM(QtySak) FROM WHS_SuratJalan1 WHERE SjId = @sjId) WHERE SjId = @sjId", new { sjId }, tx);
                 await Audit.Write(db, tx, u, ctx, "SJ_BUAT", "SURAT_JALAN", sjId, $"{sjNo} {r.Plans.Count} SPMB");
                 await tx.CommitAsync();
