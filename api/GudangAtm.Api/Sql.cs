@@ -214,7 +214,8 @@ ORDER BY h.DocDate, h.DocEntry, d.LineNum";
 SELECT  SUM(CASE WHEN h.ObjType = '6730' THEN 1 ELSE 0 END)                       AS inboundDocs,
         SUM(CASE WHEN h.ObjType <> '6730' THEN 1 ELSE 0 END)                      AS outboundDocs,
         SUM(CASE WHEN h.DocStatus <> 'C' THEN 1 ELSE 0 END)                       AS openDocs,
-        SUM(CASE WHEN h.DocStatus <> 'C' AND ISNULL(h.U_IDU_Kode_PT,'') = '' THEN 1 ELSE 0 END) AS waitingPt,
+        SUM(CASE WHEN h.DocStatus <> 'C' AND ISNULL(h.U_IDU_Kode_PT,'') = ''
+                  AND EXISTS (SELECT 1 FROM KRN1 z WHERE z.ObjType = h.ObjType AND z.DocEntry = h.DocEntry AND ISNULL(z.U_IDU_Kode_PT, '') = '') THEN 1 ELSE 0 END) AS waitingPt,
         ISNULL(SUM(x.kgIn), 0)    AS kgIn,
         ISNULL(SUM(x.kgOut), 0)   AS kgOut,
         ISNULL(SUM(x.palIn), 0)   AS paletIn,
@@ -240,7 +241,9 @@ SELECT  TOP 200
         h.WhsCode AS whsCode, w.WhsName AS whsName,
         CAST(CASE WHEN w.[External] = 'Y' THEN 1 ELSE 0 END AS bit) AS isTitipan,
         h.VehicleNo AS noMobil, h.ContainerNo AS containerNo,
-        h.U_IDU_Kode_PT AS ptCode, p.PrcName AS ptName,
+        -- PT di header, atau per baris (SPMB): tampil 'PER BARIS' bila semua baris sudah ber-PT
+        COALESCE(NULLIF(h.U_IDU_Kode_PT, ''), CASE WHEN NOT EXISTS (SELECT 1 FROM KRN1 z WHERE z.ObjType = h.ObjType AND z.DocEntry = h.DocEntry AND ISNULL(z.U_IDU_Kode_PT, '') = '') THEN 'PER BARIS' END) AS ptCode,
+        COALESCE(p.PrcName, CASE WHEN ISNULL(h.U_IDU_Kode_PT, '') = '' THEN 'PT per baris' END) AS ptName,
         h.CardCode AS cardCode, c.CardName AS cardName, h.NumAtCard AS numAtCard, h.U_NoBL AS blNo,
         u.USER_CODE AS krani, h.DocStatus AS docStatus,
         x.lineCount, x.qtyKg, x.qtySak, x.qtyPalet, x.editedLines

@@ -160,11 +160,11 @@ export function AdminKendaraan() {
             <div className="small">T3 {kg(sesi.header.t3)} ({sesi.header.plat3 ?? '-'}) · T4 {kg(sesi.header.t4)} → kosong <strong>{kg(sesi.header.beratKosong)}</strong> kg</div>
             <div>Net barang <strong>{kg(sesi.header.net)}</strong> kg · input krani {kg(sesi.header.netKrani)} kg{sesi.header.selisihPersen != null ? ` · selisih ${sesi.header.selisihPersen}%` : ''}</div>
             {sesi.header.peringatan && <div className="small muted">{sesi.header.peringatan}</div>}
-            <div className="tablewrap"><table className="table cards"><thead><tr><th>Barang</th><th>Karung</th><th>KG krani</th><th>Sampel</th><th>Estimasi sisa</th><th>Alokasi sisa</th><th>KG timbang</th></tr></thead><tbody>
+            <div className="tablewrap"><table className="table cards"><thead><tr><th>Barang</th><th>Karung</th><th>KG krani</th><th>Sampel (krg / kg)</th><th>Estimasi (krg × rata²)</th><th>KG timbang</th></tr></thead><tbody>
               {((sesi.alokasi as Row[]).length ? (sesi.alokasi as Row[]) : (sesi.items as Row[])).map((a) => (
                 <tr key={a.planLine}><td data-label="Barang">{a.itemCode}</td><td data-label="Karung" className="num">{kg(a.sakTotal)}</td><td data-label="KG krani" className="num">{kg(a.kgKrani)}</td>
                   <td data-label="Sampel" className="num">{a.sakSampel ? `${a.sakSampel} krg / ${fmt(a.kgSampel)} kg` : 'belum'}</td>
-                  <td data-label="Estimasi sisa" className="num">{kg(a.estimasiSisaKg)}</td><td data-label="Alokasi sisa" className="num">{kg(a.alokasiSisaKg)}</td><td data-label="KG timbang" className="num"><strong>{kg(a.kgTimbang)}</strong></td></tr>
+                  <td data-label="Estimasi" className="num">{kg(a.estimasiSisaKg)}</td><td data-label="KG timbang" className="num"><strong>{kg(a.kgTimbang)}</strong></td></tr>
               ))}</tbody></table></div>
           </div>
         )}

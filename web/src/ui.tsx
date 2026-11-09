@@ -495,3 +495,10 @@ export function RuanganSelect(props: { whs: string; value: string; onChange: (v:
   }, [opts.length]);
   return <SearchSelect options={opts} value={props.value} onChange={props.onChange} placeholder={props.placeholder ?? 'Cari & pilih ruangan'} disabled={props.disabled} />;
 }
+
+// ---------------------------------------------------------------- PT (OPRC)
+export function PtSelect(props: { value: string; onChange: (v: string) => void; disabled?: boolean; placeholder?: string; allowEmpty?: string }) {
+  const { data } = useLoad(() => get<Row[]>('/api/master/pt'), []);
+  const opts = (data ?? []).map((p) => ({ value: String(p.code), label: `${p.code} · ${p.name ?? ''}` }));
+  return <SearchSelect options={opts} value={props.value} onChange={props.onChange} disabled={props.disabled} placeholder={props.placeholder ?? 'Cari & pilih PT'} allowEmpty={props.allowEmpty} />;
+}

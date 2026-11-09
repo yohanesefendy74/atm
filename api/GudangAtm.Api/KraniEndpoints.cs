@@ -223,7 +223,7 @@ public static class KraniEndpoints
         api.MapGet("/master/pt", async (string? q) =>
         {
             await using var db = dbf();
-            return Results.Ok(await db.QueryAsync(Sql.PtLookup, new { q = $"%{(q ?? "").Trim()}%" }));
+            return Results.Ok(await db.QueryAsync("SELECT TOP 500 PrcCode AS code, PrcName AS name FROM OPRC WHERE (PrcCode LIKE @q OR PrcName LIKE @q) AND ISNULL(Active, 'Y') = 'Y' ORDER BY PrcCode", new { q = $"%{(q ?? "").Trim()}%" }));
         });
 
         api.MapGet("/reports/stock-item", async (string? whsCode, string? ruangan, ClaimsPrincipal u) =>

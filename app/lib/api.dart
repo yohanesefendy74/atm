@@ -137,6 +137,18 @@ class Api {
       throw ApiException('Tidak bisa terhubung ke server (${Session.I.baseUrl}): ${e.toString().split('\n').first}');
     }
   }
+  static Future<dynamic> delete(String path) async {
+    try {
+      final r = await http.delete(_uri(path), headers: _headers).timeout(_timeout);
+      return _decode(r);
+    } on ApiException {
+      rethrow;
+    } on TimeoutException {
+      throw ApiException('Server tidak merespons. Cek koneksi WiFi gudang.');
+    } catch (e) {
+      throw ApiException('Tidak bisa terhubung ke server (${Session.I.baseUrl}): ${e.toString().split('\n').first}');
+    }
+  }
 
   /// Cek versi baru di server (distribusi internal). Mengembalikan alamat unduh bila ada versi lebih baru.
   static Future<String?> cekUpdate() async {

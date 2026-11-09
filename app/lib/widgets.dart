@@ -584,3 +584,56 @@ class _RuanganFieldState extends State<RuanganField> {
     );
   }
 }
+
+
+/// PT (OPRC). Cari lalu pilih dari daftar; teks bebas tidak diterima.
+class PtField extends StatefulWidget {
+  const PtField({super.key, required this.value, required this.onChanged, this.label = 'PT'});
+  final String? value;
+  final ValueChanged<String?> onChanged;
+  final String label;
+  @override
+  State<PtField> createState() => _PtFieldState();
+}
+
+class _PtFieldState extends State<PtField> {
+  static List<Map<String, dynamic>>? _cache;
+  List<Map<String, dynamic>> _list = _cache ?? [];
+
+  @override
+  void initState() {
+    super.initState();
+    if (_cache == null) {
+      Api.get('/api/master/pt').then((r) {
+        _cache = (r as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        if (mounted) setState(() => _list = _cache!);
+      }).catchError((_) {});
+    }
+  }
+
+  String _label(Map<String, dynamic> p) => '${p['code']} · ${p['name'] ?? ''}';
+
+  @override
+  Widget build(BuildContext context) {
+    final cur = _list.where((p) => p['code'].toString() == widget.value).firstOrNull;
+    return Autocomplete<Map<String, dynamic>>(
+      key: ValueKey('${widget.value}|${_list.length}'),
+      initialValue: TextEditingValue(text: cur == null ? '' : _label(cur)),
+      displayStringForOption: _label,
+      optionsBuilder: (v) {
+        final q = v.text.trim().toUpperCase();
+        if (cur != null && v.text == _label(cur)) return _list;
+        return _list.where((p) => q.isEmpty || _label(p).toUpperCase().contains(q));
+      },
+      onSelected: (p) => widget.onChanged(p['code'].toString()),
+      fieldViewBuilder: (context, ctrl, focus, onSubmit) => TextField(
+        controller: ctrl,
+        focusNode: focus,
+        decoration: InputDecoration(labelText: '${widget.label} (wajib)', suffixIcon: const Icon(Icons.arrow_drop_down)),
+        onChanged: (_) {
+          if (widget.value != null) widget.onChanged(null);
+        },
+      ),
+    );
+  }
+}

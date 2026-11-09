@@ -91,18 +91,15 @@ class _TugasDetailState extends State<TugasDetail> {
   List<Map<String, dynamic>> _lines = [];
   List<Map<String, dynamic>> _ruang = [];
   List<Map<String, dynamic>> _veh = [];
-  final _qty = <int, TextEditingController>{};
-  final _sak = <int, TextEditingController>{};
-  final _pal = <int, TextEditingController>{};
-  final _room = <int, String?>{};
+  // isian per baris dokumen; SPMB boleh beberapa isian per baris (PT berbeda, boleh campur)
+  final _entries = <_Entry>[];
   int? _regId;
   // SPBB: kontainer di dock + sampling berat per barang
   List<Map<String, dynamic>> _kont = [];
   int? _sesiId;
   List<Map<String, dynamic>> _kItems = [];
   String? _kStatus;
-  final _sSak = <int, TextEditingController>{};
-  final _sKg = <int, TextEditingController>{};
+  List<Map<String, dynamic>> _sampel = [];
   String? _error;
   bool _busy = false;
 
@@ -142,10 +139,7 @@ class _TugasDetailState extends State<TugasDetail> {
         if (veh.length == 1) _regId = toI(veh.first['regId']);
         for (final l in lines) {
           final k = toI(l['planLine']);
-          _qty.putIfAbsent(k, () => TextEditingController());
-          _sak.putIfAbsent(k, () => TextEditingController());
-          _pal.putIfAbsent(k, () => TextEditingController());
-          _room[k] ??= l['kodeRuangan']?.toString() ?? h['kodeRuangan']?.toString();
+          if (!_entries.any((e) => e.planLine == k)) _entries.add(_Entry(k, l['kodeRuangan']?.toString() ?? h['kodeRuangan']?.toString()));
         }
       });
       if (_sesiId != null) await _loadKont();
@@ -161,52 +155,67 @@ class _TugasDetailState extends State<TugasDetail> {
     setState(() {
       _kStatus = (r['header'] as Map)['status']?.toString();
       _kItems = (r['items'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-      for (final i in _kItems) {
-        final k = toI(i['planLine']);
-        _sSak.putIfAbsent(k, () => TextEditingController(text: toI(i['sakSampel']) > 0 ? '${toI(i['sakSampel'])}' : ''));
-        _sKg.putIfAbsent(k, () => TextEditingController(text: toD(i['kgSampel']) > 0 ? toD(i['kgSampel']).toString() : ''));
-      }
+      _sampel = ((r['sampel'] as List?) ?? const []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
     });
   }
 
-  Future<void> _simpanSampling() async {
-    final items = <Map<String, dynamic>>[];
-    for (final i in _kItems) {
-      final k = toI(i['planLine']);
-      final sak = int.tryParse(_sSak[k]!.text.trim()) ?? 0;
-      final kg = double.tryParse(_sKg[k]!.text.replaceAll(',', '.')) ?? 0;
-      if (sak <= 0 && kg <= 0) continue;
-      if (sak < 1 || kg <= 0) return showError(context, '${i['itemCode']}: isi jumlah karung sampel (min 1) dan beratnya');
-      items.add({'planLine': k, 'sakSampel': sak, 'kgSampel': kg});
-    }
-    if (items.isEmpty) return showError(context, 'Isi sampling minimal satu barang');
-    setState(() => _busy = true);
+  /// Timbang 1 karung (boleh berkali-kali per barang). Hanya untuk rata-rata kg/karung, tidak ikut dihitung.
+  Future<void> _timbangSampel(Map<String, dynamic> item) async {
+    Berat? b;
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (c) => Padding(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(c).viewInsets.bottom),
+        child: StatefulBuilder(
+          builder: (c, set) => Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text('Sampel 1 karung · ${item['itemCode']}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            const Text('Taruh SATU karung di timbangan. Sampel hanya untuk rata-rata berat per karung.', style: TextStyle(color: C.muted)),
+            const SizedBox(height: 12),
+            BeratField(whs: _h!['whsCode'].toString(), alat: 'PALET', manualPerluAdmin: false, onChanged: (v) => set(() => b = v)),
+            const SizedBox(height: 12),
+            BigButton(label: 'Simpan sampel', onPressed: () => Navigator.of(c).pop(true)),
+          ]),
+        ),
+      ),
+    );
+    if (ok != true) return;
+    if (b == null) return showError(context, 'Baca berat karung dulu');
+    if (b!.kg > 200) return showError(context, 'Berat ${b!.kg.toStringAsFixed(1)} kg terlalu besar untuk 1 karung');
     try {
-      await Api.put('/api/kontainer/$_sesiId/sampling', {'items': items});
-      if (mounted) showInfo(context, 'Sampling tersimpan');
+      await Api.post('/api/kontainer/$_sesiId/sampel', {'planLine': toI(item['planLine']), 'kgSak': b!.kg, 'sumber': b!.sumber});
       await _loadKont();
     } catch (e) {
       if (mounted) showError(context, e);
-    } finally {
-      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _hapusSampel(int sampId) async {
+    try {
+      await Api.delete('/api/kontainer/$_sesiId/sampel/$sampId');
+      await _loadKont();
+    } catch (e) {
+      if (mounted) showError(context, e);
     }
   }
 
   Future<void> _simpan() async {
+    final spbb = _h?['jenis'] == 'SPBB';
     final items = <Map<String, dynamic>>[];
-    for (final l in _lines) {
-      final k = toI(l['planLine']);
-      final q = double.tryParse(_qty[k]!.text.replaceAll(',', '.')) ?? 0;
+    for (final e in _entries) {
+      final q = double.tryParse(e.qty.text.replaceAll(',', '.')) ?? 0;
       if (q <= 0) continue;
+      if (!spbb && (e.pt ?? '').isEmpty) return showError(context, 'Pilih PT untuk setiap baris yang diisi');
       items.add({
-        'planLine': k,
+        'planLine': e.planLine,
         'qty': q,
-        'qty2': double.tryParse(_sak[k]!.text.replaceAll(',', '.')) ?? 0,
-        'qtyPalet': double.tryParse(_pal[k]!.text.replaceAll(',', '.')) ?? 0,
-        'kodeRuangan': _room[k],
+        'qty2': double.tryParse(e.sak.text.replaceAll(',', '.')) ?? 0,
+        'qtyPalet': double.tryParse(e.pal.text.replaceAll(',', '.')) ?? 0,
+        'kodeRuangan': e.room,
+        'ptCode': spbb ? null : e.pt,
       });
     }
-    final spbb = _h?['jenis'] == 'SPBB';
     if (spbb && _sesiId == null) return showError(context, 'Pilih kontainer yang sedang dibongkar');
     if (!spbb && _regId == null) return showError(context, 'Pilih kendaraan dulu (registrasi di pos timbang)');
     if (items.isEmpty) return showError(context, 'Isi qty minimal satu baris');
@@ -215,9 +224,12 @@ class _TugasDetailState extends State<TugasDetail> {
       final r = await Api.post('/api/plan/${widget.planId}/simpan', {'regId': spbb ? null : _regId, 'sesiId': spbb ? _sesiId : null, 'lines': items});
       if (!mounted) return;
       showInfo(context, 'Tersimpan · penerimaan ke-${r['penerimaanKe']}');
-      for (final c in [..._qty.values, ..._sak.values, ..._pal.values]) {
-        c.clear();
+      for (final e in _entries) {
+        e.qty.clear();
+        e.sak.clear();
+        e.pal.clear();
       }
+      _entries.removeWhere((e) => e.tambahan);
       await _load();
     } catch (e) {
       if (mounted) showError(context, e);
@@ -278,8 +290,7 @@ class _TugasDetailState extends State<TugasDetail> {
                         setState(() {
                           _sesiId = v;
                           _kItems = [];
-                          _sSak.clear();
-                          _sKg.clear();
+                          _sampel = [];
                         });
                         _loadKont();
                       },
@@ -320,24 +331,34 @@ class _TugasDetailState extends State<TugasDetail> {
         _ => '$s',
       };
 
-  /// Sampling berat: per barang di kontainer ini, timbang beberapa karung (bebas, min 1).
+  /// Sampel berat: timbang 1 karung per kali, boleh berkali-kali per barang. Hanya untuk rata-rata kg/karung (tidak ikut dihitung).
   Widget _samplingCard() {
     return Box(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Sampling berat per barang', style: TextStyle(fontWeight: FontWeight.w700)),
-        const Hint('Timbang beberapa karung tiap barang. Berat bersih kontainer dibagi ke tiap barang sesuai sampling (prorata).'),
+        const Text('Sampel berat per karung', style: TextStyle(fontWeight: FontWeight.w700)),
+        const Hint('Timbang 1 karung per kali, boleh berkali-kali. Sampel hanya untuk rata-rata kg/karung; berat bersih kontainer dibagi ke tiap barang sesuai karung x rata-rata.'),
         const SizedBox(height: 8),
-        if (_kItems.isEmpty) const Text('Simpan input barang dulu, lalu isi sampling.', style: TextStyle(color: C.muted)),
+        if (_kItems.isEmpty) const Text('Simpan input barang dulu, lalu timbang sampel.', style: TextStyle(color: C.muted)),
         for (final i in _kItems) ...[
           Text('${i['itemCode']} · ${toD(i['sakTotal']).toStringAsFixed(0)} karung · ${toD(i['kgKrani']).toStringAsFixed(0)} kg', style: const TextStyle(fontWeight: FontWeight.w600)),
-          Row(children: [
-            Expanded(child: TextField(controller: _sSak[toI(i['planLine'])], keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Karung sampel'))),
-            const SizedBox(width: 8),
-            Expanded(child: TextField(controller: _sKg[toI(i['planLine'])], keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Berat sampel (kg)'))),
-          ]),
+          Builder(builder: (_) {
+            final list = _sampel.where((x) => toI(x['planLine']) == toI(i['planLine'])).toList();
+            final avg = list.isEmpty ? 0.0 : list.fold<double>(0, (a, x) => a + toD(x['kgSak'])) / list.length;
+            return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(list.isEmpty ? 'Belum ada sampel' : '${list.length} sampel · rata-rata ${avg.toStringAsFixed(2)} kg/karung',
+                  style: TextStyle(fontSize: 13, color: list.isEmpty ? C.outbound : C.ink)),
+              Wrap(spacing: 6, runSpacing: 4, children: [
+                for (final x in list)
+                  InputChip(
+                    label: Text('${toD(x['kgSak']).toStringAsFixed(2)} kg'),
+                    onDeleted: _busy ? null : () => _hapusSampel(toI(x['sampId'])),
+                  ),
+              ]),
+              TextButton.icon(onPressed: () => _timbangSampel(i), icon: const Icon(Icons.scale_outlined), label: const Text('Timbang 1 karung')),
+            ]);
+          }),
           const SizedBox(height: 10),
         ],
-        if (_kItems.isNotEmpty) BigButton(label: 'Simpan sampling', outlined: true, color: C.inbound, busy: _busy, onPressed: _simpanSampling),
       ]),
     );
   }
@@ -355,23 +376,36 @@ class _TugasDetailState extends State<TugasDetail> {
           const SizedBox(height: 8),
           if (sisa <= 0)
             const Pill('Selesai', bg: C.greenTint, fg: C.greenText)
-          else ...[
-            Row(children: [
-              Expanded(child: TextField(controller: _qty[k], keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Kg'))),
-              const SizedBox(width: 8),
-              Expanded(child: TextField(controller: _sak[k], keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Karung'))),
-              const SizedBox(width: 8),
-              Expanded(child: TextField(controller: _pal[k], keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Palet'))),
-            ]),
-            const SizedBox(height: 8),
-            RuanganField(
-              whs: _h!['whsCode'].toString(),
-              value: _room[k],
-              titipan: _h!['titipan'] as bool?,
-              label: spbb ? 'Ruangan tujuan' : 'Ruangan sumber',
-              onChanged: (v) => setState(() => _room[k] = v),
+          else
+            for (final e in _entries.where((e) => e.planLine == k)) ...[
+              if (e.tambahan) const Divider(height: 20),
+              Row(children: [
+                Expanded(child: TextField(controller: e.qty, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Kg'))),
+                const SizedBox(width: 8),
+                Expanded(child: TextField(controller: e.sak, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Karung'))),
+                const SizedBox(width: 8),
+                Expanded(child: TextField(controller: e.pal, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Palet'))),
+                if (e.tambahan) IconButton(tooltip: 'Hapus', icon: const Icon(Icons.close), onPressed: () => setState(() => _entries.remove(e))),
+              ]),
+              if (!spbb) ...[
+                const SizedBox(height: 8),
+                PtField(value: e.pt, onChanged: (v) => setState(() => e.pt = v)),
+              ],
+              const SizedBox(height: 8),
+              RuanganField(
+                whs: _h!['whsCode'].toString(),
+                value: e.room,
+                titipan: _h!['titipan'] as bool?,
+                label: spbb ? 'Ruangan tujuan' : 'Ruangan sumber',
+                onChanged: (v) => setState(() => e.room = v),
+              ),
+            ],
+          if (!spbb && sisa > 0)
+            TextButton.icon(
+              onPressed: () => setState(() => _entries.add(_Entry(k, l['kodeRuangan']?.toString() ?? _h!['kodeRuangan']?.toString(), tambahan: true))),
+              icon: const Icon(Icons.add),
+              label: const Text('Tambah baris PT lain'),
             ),
-          ],
         ]),
       ),
     );
@@ -461,4 +495,17 @@ class _PaletScreenState extends State<PaletScreen> {
       ]),
     );
   }
+}
+
+
+/// Satu isian krani untuk satu baris dokumen. SPMB: PT per isian (boleh beberapa PT untuk satu barang).
+class _Entry {
+  _Entry(this.planLine, this.room, {this.tambahan = false});
+  final int planLine;
+  final bool tambahan;
+  final qty = TextEditingController();
+  final sak = TextEditingController();
+  final pal = TextEditingController();
+  String? room;
+  String? pt;
 }

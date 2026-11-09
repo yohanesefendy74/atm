@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { get, post, put, type Row } from '../api';
 import { Link, navigate } from '../router';
-import { ErrorBox, Icon, KV, Page, RuanganSelect, Spinner, errText, fmt, fmtDate, num, useLoad, useToast } from '../ui';
+import { ErrorBox, Icon, KV, Page, PtSelect, RuanganSelect, Spinner, errText, fmt, fmtDate, num, useLoad, useToast } from '../ui';
 
 const TRX: Record<string, string> = {
   IB: 'Inbound Supplier',
@@ -184,7 +184,7 @@ function Lookup(props: { url: string; query?: Record<string, string>; value: str
   );
 }
 
-type Edit = { qty: string; qty2: string; qtyPalet: string; numAtCard: string; ruang: string };
+type Edit = { qty: string; qty2: string; qtyPalet: string; numAtCard: string; ruang: string; pt: string };
 
 export function CmsDetail({ objType, docEntry }: { objType: string; docEntry: string }) {
   const toast = useToast();
@@ -213,7 +213,7 @@ export function CmsDetail({ objType, docEntry }: { objType: string; docEntry: st
     setNumAtCard(h.numAtCard ?? '');
     setBl(h.blNo ?? '');
     const e: Record<number, Edit> = {};
-    lines.forEach((l) => (e[l.lineNum] = { qty: String(l.qty), qty2: String(l.qty2), qtyPalet: String(l.qtyPalet), numAtCard: l.numAtCard ?? '', ruang: l.kodeRuangan ?? '' }));
+    lines.forEach((l) => (e[l.lineNum] = { qty: String(l.qty), qty2: String(l.qty2), qtyPalet: String(l.qtyPalet), numAtCard: l.numAtCard ?? '', ruang: l.kodeRuangan ?? '', pt: l.ptCode ?? '' }));
     setEdits(e);
     setRetur({});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -237,7 +237,7 @@ export function CmsDetail({ objType, docEntry }: { objType: string; docEntry: st
     bp.code !== (h.cardCode ?? '') ||
     numAtCard !== (h.numAtCard ?? '') ||
     bl !== (h.blNo ?? '') ||
-    lines.some((l) => changed(l, 'qty') || changed(l, 'qty2') || changed(l, 'qtyPalet') || (edits[l.lineNum]?.numAtCard ?? '') !== (l.numAtCard ?? '') || (edits[l.lineNum]?.ruang ?? '') !== (l.kodeRuangan ?? ''));
+    lines.some((l) => changed(l, 'qty') || changed(l, 'qty2') || changed(l, 'qtyPalet') || (edits[l.lineNum]?.numAtCard ?? '') !== (l.numAtCard ?? '') || (edits[l.lineNum]?.ruang ?? '') !== (l.kodeRuangan ?? '') || (edits[l.lineNum]?.pt ?? '') !== (l.ptCode ?? ''));
 
   const body = () => ({
     trxCode: trx,
@@ -252,6 +252,7 @@ export function CmsDetail({ objType, docEntry }: { objType: string; docEntry: st
       qtyPalet: num(edits[l.lineNum]?.qtyPalet),
       numAtCard: edits[l.lineNum]?.numAtCard?.trim() || null,
       kodeRuangan: edits[l.lineNum]?.ruang || null,
+      ptCode: edits[l.lineNum]?.pt || null,
     })),
   });
 
@@ -419,6 +420,11 @@ export function CmsDetail({ objType, docEntry }: { objType: string; docEntry: st
                 <div className="small muted">{[l.itemName, l.brand, l.origin].filter(Boolean).join(' · ')}</div>
                 <div style={{ marginTop: 6, minWidth: 200 }}>
                   <RuanganSelect whs={h!.whsCode} value={edits[l.lineNum]?.ruang ?? ''} onChange={(v) => setEdit(l.lineNum, 'ruang', v)} disabled={closed} placeholder="Ruangan (wajib)" />
+                  {(!h!.ptCode || l.ptCode) && (
+                    <div style={{ marginTop: 6 }}>
+                      <PtSelect value={edits[l.lineNum]?.pt ?? ''} onChange={(v) => setEdit(l.lineNum, 'pt', v)} disabled={closed} placeholder="PT baris (wajib bila PT header kosong)" />
+                    </div>
+                  )}
                 </div>
               </td>
               <td data-label="Arah">{Number(l.flag) === 1 ? <span className="pill green">MASUK</span> : <span className="pill out">KELUAR</span>}</td>
