@@ -118,12 +118,21 @@ public static class KraniEndpoints
             }
             if (jenis != "OB" && roomTitipan) return Bad("KR dan RP tidak boleh di ruangan titipan");
             var cont = (req.ContainerNo ?? "").Replace(" ", "").ToUpperInvariant();
-            foreach (var g in outLines.Where(l => !string.IsNullOrWhiteSpace(l.KodeRuangan)).GroupBy(l => (l.ItemCode, Ruang: l.KodeRuangan!.Trim())))
+            // Saldo per BL: setiap palet keluar wajib punya BL sumber; stok dicek per item + ruangan + BL + container
+            if (outLines.Any(l => string.IsNullOrWhiteSpace(l.NoBL))) return Bad("Pilih BL sumber untuk setiap palet keluar");
+            foreach (var g in outLines.GroupBy(l => (l.ItemCode, Ruang: l.KodeRuangan!.Trim(), Bl: l.NoBL!.Trim())))
             {
-                var stokKg = await db.ExecuteScalarAsync<decimal?>("SELECT Kg FROM WHS_Saldo WHERE WhsCode = @w AND ItemCode = @i AND KodeRuangan = @r AND ContainerNo = @c",
-                    new { w = req.WhsCode, i = g.Key.ItemCode, r = g.Key.Ruang, c = cont }) ?? 0;
+                var stokKg = await db.ExecuteScalarAsync<decimal?>("SELECT Kg FROM WHS_Saldo WHERE WhsCode = @w AND ItemCode = @i AND KodeRuangan = @r AND ContainerNo = @c AND NoBL = @bl",
+                    new { w = req.WhsCode, i = g.Key.ItemCode, r = g.Key.Ruang, c = cont, bl = g.Key.Bl }) ?? 0;
                 var keluar = g.Sum(l => l.Qty);
-                if (keluar > stokKg + 0.01m) return Bad($"{g.Key.ItemCode} di ruangan {g.Key.Ruang}: keluar {keluar:N0} kg melebihi stok {stokKg:N0} kg");
+                if (keluar > stokKg + 0.01m) return Bad($"{g.Key.ItemCode} ruangan {g.Key.Ruang} BL {g.Key.Bl}: keluar {keluar:N0} kg melebihi stok {stokKg:N0} kg");
+            }
+            // Item masuk KR/RP: BL ikut BL palet keluar (bila satu BL); bila beberapa BL, krani memilih per item
+            if (inLines.Count > 0)
+            {
+                var bls = outLines.Select(l => l.NoBL!.Trim()).Distinct().ToList();
+                inLines = inLines.Select(l => string.IsNullOrWhiteSpace(l.NoBL) && bls.Count == 1 ? l with { NoBL = bls[0] } : l).ToList();
+                if (inLines.Any(l => string.IsNullOrWhiteSpace(l.NoBL))) return Bad("Pilih BL untuk setiap item masuk");
             }
             if (jenis == "RP")
             {
@@ -219,6 +228,17 @@ public static class KraniEndpoints
         });
 
         // ---------------------------------------------------------------- Laporan
+        // Saldo item per ruangan + BL (+ container) untuk memilih BL sumber (SPMB)
+        api.MapGet("/stok/bl", async (string whs, string itemCode, string? ruangan, ClaimsPrincipal u) =>
+        {
+            await using var db = dbf();
+            if (await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM USR9 WHERE UserId = @uid AND WhsCode = @whs", new { uid = u.UserId(), whs }) == 0) return Results.Forbid();
+            return Results.Ok(await db.QueryAsync(@"SELECT NULLIF(NoBL, '') AS noBL, NULLIF(KodeRuangan, '') AS kodeRuangan, SUM(Kg) AS kg, SUM(Sak) AS sak, SUM(Palet) AS palet,
+                    COUNT(DISTINCT NULLIF(ContainerNo, '')) AS containers, MIN(TglMasuk) AS tglMasuk
+                FROM WHS_Saldo WHERE WhsCode = @whs AND ItemCode = @itemCode AND (@r IS NULL OR KodeRuangan = @r) AND Kg > 0
+                GROUP BY NoBL, KodeRuangan ORDER BY MIN(TglMasuk), NoBL", new { whs, itemCode, r = Empty(ruangan) }));
+        });
+
         // Daftar PT (krani memilih PT per baris pada SPMB)
         api.MapGet("/master/pt", async (string? q) =>
         {
@@ -232,17 +252,17 @@ public static class KraniEndpoints
             return Results.Ok(await db.QueryAsync(Sql.StockPerItem, new { bplId = u.BplId(), userId = u.UserId(), whsCode = Empty(whsCode), ruangan = Empty(ruangan) }));
         });
 
-        api.MapGet("/reports/stock-container", async (string? whsCode, string? ruangan, ClaimsPrincipal u) =>
+        api.MapGet("/reports/stock-container", async (string? whsCode, string? ruangan, string? bl, ClaimsPrincipal u) =>
         {
             await using var db = dbf();
-            return Results.Ok(await db.QueryAsync(Sql.StockPerContainer, new { bplId = u.BplId(), userId = u.UserId(), whsCode = Empty(whsCode), ruangan = Empty(ruangan) }));
+            return Results.Ok(await db.QueryAsync(Sql.StockPerContainer, new { bplId = u.BplId(), userId = u.UserId(), whsCode = Empty(whsCode), ruangan = Empty(ruangan), bl = Empty(bl) }));
         });
 
-        api.MapGet("/reports/stock-card", async (string itemCode, string? whsCode, string? containerNo, string? ruangan, ClaimsPrincipal u) =>
+        api.MapGet("/reports/stock-card", async (string itemCode, string? whsCode, string? containerNo, string? ruangan, string? bl, ClaimsPrincipal u) =>
         {
             await using var db = dbf();
             var rows = (await db.QueryAsync<StockCardRow>(Sql.StockCard,
-                new { bplId = u.BplId(), userId = u.UserId(), itemCode, whsCode = Empty(whsCode), containerNo = Empty(containerNo), ruangan = Empty(ruangan) })).ToList();
+                new { bplId = u.BplId(), userId = u.UserId(), itemCode, whsCode = Empty(whsCode), containerNo = Empty(containerNo), ruangan = Empty(ruangan), bl = Empty(bl) })).ToList();
             decimal kg = 0, sak = 0, pal = 0;
             foreach (var r in rows)
             {
@@ -362,6 +382,7 @@ public static class Helpers
                     qtyPalet = l.QtyPalet,
                     flag,
                     ruang = Helpers.Empty(l.KodeRuangan),
+                    bl = Helpers.Empty(l.NoBL),
                 }, tx);
             }
 

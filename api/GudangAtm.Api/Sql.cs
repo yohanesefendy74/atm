@@ -134,17 +134,17 @@ FROM    OKRN h OUTER APPLY (SELECT SUM(d.qty) q, SUM(d.Qty2) s, SUM(d.QtyPalet) 
 WHERE   h.ObjType = @objType AND h.DocEntry = @docEntry";
 
     public const string InsertLine = @"
-INSERT INTO KRN1 (ObjType, DocEntry, LineNum, ItemCode, brand_name, Origin, qty, Qty2, QtyPalet, flags, LineStatus, KodeRuangan)
-VALUES (@objType, @docEntry, @lineNum, @itemCode, @brand, @origin, @qty, @qty2, @qtyPalet, @flag, 'O', @ruang)";
+INSERT INTO KRN1 (ObjType, DocEntry, LineNum, ItemCode, brand_name, Origin, qty, Qty2, QtyPalet, flags, LineStatus, KodeRuangan, NoBL)
+VALUES (@objType, @docEntry, @lineNum, @itemCode, @brand, @origin, @qty, @qty2, @qtyPalet, @flag, 'O', @ruang, @bl)";
 
     /// Stok per ruangan untuk item + container di warehouse (dokumen yang sudah diposting).
     public const string StockPerRuangan = @"
 SELECT  NULLIF(s.KodeRuangan, '') AS kodeRuangan, r.NamaRuangan AS namaRuangan, CAST(ISNULL(r.Titipan, 0) AS bit) AS titipan,
-        s.Kg AS stockKg, s.Sak AS stockSak, s.Palet AS stockPalet
+        NULLIF(s.NoBL, '') AS noBL, s.Kg AS stockKg, s.Sak AS stockSak, s.Palet AS stockPalet
 FROM    WHS_Saldo s
 LEFT JOIN WHS_MasterRuangan r ON r.KodeRuangan = s.KodeRuangan
 WHERE   s.WhsCode = @whsCode AND s.ItemCode = @itemCode AND s.ContainerNo = ISNULL(@containerNo, '') AND s.Kg > 0
-ORDER BY s.KodeRuangan";
+ORDER BY s.KodeRuangan, s.NoBL";
 
     /// Baris inbound asal untuk QR yymmdd-itemcode-container (sumber brand, origin, isi per sak / per palet).
     public const string PalletSource = @"
@@ -187,19 +187,22 @@ HAVING  SUM(s.Kg) <> 0
 ORDER BY s.ItemCode";
 
     public const string StockPerContainer = @"
-SELECT  NULLIF(s.ContainerNo, '') AS containerNo, NULLIF(s.KodeRuangan, '') AS kodeRuangan, s.ItemCode AS itemCode, i.ItemName AS itemName, s.Brand AS brand,
+SELECT  NULLIF(s.ContainerNo, '') AS containerNo, NULLIF(s.KodeRuangan, '') AS kodeRuangan, NULLIF(s.NoBL, '') AS noBL,
+        s.ItemCode AS itemCode, i.ItemName AS itemName, s.Brand AS brand,
         s.TglMasuk AS inboundDate, s.Kg AS kg, s.Sak AS sak, s.Palet AS palet, s.WhsCode AS whsCode
 FROM    WHS_Saldo s
 JOIN    OWHS w ON w.WhsCode = s.WhsCode
 JOIN    OITM i ON i.ItemCode = s.ItemCode
 WHERE   w.BPLid = @bplId AND (@whsCode IS NULL OR s.WhsCode = @whsCode) AND (@ruangan IS NULL OR s.KodeRuangan = @ruangan)
+  AND   (@bl IS NULL OR s.NoBL LIKE '%' + @bl + '%')
   AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = s.WhsCode)
   AND   s.Kg <> 0
-ORDER BY s.ContainerNo, s.KodeRuangan, s.ItemCode";
+ORDER BY s.NoBL, s.ContainerNo, s.KodeRuangan, s.ItemCode";
 
     public const string StockCard = @"
 SELECT  h.DocDate AS docDate, h.ObjType AS objType, h.DocEntry AS docEntry, h.TrxCode AS trxCode,
-        h.ContainerNo AS containerNo, d.KodeRuangan AS kodeRuangan, d.flags AS flag,
+        h.ContainerNo AS containerNo, d.KodeRuangan AS kodeRuangan,
+        COALESCE(NULLIF(d.NoBL, ''), CASE WHEN d.flags = 1 THEN NULLIF(h.U_NoBL, '') END) AS noBL, d.flags AS flag,
         d.qty * d.flags AS kg, d.Qty2 * d.flags AS sak, d.QtyPalet * d.flags AS palet
 FROM    OKRN h
 JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
@@ -207,6 +210,7 @@ WHERE   h.DocStatus = 'C' AND h.BPLId = @bplId AND d.ItemCode = @itemCode
   AND   (@whsCode IS NULL OR h.WhsCode = @whsCode)
   AND   (@containerNo IS NULL OR h.ContainerNo = @containerNo)
   AND   (@ruangan IS NULL OR d.KodeRuangan = @ruangan)
+  AND   (@bl IS NULL OR COALESCE(NULLIF(d.NoBL, ''), CASE WHEN d.flags = 1 THEN NULLIF(h.U_NoBL, '') END) = @bl)
   AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = h.WhsCode)
 ORDER BY h.DocDate, h.DocEntry, d.LineNum";
 
@@ -279,7 +283,7 @@ WHERE   h.ObjType = @objType AND h.DocEntry = @docEntry AND h.BPLId = @bplId";
 
     public const string CmsLines = @"
 SELECT  d.LineNum AS lineNum, d.ItemCode AS itemCode, i.ItemName AS itemName, g.ItmsGrpNam AS groupName,
-        'KG' AS uom, d.brand_name AS brand, d.Origin AS origin, d.KodeRuangan AS kodeRuangan, d.U_IDU_Kode_PT AS ptCode, d.flags AS flag,
+        'KG' AS uom, d.brand_name AS brand, d.Origin AS origin, d.KodeRuangan AS kodeRuangan, d.U_IDU_Kode_PT AS ptCode, d.NoBL AS noBL, d.flags AS flag,
         d.qty AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet,
         d.qty_scan AS qtyScan, d.qty2_scan AS qty2Scan, d.QtyPalet_scan AS qtyPaletScan,
         d.NumAtCard AS numAtCard, d.LineStatus AS lineStatus
@@ -315,7 +319,7 @@ UPDATE  KRN1
 SET     qty_scan      = CASE WHEN qty_scan      IS NULL AND qty      <> @qty      THEN qty      ELSE qty_scan END,
         qty2_scan     = CASE WHEN qty2_scan     IS NULL AND Qty2     <> @qty2     THEN Qty2     ELSE qty2_scan END,
         QtyPalet_scan = CASE WHEN QtyPalet_scan IS NULL AND QtyPalet <> @qtyPalet THEN QtyPalet ELSE QtyPalet_scan END,
-        qty = @qty, Qty2 = @qty2, QtyPalet = @qtyPalet, NumAtCard = @numAtCard, KodeRuangan = COALESCE(@ruang, KodeRuangan), U_IDU_Kode_PT = COALESCE(@ptLine, U_IDU_Kode_PT)
+        qty = @qty, Qty2 = @qty2, QtyPalet = @qtyPalet, NumAtCard = @numAtCard, KodeRuangan = COALESCE(@ruang, KodeRuangan), U_IDU_Kode_PT = COALESCE(@ptLine, U_IDU_Kode_PT), NoBL = COALESCE(@blLine, NoBL)
 WHERE   ObjType = @objType AND DocEntry = @docEntry AND LineNum = @lineNum AND LineStatus = 'O'";
 
     public const string CmsUpdateHeader = @"

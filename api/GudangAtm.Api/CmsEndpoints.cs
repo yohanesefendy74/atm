@@ -148,10 +148,12 @@ ORDER BY LogTime DESC", new { objType, docEntry, bplId = u.BplId() }));
                     if (ruang is not null && await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WHS_MasterRuangan WHERE KodeRuangan = @r AND WhsCode = @w AND Aktif = 1", new { r = ruang, w = h.WhsCode }, tx) == 0)
                         return Bad($"Ruangan {ruang} bukan milik gudang {h.WhsCode}");
                     var ptLine = Clean(e.PtCode);
+                    var blLine = Clean(e.NoBL);
+                    if ((blLine?.Length ?? 0) > 50) return Bad("No. BL terlalu panjang");
                     if (ptLine is not null && await db.ExecuteScalarAsync<int>(Sql.PtExists, new { ptCode = ptLine }, tx) == 0) return Bad($"PT {ptLine} tidak ada di OPRC");
                     await db.ExecuteAsync(Sql.CmsUpdateLine, new
                     {
-                        objType, docEntry, lineNum = e.LineNum, qty = e.Qty, qty2 = e.Qty2, qtyPalet = e.QtyPalet, ruang, ptLine,
+                        objType, docEntry, lineNum = e.LineNum, qty = e.Qty, qty2 = e.Qty2, qtyPalet = e.QtyPalet, ruang, ptLine, blLine,
                         numAtCard = trx == "RC" ? Clean(e.NumAtCard) : null,
                     }, tx);
                 }
@@ -212,6 +214,9 @@ ORDER BY LogTime DESC", new { objType, docEntry, bplId = u.BplId() }));
                     foreach (var l in lines.Where(l => string.IsNullOrWhiteSpace(l.PtCode))) errors.Add($"Baris {l.LineNum + 1} ({l.ItemCode}) belum punya PT");
                 if (lines.Count == 0) errors.Add("Dokumen tanpa baris");
                 foreach (var l in lines.Where(l => string.IsNullOrWhiteSpace(l.KodeRuangan))) errors.Add($"Baris {l.LineNum + 1} ({l.ItemCode}) belum punya ruangan");
+                // Saldo per BL: baris masuk memakai BL baris atau BL header; baris keluar wajib BL baris (BL sumber stok)
+                foreach (var l in lines.Where(l => string.IsNullOrWhiteSpace(l.NoBL) && (l.Flag != 1 || string.IsNullOrWhiteSpace(h.BlNo))))
+                    errors.Add($"Baris {l.LineNum + 1} ({l.ItemCode}) belum punya No. BL");
 
                 var needType = RequiredCardType(h.ObjType, h.TrxCode);
                 if (needType is not null)
@@ -252,6 +257,9 @@ ORDER BY LogTime DESC", new { objType, docEntry, bplId = u.BplId() }));
                     return Results.BadRequest(new { message = "Belum bisa diposting", errors });
                 }
 
+                // BL header turun ke baris masuk yang belum ber-BL, supaya saldo & kartu stok per BL konsisten
+                await db.ExecuteAsync("UPDATE KRN1 SET NoBL = @bl WHERE ObjType = @objType AND DocEntry = @docEntry AND flags = 1 AND ISNULL(NoBL, '') = ''",
+                    new { bl = h.BlNo, objType, docEntry }, tx);
                 // Saldo stok (WHS_Saldo) diperbarui dalam transaksi yang sama dengan posting
                 await db.ExecuteAsync("dbo.usp_WHS_SaldoPosting", new { ObjType = objType, DocEntry = docEntry }, tx, commandType: CommandType.StoredProcedure);
 

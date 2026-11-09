@@ -20,7 +20,8 @@ public record DocLine(
     decimal Qty,
     decimal Qty2,
     decimal QtyPalet,
-    string? KodeRuangan = null);   // keluar: ruangan SUMBER stok; masuk: ruangan TUJUAN
+    string? KodeRuangan = null,    // keluar: ruangan SUMBER stok; masuk: ruangan TUJUAN
+    string? NoBL = null);          // No. BL: keluar = BL sumber stok (wajib); masuk = BL barang (KR/RP: dari BL palet keluar)
 
 /// Inbound: header + baris detail (semua Flag 1). TrxCode IB/BT ditentukan server dari OWHS.External.
 public record InboundRequest(
@@ -99,6 +100,7 @@ public class DocHeaderRow
 
 public class StockCardRow
 {
+    public string? NoBL { get; set; }
     public DateTime DocDate { get; set; }
     public string ObjType { get; set; } = "";
     public long DocEntry { get; set; }
@@ -116,7 +118,7 @@ public class StockCardRow
 
 // ---------------------------------------------------------------- CMS
 
-public record CmsLineEdit(int LineNum, decimal Qty, decimal Qty2, decimal QtyPalet, string? NumAtCard, string? KodeRuangan = null, string? PtCode = null);
+public record CmsLineEdit(int LineNum, decimal Qty, decimal Qty2, decimal QtyPalet, string? NumAtCard, string? KodeRuangan = null, string? PtCode = null, string? NoBL = null);
 
 /// Simpan perubahan Admin. TrxCode menentukan ObjType tujuan (SS = 6710, KR/RP = 6720).
 public record CmsSaveRequest(
@@ -145,6 +147,7 @@ public class CmsHeaderRow
 
 public class CmsLineRow
 {
+    public string? NoBL { get; set; }
     public string? KodeRuangan { get; set; }
     public string? PtCode { get; set; }   // PT per baris (SPMB: dipilih krani, boleh campur)
     public int LineNum { get; set; }

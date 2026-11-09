@@ -5,7 +5,7 @@ using Microsoft.Data.SqlClient;
 
 namespace GudangAtm.Api;
 
-public record TerimaLine(int PlanLine, decimal Qty, decimal Qty2, decimal QtyPalet, string? Brand, string? KodeRuangan, string? PtCode = null);
+public record TerimaLine(int PlanLine, decimal Qty, decimal Qty2, decimal QtyPalet, string? Brand, string? KodeRuangan, string? PtCode = null, string? NoBL = null);
 public record TerimaReq(long? RegId, DateTime? DocDate, List<TerimaLine> Lines, long? SesiId = null);
 
 /// Krani menyimpan penerimaan (SPBB) / pengiriman (SPMB) terhadap dokumen rencana. Satu simpan = satu OKRN (penerimaan ke-N).
@@ -20,7 +20,7 @@ public static class PlanKraniSave
             if (r.Lines is null || r.Lines.Count == 0) return Bad("Belum ada baris yang diisi");
             if (r.Lines.Any(l => l.Qty <= 0 || l.Qty > 10_000_000 || l.Qty2 < 0 || l.QtyPalet < 0)) return Bad("Qty tidak valid");
             // SPMB: krani memilih PT per baris (boleh campur) -> satu baris dokumen boleh dipecah per PT / ruangan
-            if (r.Lines.GroupBy(l => (l.PlanLine, Pt: (l.PtCode ?? "").Trim(), R: (l.KodeRuangan ?? "").Trim())).Any(g => g.Count() > 1)) return Bad("Baris dokumen dobel (item + PT + ruangan sama)");
+            if (r.Lines.GroupBy(l => (l.PlanLine, Pt: (l.PtCode ?? "").Trim(), R: (l.KodeRuangan ?? "").Trim(), Bl: (l.NoBL ?? "").Trim())).Any(g => g.Count() > 1)) return Bad("Baris dokumen dobel (item + PT + ruangan + BL sama)");
             await using var db = dbf();
             await db.OpenAsync();
             await using var tx = (SqlTransaction)await db.BeginTransactionAsync(IsolationLevel.Serializable);
@@ -75,6 +75,7 @@ public static class PlanKraniSave
                         if (ptc == "") return Bad($"{pr.ItemCode}: pilih PT");
                         if (!ptCache.TryGetValue(ptc, out var ok)) ptCache[ptc] = ok = await db.ExecuteScalarAsync<int>(Sql.PtExists, new { ptCode = ptc }, tx) > 0;
                         if (!ok) return Bad($"PT {ptc} tidak ada di OPRC");
+                        if (string.IsNullOrWhiteSpace(l.NoBL)) return Bad($"{pr.ItemCode}: pilih BL sumber stok");
                     }
                     var ruang = l.KodeRuangan ?? pr.KodeRuangan ?? pl.KodeRuangan;
                     if (ruang is null) return Bad(pl.Jenis == "SPBB" ? $"{pr.ItemCode}: pilih ruangan tujuan" : $"{pr.ItemCode}: pilih ruangan sumber");
@@ -87,6 +88,14 @@ public static class PlanKraniSave
                     }
                 }
                 if (pl.Jenis == "SPBB" && string.IsNullOrWhiteSpace(pl.PtCode) == false) { /* PT terisi dari dokumen */ }
+
+                if (pl.Jenis == "SPMB")
+                    foreach (var g in r.Lines.GroupBy(l => (plan1[l.PlanLine].ItemCode, R: (l.KodeRuangan ?? plan1[l.PlanLine].KodeRuangan ?? pl.KodeRuangan ?? "").Trim(), Bl: l.NoBL!.Trim())))
+                    {
+                        var stok = await db.ExecuteScalarAsync<decimal?>("SELECT SUM(Kg) FROM WHS_Saldo WHERE WhsCode = @w AND ItemCode = @i AND KodeRuangan = @r AND NoBL = @bl",
+                            new { w = pl.WhsCode, i = g.Key.ItemCode, r = g.Key.R, bl = g.Key.Bl }, tx) ?? 0;
+                        if (g.Sum(x => x.Qty) > stok + 0.01m) return Bad($"{g.Key.ItemCode} ruangan {g.Key.R} BL {g.Key.Bl}: muat {g.Sum(x => x.Qty):N0} kg melebihi stok {stok:N0} kg");
+                    }
 
                 var date = (r.DocDate ?? DateTime.Today).Date;
                 if (date > DateTime.Today || date < DateTime.Today.AddDays(-3)) date = DateTime.Today;
@@ -108,7 +117,9 @@ public static class PlanKraniSave
                     await db.ExecuteAsync("UPDATE OKRN SET PlanId = @id, PenerimaanKe = @ke, RegId = @reg, SesiId = @sesi WHERE ObjType = @objType AND DocEntry = @docEntry", new { id, ke, reg = regId, sesi = sesiId, objType, docEntry }, tx);
                     // Data dari SPBB/SPMB ikut ke dokumen krani supaya Admin tinggal mengecek & memposting stok di CMS
                     await db.ExecuteAsync(@"UPDATE h SET U_IDU_Kode_PT = COALESCE(@ptLine, p.U_IDU_Kode_PT), cardcode = COALESCE(NULLIF(p.CardCodeTitipan, ''), p.CardCode),
-                            NumAtCard = LEFT(d.NumAtCard, COL_LENGTH('OKRN', 'NumAtCard')), BaseType = d.BaseType, BaseDocEntry = d.BaseDocEntry, BaseDocNum = d.BaseDocNum
+                            NumAtCard = LEFT(d.NumAtCard, COL_LENGTH('OKRN', 'NumAtCard')),
+                        U_NoBL = CASE WHEN p.Jenis = 'SPBB' AND d.BaseType = 'BL' THEN LEFT(d.NumAtCard, COL_LENGTH('OKRN', 'U_NoBL')) ELSE h.U_NoBL END,
+                        BaseType = d.BaseType, BaseDocEntry = d.BaseDocEntry, BaseDocNum = d.BaseDocNum
                         FROM OKRN h JOIN WHS_Plan p ON p.PlanId = @id
                         OUTER APPLY (SELECT TOP 1 BaseType, BaseDocEntry, BaseDocNum, NumAtCard FROM WHS_PlanDoc WHERE PlanId = @id ORDER BY BaseDocEntry) d
                         WHERE h.ObjType = @objType AND h.DocEntry = @docEntry", new { id, objType, docEntry, ptLine = (string?)null }, tx);
@@ -119,7 +130,7 @@ public static class PlanKraniSave
                         var pr = plan1[l.PlanLine];
                         var ruang = l.KodeRuangan ?? pr.KodeRuangan ?? pl.KodeRuangan;
                         var brand = Helpers.Empty(l.Brand) ?? pr.BrandName;
-                        await db.ExecuteAsync(Sql.InsertLine, new { objType, docEntry, lineNum, itemCode = pr.ItemCode, uom = "KG", brand, origin = (string?)null, qty = l.Qty, qty2 = l.Qty2, qtyPalet = l.QtyPalet, flag, ruang }, tx);
+                        await db.ExecuteAsync(Sql.InsertLine, new { objType, docEntry, lineNum, itemCode = pr.ItemCode, uom = "KG", brand, origin = (string?)null, qty = l.Qty, qty2 = l.Qty2, qtyPalet = l.QtyPalet, flag, ruang, bl = pl.Jenis == "SPMB" ? l.NoBL!.Trim() : null }, tx);
                         await db.ExecuteAsync(@"UPDATE KRN1 SET PlanLine = @pl, ContainerNo = @c, KodeRuangan = @ru, U_IDU_Kode_PT = @ptl, PaletCode = @pc, Size = @sz, [Type] = @ty, Crop = @cr,
                             brand_asli = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN @asli END,
                             brand_diubah_oleh = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN @uid END,
