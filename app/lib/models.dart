@@ -28,8 +28,10 @@ class LineDraft {
     required this.qty2,
     required this.qtyPalet,
     this.kodeRuangan,
+    this.noBL,
   });
   final String? kodeRuangan; // ruangan TUJUAN (Item Inbound KR/RP)
+  final String? noBL; // No. BL barang (Item Inbound KR/RP: BL palet asal)
   final String itemCode;
   final String itemName;
   final String groupName;
@@ -49,10 +51,11 @@ class LineDraft {
         'qty2': qty2,
         'qtyPalet': qtyPalet,
         'kodeRuangan': kodeRuangan,
+        'noBL': noBL,
       };
 
-  LineDraft withRuangan(String? r) => LineDraft(
-      itemCode: itemCode, itemName: itemName, groupName: groupName, uom: uom, brand: brand, origin: origin, qty: qty, qty2: qty2, qtyPalet: qtyPalet, kodeRuangan: r);
+  LineDraft withRuangan(String? r, {String? bl}) => LineDraft(
+      itemCode: itemCode, itemName: itemName, groupName: groupName, uom: uom, brand: brand, origin: origin, qty: qty, qty2: qty2, qtyPalet: qtyPalet, kodeRuangan: r, noBL: bl ?? noBL);
 }
 
 class InboundDraft {
@@ -91,12 +94,21 @@ class ScannedPallet {
         stockSak = toD(j['stockSak']),
         rooms = ((j['rooms'] as List?) ?? const []).map((e) => Map<String, dynamic>.from(e as Map)).toList() {
     sak = sakPerPalet;
-    if (rooms.length == 1) kodeRuangan = rooms.first['kodeRuangan']?.toString();
+    if (rooms.length == 1) pilihSumber(rooms.first);
   }
 
   /// Stok item+container per ruangan. Satu container bisa tersebar di beberapa ruangan -> krani memilih ruangan SUMBER.
   final List<Map<String, dynamic>> rooms;
   String? kodeRuangan;
+  String? noBL; // BL sumber stok (saldo per BL)
+
+  /// Satu baris saldo = ruangan + BL. Kunci dipakai dropdown.
+  static String sumberKey(Map<String, dynamic> r) => '${r['kodeRuangan'] ?? ''}|${r['noBL'] ?? ''}';
+  String? get sumber => kodeRuangan == null ? null : '$kodeRuangan|${noBL ?? ''}';
+  void pilihSumber(Map<String, dynamic> r) {
+    kodeRuangan = r['kodeRuangan']?.toString();
+    noBL = r['noBL']?.toString();
+  }
 
   final String qr;
   final String itemCode;
@@ -145,9 +157,10 @@ class OutboundDraft {
   List<Map<String, dynamic>> outLines() {
     final map = <String, Map<String, dynamic>>{};
     for (final p in pallets) {
-      final m = map.putIfAbsent('${p.itemCode}|${p.kodeRuangan ?? ''}', () => {
+      final m = map.putIfAbsent('${p.itemCode}|${p.kodeRuangan ?? ''}|${p.noBL ?? ''}', () => {
             'itemCode': p.itemCode,
             'kodeRuangan': p.kodeRuangan,
+            'noBL': p.noBL,
             'itemName': p.itemName,
             'uom': 'KG',
             'brand': p.brand,
@@ -181,6 +194,7 @@ class OutboundDraft {
                   'qty2': l['qty2'],
                   'qtyPalet': l['qtyPalet'],
                   'kodeRuangan': l['kodeRuangan'],
+                  'noBL': l['noBL'],
                 })
             .toList(),
         'inLines': isAdj ? inLines.map((l) => l.toJson()).toList() : <Map<String, dynamic>>[],

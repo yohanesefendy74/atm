@@ -24,6 +24,7 @@ type Pallet = {
   kgManual: number | null;
   rooms: Row[]; // stok item+container per ruangan
   kodeRuangan: string; // ruangan SUMBER (wajib)
+  noBL: string; // BL sumber (saldo per BL, wajib)
 };
 const kgAuto = (p: Pallet) => p.sak * p.kgPerSak;
 const kgOf = (p: Pallet) => p.kgManual ?? kgAuto(p);
@@ -44,6 +45,7 @@ export default function OutboundNew() {
   const [pallets, setPallets] = useState<Pallet[]>([]);
   const [inLines, setInLines] = useState<Line[]>([]);
   const [ruangIn, setRuangIn] = useState('');
+  const [blIn, setBlIn] = useState('');
   const [sel, setSel] = useState<number | null>(null);
   const [armed, setArmed] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -91,7 +93,8 @@ export default function OutboundNew() {
         sak: num(r.sakPerPalet),
         kgManual: null,
         rooms: (r.rooms as Row[]) ?? [],
-        kodeRuangan: ((r.rooms as Row[]) ?? []).length === 1 ? String((r.rooms as Row[])[0].kodeRuangan) : '',
+        kodeRuangan: ((r.rooms as Row[]) ?? []).length === 1 ? String((r.rooms as Row[])[0].kodeRuangan ?? '') : '',
+        noBL: ((r.rooms as Row[]) ?? []).length === 1 ? String((r.rooms as Row[])[0].noBL ?? '') : '',
       };
       const nth = pallets.filter((x) => x.itemCode === p.itemCode).length + 1;
       setContainer(r.containerNo);
@@ -118,7 +121,7 @@ export default function OutboundNew() {
   // palet digabung per item; tiap palet discan = 1 QtyPalet
   const outLines = Object.values(
     pallets.reduce<Record<string, Row>>((acc, p) => {
-      const l = (acc[`${p.itemCode}|${p.kodeRuangan}`] ??= { itemCode: p.itemCode, itemName: p.itemName, brand: p.brand, origin: p.origin, kodeRuangan: p.kodeRuangan, uom: 'KG', qty: 0, qty2: 0, qtyPalet: 0, partial: 0 });
+      const l = (acc[`${p.itemCode}|${p.kodeRuangan}|${p.noBL}`] ??= { itemCode: p.itemCode, itemName: p.itemName, brand: p.brand, origin: p.origin, kodeRuangan: p.kodeRuangan, noBL: p.noBL, uom: 'KG', qty: 0, qty2: 0, qtyPalet: 0, partial: 0 });
       l.qty += kgOf(p);
       l.qty2 += p.sak;
       l.qtyPalet += 1;
@@ -129,6 +132,7 @@ export default function OutboundNew() {
 
   const save = async () => {
     if (pallets.some((p) => !p.kodeRuangan)) return setErr(new Error('Pilih ruangan sumber untuk setiap palet'));
+    if (pallets.some((p) => !p.noBL)) return setErr(new Error('Stok palet belum punya No. BL. Minta Admin mengisi BL stok lama dulu.'));
     setBusy(true);
     setErr(null);
     try {
@@ -139,7 +143,7 @@ export default function OutboundNew() {
         containerNo: container,
         docDate: todayIso(),
         outLines: outLines.map((l) => ({ itemCode: l.itemCode, uom: 'KG', brand: l.brand, origin: l.origin, qty: Math.round(l.qty * 100) / 100, qty2: l.qty2, qtyPalet: l.qtyPalet, kodeRuangan: l.kodeRuangan })),
-        inLines: isAdj ? inLines.map((l) => ({ itemCode: l.itemCode, uom: l.uom, brand: l.brand || null, origin: l.origin || null, qty: l.qty, qty2: l.qty2, qtyPalet: l.qtyPalet, kodeRuangan: l.kodeRuangan })) : [],
+        inLines: isAdj ? inLines.map((l) => ({ itemCode: l.itemCode, uom: l.uom, brand: l.brand || null, origin: l.origin || null, qty: l.qty, qty2: l.qty2, qtyPalet: l.qtyPalet, kodeRuangan: l.kodeRuangan, noBL: l.noBL })) : [],
       });
       toast(`Outbound ${r.docEntry} (${r.trxCode}) tersimpan`);
       navigate('/outbound', true);
@@ -243,7 +247,23 @@ export default function OutboundNew() {
           <label>Ruangan tujuan (item masuk) <span className="req">*</span></label>
           <RuanganSelect whs={wh?.whsCode ?? ''} value={ruangIn} onChange={setRuangIn} titipan={false} />
         </div>
-        <LineForm accent="green" sakLabel="Sak" onAdd={(l) => (ruangIn ? setInLines([...inLines, { ...l, kodeRuangan: ruangIn }]) : toast('Pilih ruangan tujuan dulu', true))} />
+        {(() => {
+          const bls = [...new Set(pallets.map((p) => p.noBL).filter(Boolean))];
+          const bl = bls.length === 1 ? bls[0] : blIn;
+          return (
+            <>
+              <div className="field">
+                <label>No. BL item masuk <span className="req">*</span></label>
+                {bls.length === 0 ? <p className="hint">BL item masuk mengikuti BL palet keluar. Scan palet sumber dulu.</p> : (
+                  <select className="input" value={bl} onChange={(e) => setBlIn(e.target.value)} disabled={bls.length === 1}>
+                    <option value="">Pilih BL</option>{bls.map((b) => <option key={b}>{b}</option>)}
+                  </select>
+                )}
+              </div>
+              <LineForm accent="green" sakLabel="Sak" onAdd={(l) => (!ruangIn ? toast('Pilih ruangan tujuan dulu', true) : !bl ? toast('Pilih No. BL item masuk', true) : setInLines([...inLines, { ...l, kodeRuangan: ruangIn, noBL: bl }]))} />
+            </>
+          );
+        })()}
         <strong>Item Inbound · {inLines.length} baris</strong>
         {inLines.map((l, i) => (
           <LineRow key={i} l={l} sak="sak" badge={<span className="pill green">MASUK</span>} onDelete={() => setInLines(inLines.filter((_, j) => j !== i))} />
@@ -337,12 +357,13 @@ export default function OutboundNew() {
               <div className="error">Stok item ini di container tersebut belum punya ruangan. Minta Admin mengisi ruangan stok lama dulu.</div>
             ) : (
               <div className="field">
-                <label>Ruangan sumber <span className="req">*</span></label>
-                <select className="input" value={p.kodeRuangan} onChange={(e) => update(p.id, { kodeRuangan: e.target.value })}>
-                  <option value="">Pilih ruangan</option>
+                <label>Ruangan &amp; BL sumber <span className="req">*</span></label>
+                <select className="input" value={p.kodeRuangan ? `${p.kodeRuangan}|${p.noBL}` : ''}
+                  onChange={(e) => { const [k, b] = e.target.value.split('|'); update(p.id, { kodeRuangan: k ?? '', noBL: b ?? '' }); }}>
+                  <option value="">Pilih ruangan &amp; BL</option>
                   {p.rooms.map((r) => (
-                    <option key={String(r.kodeRuangan)} value={String(r.kodeRuangan)}>
-                      {r.kodeRuangan} · stok {fmt(r.stockKg)} kg · {fmt(r.stockSak)} krg
+                    <option key={`${r.kodeRuangan}|${r.noBL}`} value={`${r.kodeRuangan ?? ''}|${r.noBL ?? ''}`}>
+                      {r.kodeRuangan ?? '-'} · BL {r.noBL ?? 'BELUM ADA'} · {fmt(r.stockKg)} kg · {fmt(r.stockSak)} krg
                     </option>
                   ))}
                 </select>

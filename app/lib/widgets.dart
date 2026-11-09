@@ -637,3 +637,77 @@ class _PtFieldState extends State<PtField> {
     );
   }
 }
+
+
+/// BL sumber stok untuk item (saldo per ruangan + BL). Cari lalu pilih; teks bebas tidak diterima.
+class BlField extends StatefulWidget {
+  const BlField({super.key, required this.whs, required this.itemCode, required this.ruangan, required this.value, required this.onChanged});
+  final String whs;
+  final String itemCode;
+  final String? ruangan;
+  final String? value;
+  final ValueChanged<String?> onChanged;
+  @override
+  State<BlField> createState() => _BlFieldState();
+}
+
+class _BlFieldState extends State<BlField> {
+  List<Map<String, dynamic>> _rows = [];
+  String? _err;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(BlField old) {
+    super.didUpdateWidget(old);
+    if (old.ruangan != widget.ruangan || old.itemCode != widget.itemCode) _load();
+  }
+
+  Future<void> _load() async {
+    if (widget.ruangan == null) return setState(() => _rows = []);
+    try {
+      final r = await Api.get('/api/stok/bl', {'whs': widget.whs, 'itemCode': widget.itemCode, 'ruangan': widget.ruangan!}) as List;
+      if (!mounted) return;
+      setState(() {
+        _err = null;
+        _rows = r.map((e) => Map<String, dynamic>.from(e as Map)).where((x) => (x['noBL'] ?? '').toString().isNotEmpty).toList();
+      });
+      if (widget.value == null && _rows.length == 1) widget.onChanged(_rows.first['noBL'].toString());
+    } catch (e) {
+      if (mounted) setState(() => _err = e.toString());
+    }
+  }
+
+  String _label(Map<String, dynamic> r) => '${r['noBL']} · stok ${toD(r['kg']).toStringAsFixed(0)} kg';
+
+  @override
+  Widget build(BuildContext context) {
+    if (_err != null) return Hint('Gagal memuat BL: $_err', color: C.outbound);
+    if (widget.ruangan == null) return const Hint('Pilih ruangan sumber dulu untuk melihat BL', color: C.amberText);
+    if (_rows.isEmpty) return const Hint('Tidak ada stok ber-BL untuk item ini di ruangan tersebut', color: C.outbound);
+    final cur = _rows.where((r) => r['noBL'].toString() == widget.value).firstOrNull;
+    return Autocomplete<Map<String, dynamic>>(
+      key: ValueKey('${widget.ruangan}|${widget.value}|${_rows.length}'),
+      initialValue: TextEditingValue(text: cur == null ? '' : _label(cur)),
+      displayStringForOption: _label,
+      optionsBuilder: (v) {
+        final q = v.text.trim().toUpperCase();
+        if (cur != null && v.text == _label(cur)) return _rows;
+        return _rows.where((r) => q.isEmpty || _label(r).toUpperCase().contains(q));
+      },
+      onSelected: (r) => widget.onChanged(r['noBL'].toString()),
+      fieldViewBuilder: (context, ctrl, focus, onSubmit) => TextField(
+        controller: ctrl,
+        focusNode: focus,
+        decoration: const InputDecoration(labelText: 'No. BL sumber (wajib)', suffixIcon: Icon(Icons.arrow_drop_down)),
+        onChanged: (_) {
+          if (widget.value != null) widget.onChanged(null);
+        },
+      ),
+    );
+  }
+}

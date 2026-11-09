@@ -205,6 +205,7 @@ class OutboundAddItemScreen extends StatefulWidget {
 
 class _OutboundAddItemScreenState extends State<OutboundAddItemScreen> {
   String? _ruang;
+  String? _bl;
 
   @override
   Widget build(BuildContext context) {
@@ -224,12 +225,25 @@ class _OutboundAddItemScreenState extends State<OutboundAddItemScreen> {
           child: ListView(padding: const EdgeInsets.all(20), children: [
             RuanganField(whs: d.warehouse!.code, value: _ruang, titipan: false, label: 'Ruangan tujuan (item masuk)', onChanged: (v) => setState(() => _ruang = v)),
             const SizedBox(height: 12),
+            Builder(builder: (_) {
+              final bls = d.pallets.map((p) => p.noBL).whereType<String>().where((b) => b.isNotEmpty).toSet().toList();
+              if (bls.length == 1) _bl = bls.first;
+              if (bls.isEmpty) return const Hint('BL item masuk mengikuti BL palet keluar. Scan palet sumber dulu.', color: C.amberText);
+              return DropdownButtonFormField<String>(
+                value: bls.contains(_bl) ? _bl : null,
+                decoration: const InputDecoration(labelText: 'No. BL item masuk'),
+                items: [for (final b in bls) DropdownMenuItem(value: b, child: Text(b))],
+                onChanged: (v) => setState(() => _bl = v),
+              );
+            }),
+            const SizedBox(height: 12),
             LineForm(
               accent: C.green,
               sakLabel: 'Sak',
               onAdd: (l) {
                 if (_ruang == null) return showError(context, 'Pilih ruangan tujuan dulu');
-                setState(() => d.inLines.add(l.withRuangan(_ruang)));
+                if (_bl == null) return showError(context, 'Pilih No. BL item masuk (dari palet keluar)');
+                setState(() => d.inLines.add(l.withRuangan(_ruang, bl: _bl)));
               },
             ),
             const SizedBox(height: 16),
@@ -238,7 +252,7 @@ class _OutboundAddItemScreenState extends State<OutboundAddItemScreen> {
             for (var i = 0; i < d.inLines.length; i++) ...[
               LineTile(d.inLines[i],
                   sakLabel: 'sak',
-                  badge: Pill('MASUK · ${d.inLines[i].kodeRuangan ?? '-'}', bg: C.greenTint, fg: C.greenText),
+                  badge: Pill('MASUK · ${d.inLines[i].kodeRuangan ?? '-'} · BL ${d.inLines[i].noBL ?? '-'}', bg: C.greenTint, fg: C.greenText),
                   onDelete: () => setState(() => d.inLines.removeAt(i))),
               const SizedBox(height: 8),
             ],
@@ -310,7 +324,7 @@ class _OutboundScanScreenState extends State<OutboundScanScreen> {
       if (p.rooms.length > 1) {
         final r = await pilihRuanganSumber(context, p);
         if (r == null) return;
-        p.kodeRuangan = r;
+        p.pilihSumber(r);
       }
       if (!mounted) return;
       d.containerNo ??= p.containerNo;
@@ -558,14 +572,19 @@ class _PalletEditorState extends State<_PalletEditor> {
           const Hint('Stok item ini di container tersebut belum punya ruangan. Minta Admin mengisi ruangan stok lama dulu.', color: C.outbound)
         else
           DropdownButtonFormField<String>(
-            value: p.kodeRuangan,
-            decoration: const InputDecoration(labelText: 'Ruangan sumber'),
+            value: p.sumber,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Ruangan & BL sumber'),
             items: [
               for (final r in p.rooms)
-                DropdownMenuItem(value: r['kodeRuangan']?.toString(), child: Text('${r['kodeRuangan'] ?? '-'} · stok ${fmt(toD(r['stockKg']))} kg · ${fmt(toD(r['stockSak']))} krg')),
+                DropdownMenuItem(
+                  value: ScannedPallet.sumberKey(r),
+                  child: Text('${r['kodeRuangan'] ?? '-'} · BL ${r['noBL'] ?? 'BELUM ADA'} · ${fmt(toD(r['stockKg']))} kg', overflow: TextOverflow.ellipsis),
+                ),
             ],
             onChanged: (v) {
-              setState(() => p.kodeRuangan = v);
+              final r = p.rooms.firstWhere((x) => ScannedPallet.sumberKey(x) == v);
+              setState(() => p.pilihSumber(r));
               widget.onChanged();
             },
           ),
@@ -675,6 +694,7 @@ class _OutboundSummaryScreenState extends State<OutboundSummaryScreen> {
   Future<void> _save() async {
     final d = widget.draft;
     if (d.pallets.any((p) => p.kodeRuangan == null)) return showError(context, 'Pilih ruangan sumber untuk setiap palet');
+    if (d.pallets.any((p) => (p.noBL ?? '').isEmpty)) return showError(context, 'Stok palet belum punya No. BL. Minta Admin mengisi BL stok lama dulu.');
     setState(() => _busy = true);
     try {
       final r = await Api.saveOutbound(d.toJson());
@@ -773,21 +793,21 @@ class _OutboundSummaryScreenState extends State<OutboundSummaryScreen> {
 }
 
 
-/// Satu container bisa tersebar di beberapa ruangan: krani memilih ruangan SUMBER palet ini.
-Future<String?> pilihRuanganSumber(BuildContext context, ScannedPallet p) => showModalBottomSheet<String>(
+/// Satu container bisa tersebar di beberapa ruangan / BL: krani memilih ruangan + BL SUMBER palet ini.
+Future<Map<String, dynamic>?> pilihRuanganSumber(BuildContext context, ScannedPallet p) => showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       builder: (c) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-            child: Text('Ruangan sumber · ${p.itemCode}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            child: Text('Ruangan & BL sumber · ${p.itemCode}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
           ),
-          const Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('Barang dari container ini ada di beberapa ruangan. Pilih asal palet yang discan.', style: TextStyle(color: C.muted))),
+          const Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('Barang dari container ini ada di beberapa ruangan / BL. Pilih asal palet yang discan.', style: TextStyle(color: C.muted))),
           for (final r in p.rooms)
             ListTile(
-              title: Text('${r['kodeRuangan'] ?? '-'}${r['namaRuangan'] != null ? ' · ${r['namaRuangan']}' : ''}'),
+              title: Text('${r['kodeRuangan'] ?? '-'}${r['namaRuangan'] != null ? ' · ${r['namaRuangan']}' : ''} · BL ${r['noBL'] ?? '-'}'),
               subtitle: Text('Stok ${fmt(toD(r['stockKg']))} kg · ${fmt(toD(r['stockSak']))} karung'),
-              onTap: () => Navigator.of(c).pop(r['kodeRuangan']?.toString()),
+              onTap: () => Navigator.of(c).pop(r),
             ),
           const SizedBox(height: 8),
         ]),

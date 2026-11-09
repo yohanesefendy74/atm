@@ -207,6 +207,7 @@ class _TugasDetailState extends State<TugasDetail> {
       final q = double.tryParse(e.qty.text.replaceAll(',', '.')) ?? 0;
       if (q <= 0) continue;
       if (!spbb && (e.pt ?? '').isEmpty) return showError(context, 'Pilih PT untuk setiap baris yang diisi');
+      if (!spbb && (e.bl ?? '').isEmpty) return showError(context, 'Pilih BL sumber untuk setiap baris yang diisi');
       items.add({
         'planLine': e.planLine,
         'qty': q,
@@ -214,6 +215,7 @@ class _TugasDetailState extends State<TugasDetail> {
         'qtyPalet': double.tryParse(e.pal.text.replaceAll(',', '.')) ?? 0,
         'kodeRuangan': e.room,
         'ptCode': spbb ? null : e.pt,
+        'noBL': spbb ? null : e.bl,
       });
     }
     if (spbb && _sesiId == null) return showError(context, 'Pilih kontainer yang sedang dibongkar');
@@ -397,8 +399,15 @@ class _TugasDetailState extends State<TugasDetail> {
                 value: e.room,
                 titipan: _h!['titipan'] as bool?,
                 label: spbb ? 'Ruangan tujuan' : 'Ruangan sumber',
-                onChanged: (v) => setState(() => e.room = v),
+                onChanged: (v) => setState(() {
+                  e.room = v;
+                  e.bl = null;
+                }),
               ),
+              if (!spbb) ...[
+                const SizedBox(height: 8),
+                BlField(whs: _h!['whsCode'].toString(), itemCode: '${l['itemCode']}', ruangan: e.room, value: e.bl, onChanged: (v) => setState(() => e.bl = v)),
+              ],
             ],
           if (!spbb && sisa > 0)
             TextButton.icon(
@@ -508,4 +517,5 @@ class _Entry {
   final pal = TextEditingController();
   String? room;
   String? pt;
+  String? bl;
 }

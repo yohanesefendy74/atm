@@ -184,7 +184,7 @@ function Lookup(props: { url: string; query?: Record<string, string>; value: str
   );
 }
 
-type Edit = { qty: string; qty2: string; qtyPalet: string; numAtCard: string; ruang: string; pt: string };
+type Edit = { qty: string; qty2: string; qtyPalet: string; numAtCard: string; ruang: string; pt: string; bl: string };
 
 export function CmsDetail({ objType, docEntry }: { objType: string; docEntry: string }) {
   const toast = useToast();
@@ -213,7 +213,7 @@ export function CmsDetail({ objType, docEntry }: { objType: string; docEntry: st
     setNumAtCard(h.numAtCard ?? '');
     setBl(h.blNo ?? '');
     const e: Record<number, Edit> = {};
-    lines.forEach((l) => (e[l.lineNum] = { qty: String(l.qty), qty2: String(l.qty2), qtyPalet: String(l.qtyPalet), numAtCard: l.numAtCard ?? '', ruang: l.kodeRuangan ?? '', pt: l.ptCode ?? '' }));
+    lines.forEach((l) => (e[l.lineNum] = { qty: String(l.qty), qty2: String(l.qty2), qtyPalet: String(l.qtyPalet), numAtCard: l.numAtCard ?? '', ruang: l.kodeRuangan ?? '', pt: l.ptCode ?? '', bl: l.noBL ?? '' }));
     setEdits(e);
     setRetur({});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -237,7 +237,7 @@ export function CmsDetail({ objType, docEntry }: { objType: string; docEntry: st
     bp.code !== (h.cardCode ?? '') ||
     numAtCard !== (h.numAtCard ?? '') ||
     bl !== (h.blNo ?? '') ||
-    lines.some((l) => changed(l, 'qty') || changed(l, 'qty2') || changed(l, 'qtyPalet') || (edits[l.lineNum]?.numAtCard ?? '') !== (l.numAtCard ?? '') || (edits[l.lineNum]?.ruang ?? '') !== (l.kodeRuangan ?? '') || (edits[l.lineNum]?.pt ?? '') !== (l.ptCode ?? ''));
+    lines.some((l) => changed(l, 'qty') || changed(l, 'qty2') || changed(l, 'qtyPalet') || (edits[l.lineNum]?.numAtCard ?? '') !== (l.numAtCard ?? '') || (edits[l.lineNum]?.ruang ?? '') !== (l.kodeRuangan ?? '') || (edits[l.lineNum]?.pt ?? '') !== (l.ptCode ?? '') || (edits[l.lineNum]?.bl ?? '') !== (l.noBL ?? ''));
 
   const body = () => ({
     trxCode: trx,
@@ -253,6 +253,7 @@ export function CmsDetail({ objType, docEntry }: { objType: string; docEntry: st
       numAtCard: edits[l.lineNum]?.numAtCard?.trim() || null,
       kodeRuangan: edits[l.lineNum]?.ruang || null,
       ptCode: edits[l.lineNum]?.pt || null,
+      noBL: edits[l.lineNum]?.bl?.trim() || null,
     })),
   });
 
@@ -420,6 +421,8 @@ export function CmsDetail({ objType, docEntry }: { objType: string; docEntry: st
                 <div className="small muted">{[l.itemName, l.brand, l.origin].filter(Boolean).join(' · ')}</div>
                 <div style={{ marginTop: 6, minWidth: 200 }}>
                   <RuanganSelect whs={h!.whsCode} value={edits[l.lineNum]?.ruang ?? ''} onChange={(v) => setEdit(l.lineNum, 'ruang', v)} disabled={closed} placeholder="Ruangan (wajib)" />
+                  <input className="input" style={{ marginTop: 6 }} value={edits[l.lineNum]?.bl ?? ''} onChange={(e) => setEdit(l.lineNum, 'bl', e.target.value)} disabled={closed}
+                    placeholder={Number(l.flag) === 1 ? 'No. BL (kosong = BL header)' : 'No. BL sumber (wajib)'} aria-label="No. BL baris" />
                   {(!h!.ptCode || l.ptCode) && (
                     <div style={{ marginTop: 6 }}>
                       <PtSelect value={edits[l.lineNum]?.pt ?? ''} onChange={(v) => setEdit(l.lineNum, 'pt', v)} disabled={closed} placeholder="PT baris (wajib bila PT header kosong)" />
