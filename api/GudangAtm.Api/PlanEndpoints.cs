@@ -9,7 +9,7 @@ namespace GudangAtm.Api;
 
 public record PlanLineReq(int BaseDocEntry, int BaseLineNum, decimal QtyPlan, string? ContainerNo, string? KodeRuangan, string? PaletCode, int? PaletPlan, string? FreeTxt);
 public record PlanCreateReq(string Jenis, string WhsCode, string Src, List<int> Docs, string KodeRuangan, string? CardCodeTitipan,
-    string? PtCode, string? JenisContainer, string? EtaDatang, DateTime? TglJadwal, List<int>? Kranis, List<PlanLineReq> Lines);
+    string? PtCode, string? JenisContainer, string? EtaDatang, DateTime? TglJadwal, List<int>? Kranis, List<PlanLineReq> Lines, string? NoBL = null);
 public record PlanKraniReq(List<int> Kranis);
 public record PlanTutupReq(string Alasan);
 
@@ -241,14 +241,21 @@ VALUES (@no, @jenis, @whs, @bpl, @src, @jc, @batas, @total, @cc, @cn, @pt, 'Terb
                     await db.ExecuteAsync("INSERT WHS_PlanDoc (PlanId, BaseType, BaseDocEntry, BaseObjType, BaseDocNum, CardCode, CardName, NumAtCard, BaseDocDate) VALUES (@planId, @src, @de, NULL, @dn, @cc, @cn, @na, @dd)",
                         new { planId, src, de = h.DocEntry, dn = h.DocNum, cc = h.CardCode, cn = h.CardName, na = h.NumAtCard, dd = h.DocDate }, tx);
 
+                // No. BL per baris SPBB = sumber info BL stok. Sumber BL: NumAtCard dokumen BL; sumber DO: diisi Admin. Titipan: tanpa BL.
+                var blManual = Clean(r.NoBL)?.ToUpperInvariant();
+                if ((blManual?.Length ?? 0) > 50) return Bad("No. BL terlalu panjang");
+                string? BlLine(int baseDoc) => jenis != "SPBB" || titipan ? null
+                    : src == "BL" ? Clean(heads.First(x => x.DocEntry == baseDoc).NumAtCard) ?? blManual : blManual;
+                if (jenis == "SPBB" && !titipan && rows.Any(x => BlLine(x.Item1.BaseDocEntry) is null))
+                    return Bad(src == "BL" ? "Dokumen BL tanpa nomor BL (NumAtCard) · isi No. BL" : "No. BL wajib diisi untuk SPBB (stok disimpan per BL)");
                 var line = 0;
                 foreach (var (q, sap, lineRoom, karung) in rows)
                 {
                     line++;
                     await db.ExecuteAsync(@"
 INSERT WHS_Plan1 (PlanId, PlanLine, BaseType, BaseDocEntry, BaseLineNum, ContainerNo, ItemCode, Dscription, FreeTxt, BrandName, Size, [Type], Crop,
-                  QtyBase, OpenQtyBase, QtyPlan, Qty2Plan, PaletCode, PaletPlan, KodeRuangan)
-VALUES (@planId, @line, @src, @de, @ln, @cont, @item, @desc, @free, @brand, @size, @type, @crop, @qb, @oq, @qp, @q2, @pal, @palN, @room)",
+                  QtyBase, OpenQtyBase, QtyPlan, Qty2Plan, PaletCode, PaletPlan, KodeRuangan, NoBL)
+VALUES (@planId, @line, @src, @de, @ln, @cont, @item, @desc, @free, @brand, @size, @type, @crop, @qb, @oq, @qp, @q2, @pal, @palN, @room, @bl)",
                         new
                         {
                             planId, line, src, de = q.BaseDocEntry, ln = q.BaseLineNum,
@@ -257,6 +264,7 @@ VALUES (@planId, @line, @src, @de, @ln, @cont, @item, @desc, @free, @brand, @siz
                             brand = (string?)sap.StgDesc, size = (string?)sap.SerialNum, type = (string?)sap.BaseAtCard, crop = (string?)sap.BlockNum,
                             qb = (decimal)sap.Quantity, oq = (decimal)sap.OpenQty, qp = q.QtyPlan, q2 = karung,
                             pal = jenis == "SPBB" ? q.PaletCode : null, palN = jenis == "SPBB" ? q.PaletPlan : null, room = lineRoom,
+                            bl = BlLine(q.BaseDocEntry),
                         }, tx);
                 }
 

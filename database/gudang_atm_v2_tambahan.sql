@@ -151,3 +151,7 @@ GO
 /* SPMB: PT tidak diisi Admin; krani memilih PT per baris (boleh campur) -> PT disimpan di detail */
 IF COL_LENGTH('dbo.KRN1','U_IDU_Kode_PT') IS NULL ALTER TABLE dbo.KRN1 ADD U_IDU_Kode_PT NVARCHAR(30) NULL;
 GO
+
+/* No. BL per baris SPBB: sumber info BL stok (non-titipan). Sumber BL = NumAtCard dokumen BL; sumber DO = diisi Admin. */
+IF COL_LENGTH('dbo.WHS_Plan1','NoBL') IS NULL ALTER TABLE dbo.WHS_Plan1 ADD NoBL NVARCHAR(50) NULL;
+GO

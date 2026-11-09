@@ -694,7 +694,7 @@ class _OutboundSummaryScreenState extends State<OutboundSummaryScreen> {
   Future<void> _save() async {
     final d = widget.draft;
     if (d.pallets.any((p) => p.kodeRuangan == null)) return showError(context, 'Pilih ruangan sumber untuk setiap palet');
-    if (d.pallets.any((p) => (p.noBL ?? '').isEmpty)) return showError(context, 'Stok palet belum punya No. BL. Minta Admin mengisi BL stok lama dulu.');
+    if (d.pallets.any((p) => !p.titipan && (p.noBL ?? '').isEmpty)) return showError(context, 'Stok palet belum punya No. BL. Minta Admin mengisi BL stok lama dulu.');
     setState(() => _busy = true);
     try {
       final r = await Api.saveOutbound(d.toJson());

@@ -215,7 +215,10 @@ ORDER BY LogTime DESC", new { objType, docEntry, bplId = u.BplId() }));
                 if (lines.Count == 0) errors.Add("Dokumen tanpa baris");
                 foreach (var l in lines.Where(l => string.IsNullOrWhiteSpace(l.KodeRuangan))) errors.Add($"Baris {l.LineNum + 1} ({l.ItemCode}) belum punya ruangan");
                 // Saldo per BL: baris masuk memakai BL baris atau BL header; baris keluar wajib BL baris (BL sumber stok)
-                foreach (var l in lines.Where(l => string.IsNullOrWhiteSpace(l.NoBL) && (l.Flag != 1 || string.IsNullOrWhiteSpace(h.BlNo))))
+                // barang titipan tidak memakai BL
+                var titipanDoc = h.IsTitipan || h.TrxCode == "BT"
+                    || await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM KRN1 d JOIN WHS_MasterRuangan r ON r.KodeRuangan = d.KodeRuangan WHERE d.ObjType = @objType AND d.DocEntry = @docEntry AND r.Titipan = 1", new { objType, docEntry }, tx) > 0;
+                foreach (var l in lines.Where(l => !titipanDoc && string.IsNullOrWhiteSpace(l.NoBL) && (l.Flag != 1 || string.IsNullOrWhiteSpace(h.BlNo))))
                     errors.Add($"Baris {l.LineNum + 1} ({l.ItemCode}) belum punya No. BL");
 
                 var needType = RequiredCardType(h.ObjType, h.TrxCode);

@@ -44,6 +44,7 @@ export function PlanNew() {
   const [kraniList, setKraniList] = useState<Row[]>([]);
   const [kranis, setKranis] = useState<number[]>([]);
   const [pt, setPt] = useState('');
+  const [noBL, setNoBL] = useState('');
   const [titipanCard, setTitipanCard] = useState('');
   const [eta, setEta] = useState('');
   const [tgl, setTgl] = useState('');
@@ -85,7 +86,7 @@ export function PlanNew() {
     setBusy(true);
     try {
       const r = await post<Row>('/api/cms/plan', { Jenis: jenis, WhsCode: whs, Src: src, Docs: docs.map((d) => d.head.docEntry), KodeRuangan: ruang,
-        CardCodeTitipan: room?.titipan ? titipanCard || null : null, PtCode: pt || null, EtaDatang: eta || null, TglJadwal: tgl || null, Kranis: kranis, Lines: lines });
+        CardCodeTitipan: room?.titipan ? titipanCard || null : null, PtCode: pt || null, NoBL: jenis === 'SPBB' && !room?.titipan ? noBL.trim() || null : null, EtaDatang: eta || null, TglJadwal: tgl || null, Kranis: kranis, Lines: lines });
       toast(`Terbit ${r.planNo}`);
       navigate(`/admin/plan/${r.planId}`);
     } catch (e) { toast(errText(e), true); } finally { setBusy(false); }
@@ -133,6 +134,11 @@ export function PlanNew() {
       <div className="card stack">
         <label className="stack tight"><span className="small muted">Ruangan dokumen (default semua item; bisa diganti per item di atas, krani juga bisa mengubah saat input)</span><SearchSelect options={ruangList.filter((r) => r.aktif).map((r) => ({ value: r.kodeRuangan, label: `${r.kodeRuangan} · ${r.namaRuangan}${r.titipan ? ' (titipan)' : ''}` }))} value={ruang} onChange={setRuang} placeholder="Cari & pilih ruangan" /></label>
         {room?.titipan && <label className="stack tight"><span className="small muted">Kode customer titipan (pemilik barang)</span><input className="input" value={titipanCard} onChange={(e) => setTitipanCard(e.target.value)} /></label>}
+        {jenis === 'SPBB' && !room?.titipan && (
+          <label className="stack tight"><span className="small muted">No. BL {src === 'BL' ? '(otomatis dari nomor BL dokumen; isi hanya bila dokumen BL tidak punya nomor)' : '(wajib · stok disimpan per BL)'}</span>
+            <input className="input" value={noBL} onChange={(e) => setNoBL(e.target.value.toUpperCase())} placeholder={src === 'BL' ? docs.map((d) => d.head.numAtCard).filter(Boolean).join(', ') || 'No. BL' : 'No. BL'} />
+          </label>
+        )}
         {jenis === 'SPBB' && <label className="stack tight"><span className="small muted">Kode PT (opsional)</span><input className="input" value={pt} onChange={(e) => setPt(e.target.value)} /></label>}
         <div className="formrow"><label className="stack tight"><span className="small muted">Tanggal jadwal</span><input className="input" type="date" value={tgl} onChange={(e) => setTgl(e.target.value)} /></label>
           <label className="stack tight"><span className="small muted">ETA (HH:MM, opsional)</span><input className="input" type="time" value={eta} onChange={(e) => setEta(e.target.value)} /></label></div>
@@ -175,8 +181,8 @@ export function PlanDetail({ id }: { id: string }) {
           </div>
           <div className="card stack tight"><strong>Dokumen sumber</strong>
             {(data!.docs as Row[]).map((d) => <div key={`${d.baseType}${d.baseDocEntry}`} className="small">{d.baseType} {d.baseDocNum} · {d.cardName} {d.numAtCard ? `· PO ${d.numAtCard}` : ''}</div>)}</div>
-          <div className="tablewrap"><table className="table cards"><thead><tr><th>Item</th><th>Container</th><th>Ruangan</th><th>Rencana</th><th>Realisasi</th><th>Sisa</th></tr></thead><tbody>
-            {(data!.lines as Row[]).map((l) => <tr key={l.PlanLine}><td data-label="Item">{l.ItemCode}<div className="small muted">{l.Dscription}</div></td><td data-label="Container" className="mono">{l.ContainerNo ?? '-'}</td><td data-label="Ruangan" className="mono">{l.KodeRuangan ?? h.KodeRuangan ?? '-'}</td>
+          <div className="tablewrap"><table className="table cards"><thead><tr><th>Item</th><th>Container</th><th>Ruangan</th><th>No. BL</th><th>Rencana</th><th>Realisasi</th><th>Sisa</th></tr></thead><tbody>
+            {(data!.lines as Row[]).map((l) => <tr key={l.PlanLine}><td data-label="Item">{l.ItemCode}<div className="small muted">{l.Dscription}</div></td><td data-label="Container" className="mono">{l.ContainerNo ?? '-'}</td><td data-label="Ruangan" className="mono">{l.KodeRuangan ?? h.KodeRuangan ?? '-'}</td><td data-label="No. BL" className="mono">{l.NoBL ?? (h.titipan ? 'titipan' : '-')}</td>
               <td data-label="Rencana" className="num">{fmt(l.QtyPlan)}</td><td data-label="Realisasi" className="num">{fmt(l.QtyDone)}</td><td data-label="Sisa" className="num">{fmt(l.QtyOutstanding)}</td></tr>)}
           </tbody></table></div>
           {aktif && (

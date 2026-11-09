@@ -132,7 +132,7 @@ export default function OutboundNew() {
 
   const save = async () => {
     if (pallets.some((p) => !p.kodeRuangan)) return setErr(new Error('Pilih ruangan sumber untuk setiap palet'));
-    if (pallets.some((p) => !p.noBL)) return setErr(new Error('Stok palet belum punya No. BL. Minta Admin mengisi BL stok lama dulu.'));
+    if (pallets.some((p) => !p.noBL && !p.rooms.some((r) => String(r.kodeRuangan) === p.kodeRuangan && r.titipan))) return setErr(new Error('Stok palet belum punya No. BL. Minta Admin mengisi BL stok lama dulu.'));
     setBusy(true);
     setErr(null);
     try {

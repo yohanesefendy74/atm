@@ -100,7 +100,8 @@ class ScannedPallet {
   /// Stok item+container per ruangan. Satu container bisa tersebar di beberapa ruangan -> krani memilih ruangan SUMBER.
   final List<Map<String, dynamic>> rooms;
   String? kodeRuangan;
-  String? noBL; // BL sumber stok (saldo per BL)
+  String? noBL; // BL sumber stok (saldo per BL; barang titipan tanpa BL)
+  bool titipan = false;
 
   /// Satu baris saldo = ruangan + BL. Kunci dipakai dropdown.
   static String sumberKey(Map<String, dynamic> r) => '${r['kodeRuangan'] ?? ''}|${r['noBL'] ?? ''}';
@@ -108,6 +109,7 @@ class ScannedPallet {
   void pilihSumber(Map<String, dynamic> r) {
     kodeRuangan = r['kodeRuangan']?.toString();
     noBL = r['noBL']?.toString();
+    titipan = r['titipan'] == true;
   }
 
   final String qr;

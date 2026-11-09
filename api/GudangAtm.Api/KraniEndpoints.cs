@@ -118,21 +118,28 @@ public static class KraniEndpoints
             }
             if (jenis != "OB" && roomTitipan) return Bad("KR dan RP tidak boleh di ruangan titipan");
             var cont = (req.ContainerNo ?? "").Replace(" ", "").ToUpperInvariant();
-            // Saldo per BL: setiap palet keluar wajib punya BL sumber; stok dicek per item + ruangan + BL + container
-            if (outLines.Any(l => string.IsNullOrWhiteSpace(l.NoBL))) return Bad("Pilih BL sumber untuk setiap palet keluar");
-            foreach (var g in outLines.GroupBy(l => (l.ItemCode, Ruang: l.KodeRuangan!.Trim(), Bl: l.NoBL!.Trim())))
+            // Saldo per BL (barang titipan tanpa BL): setiap palet keluar wajib punya BL sumber; stok dicek per item + ruangan + BL + container
+            if (roomTitipan)
+            {
+                outLines = outLines.Select(l => l with { NoBL = null }).ToList();
+                inLines = inLines.Select(l => l with { NoBL = null }).ToList();
+            }
+            else if (outLines.Any(l => string.IsNullOrWhiteSpace(l.NoBL))) return Bad("Pilih BL sumber untuk setiap palet keluar");
+            foreach (var g in outLines.GroupBy(l => (l.ItemCode, Ruang: l.KodeRuangan!.Trim(), Bl: (l.NoBL ?? "").Trim())))
             {
                 var stokKg = await db.ExecuteScalarAsync<decimal?>("SELECT Kg FROM WHS_Saldo WHERE WhsCode = @w AND ItemCode = @i AND KodeRuangan = @r AND ContainerNo = @c AND NoBL = @bl",
                     new { w = req.WhsCode, i = g.Key.ItemCode, r = g.Key.Ruang, c = cont, bl = g.Key.Bl }) ?? 0;
                 var keluar = g.Sum(l => l.Qty);
                 if (keluar > stokKg + 0.01m) return Bad($"{g.Key.ItemCode} ruangan {g.Key.Ruang} BL {g.Key.Bl}: keluar {keluar:N0} kg melebihi stok {stokKg:N0} kg");
             }
-            // Item masuk KR/RP: BL ikut BL palet keluar (bila satu BL); bila beberapa BL, krani memilih per item
-            if (inLines.Count > 0)
+            // Item masuk KR/RP wajib membawa BL sumber: BL palet keluar (satu BL -> otomatis; beberapa BL -> krani memilih per item)
+            if (inLines.Count > 0 && !roomTitipan)
             {
                 var bls = outLines.Select(l => l.NoBL!.Trim()).Distinct().ToList();
                 inLines = inLines.Select(l => string.IsNullOrWhiteSpace(l.NoBL) && bls.Count == 1 ? l with { NoBL = bls[0] } : l).ToList();
-                if (inLines.Any(l => string.IsNullOrWhiteSpace(l.NoBL))) return Bad("Pilih BL untuk setiap item masuk");
+                if (inLines.Any(l => string.IsNullOrWhiteSpace(l.NoBL))) return Bad("Pilih BL sumber untuk setiap item masuk");
+                if (bls.Count > 0 && inLines.Any(l => !bls.Contains(l.NoBL!.Trim())))
+                    return Bad(jenis == "RP" ? "Hasil Repacking wajib membawa BL sumber (BL palet yang di-repack)" : "BL item masuk harus salah satu BL palet keluar");
             }
             if (jenis == "RP")
             {

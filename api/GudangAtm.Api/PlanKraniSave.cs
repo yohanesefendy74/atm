@@ -57,8 +57,8 @@ public static class PlanKraniSave
                 }
                 else return Bad("Pilih kendaraan yang sedang memuat");
 
-                var plan1 = (await db.QueryAsync<(int PlanLine, string ItemCode, string? Dscription, string? ContainerNo, string? BrandName, decimal QtyPlan, decimal QtyDone, string? PaletCode, string? KodeRuangan, string? Size, string? Type, string? Crop)>(
-                    "SELECT PlanLine, ItemCode, Dscription, ContainerNo, BrandName, QtyPlan, QtyDone, PaletCode, KodeRuangan, Size, [Type], Crop FROM WHS_Plan1 WITH (UPDLOCK) WHERE PlanId = @id", new { id }, tx)).ToDictionary(x => x.PlanLine);
+                var plan1 = (await db.QueryAsync<(int PlanLine, string ItemCode, string? Dscription, string? ContainerNo, string? BrandName, decimal QtyPlan, decimal QtyDone, string? PaletCode, string? KodeRuangan, string? Size, string? Type, string? Crop, string? NoBL)>(
+                    "SELECT PlanLine, ItemCode, Dscription, ContainerNo, BrandName, QtyPlan, QtyDone, PaletCode, KodeRuangan, Size, [Type], Crop, NoBL FROM WHS_Plan1 WITH (UPDLOCK) WHERE PlanId = @id", new { id }, tx)).ToDictionary(x => x.PlanLine);
                 foreach (var g in r.Lines.GroupBy(l => l.PlanLine))
                 {
                     if (!plan1.TryGetValue(g.Key, out var pg)) return Bad($"Baris {g.Key} tidak ada di dokumen");
@@ -75,7 +75,7 @@ public static class PlanKraniSave
                         if (ptc == "") return Bad($"{pr.ItemCode}: pilih PT");
                         if (!ptCache.TryGetValue(ptc, out var ok)) ptCache[ptc] = ok = await db.ExecuteScalarAsync<int>(Sql.PtExists, new { ptCode = ptc }, tx) > 0;
                         if (!ok) return Bad($"PT {ptc} tidak ada di OPRC");
-                        if (string.IsNullOrWhiteSpace(l.NoBL)) return Bad($"{pr.ItemCode}: pilih BL sumber stok");
+                        if (pl.Titipan != true && string.IsNullOrWhiteSpace(l.NoBL)) return Bad($"{pr.ItemCode}: pilih BL sumber stok");
                     }
                     var ruang = l.KodeRuangan ?? pr.KodeRuangan ?? pl.KodeRuangan;
                     if (ruang is null) return Bad(pl.Jenis == "SPBB" ? $"{pr.ItemCode}: pilih ruangan tujuan" : $"{pr.ItemCode}: pilih ruangan sumber");
@@ -90,7 +90,7 @@ public static class PlanKraniSave
                 if (pl.Jenis == "SPBB" && string.IsNullOrWhiteSpace(pl.PtCode) == false) { /* PT terisi dari dokumen */ }
 
                 if (pl.Jenis == "SPMB")
-                    foreach (var g in r.Lines.GroupBy(l => (plan1[l.PlanLine].ItemCode, R: (l.KodeRuangan ?? plan1[l.PlanLine].KodeRuangan ?? pl.KodeRuangan ?? "").Trim(), Bl: l.NoBL!.Trim())))
+                    foreach (var g in r.Lines.GroupBy(l => (plan1[l.PlanLine].ItemCode, R: (l.KodeRuangan ?? plan1[l.PlanLine].KodeRuangan ?? pl.KodeRuangan ?? "").Trim(), Bl: pl.Titipan == true ? "" : l.NoBL!.Trim())))
                     {
                         var stok = await db.ExecuteScalarAsync<decimal?>("SELECT SUM(Kg) FROM WHS_Saldo WHERE WhsCode = @w AND ItemCode = @i AND KodeRuangan = @r AND NoBL = @bl",
                             new { w = pl.WhsCode, i = g.Key.ItemCode, r = g.Key.R, bl = g.Key.Bl }, tx) ?? 0;
@@ -118,7 +118,7 @@ public static class PlanKraniSave
                     // Data dari SPBB/SPMB ikut ke dokumen krani supaya Admin tinggal mengecek & memposting stok di CMS
                     await db.ExecuteAsync(@"UPDATE h SET U_IDU_Kode_PT = COALESCE(@ptLine, p.U_IDU_Kode_PT), cardcode = COALESCE(NULLIF(p.CardCodeTitipan, ''), p.CardCode),
                             NumAtCard = LEFT(d.NumAtCard, COL_LENGTH('OKRN', 'NumAtCard')),
-                        U_NoBL = CASE WHEN p.Jenis = 'SPBB' AND d.BaseType = 'BL' THEN LEFT(d.NumAtCard, COL_LENGTH('OKRN', 'U_NoBL')) ELSE h.U_NoBL END,
+                        U_NoBL = CASE WHEN p.Jenis = 'SPBB' THEN LEFT((SELECT TOP 1 NoBL FROM WHS_Plan1 WHERE PlanId = @id AND NoBL IS NOT NULL ORDER BY PlanLine), COL_LENGTH('OKRN', 'U_NoBL')) ELSE h.U_NoBL END,
                         BaseType = d.BaseType, BaseDocEntry = d.BaseDocEntry, BaseDocNum = d.BaseDocNum
                         FROM OKRN h JOIN WHS_Plan p ON p.PlanId = @id
                         OUTER APPLY (SELECT TOP 1 BaseType, BaseDocEntry, BaseDocNum, NumAtCard FROM WHS_PlanDoc WHERE PlanId = @id ORDER BY BaseDocEntry) d
@@ -130,7 +130,7 @@ public static class PlanKraniSave
                         var pr = plan1[l.PlanLine];
                         var ruang = l.KodeRuangan ?? pr.KodeRuangan ?? pl.KodeRuangan;
                         var brand = Helpers.Empty(l.Brand) ?? pr.BrandName;
-                        await db.ExecuteAsync(Sql.InsertLine, new { objType, docEntry, lineNum, itemCode = pr.ItemCode, uom = "KG", brand, origin = (string?)null, qty = l.Qty, qty2 = l.Qty2, qtyPalet = l.QtyPalet, flag, ruang, bl = pl.Jenis == "SPMB" ? l.NoBL!.Trim() : null }, tx);
+                        await db.ExecuteAsync(Sql.InsertLine, new { objType, docEntry, lineNum, itemCode = pr.ItemCode, uom = "KG", brand, origin = (string?)null, qty = l.Qty, qty2 = l.Qty2, qtyPalet = l.QtyPalet, flag, ruang, bl = pl.Titipan == true ? null : pl.Jenis == "SPMB" ? l.NoBL!.Trim() : pr.NoBL }, tx);
                         await db.ExecuteAsync(@"UPDATE KRN1 SET PlanLine = @pl, ContainerNo = @c, KodeRuangan = @ru, U_IDU_Kode_PT = @ptl, PaletCode = @pc, Size = @sz, [Type] = @ty, Crop = @cr,
                             brand_asli = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN @asli END,
                             brand_diubah_oleh = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN @uid END,
