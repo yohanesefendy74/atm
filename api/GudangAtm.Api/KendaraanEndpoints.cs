@@ -14,6 +14,7 @@ public record MasukReq(string WhsCode, string Keperluan, string? PlanNo, string 
 public record KeluarReq(TimbangIn Timbang, bool KontainerTinggal, string? YardArea, decimal? TaraKontainer, bool AckPeringatan, string? KodeAdmin);
 public record SelesaiMuatReq(int JumlahPalet, decimal BeratPaletKg, TimbangIn? Timbang);
 public record LepasReq(TimbangIn Timbang, string? Dock, bool AckPeringatan, string? KodeAdmin);
+public record PlatReq(string NoPolisi);
 public record KodeAdminReq(string WhsCode, string? Tujuan);
 
 /// Registrasi kendaraan (pos timbang / layar gudang), timbang masuk-keluar, yard kontainer, riwayat berat, kode persetujuan Admin.
@@ -66,6 +67,21 @@ public static partial class KendaraanEndpoints
                 new { h = Hash(kode), whs = r.WhsCode, t = Clean(r.Tujuan), u = u.UserId() });
             await Audit.Safe(db, u, ctx, "KODE_ADMIN", "KODE", null, $"{r.WhsCode} {r.Tujuan}");
             return Results.Ok(new { kode, berlakuMenit = 15 });
+        });
+
+        // Admin mengoreksi no. polisi registrasi (mis. krani mencatat no. mobil berbeda). Dokumen krani yang belum diposting ikut dikoreksi.
+        cms.MapPut("/kendaraan/{regId:long}/plat", async (long regId, PlatReq r, ClaimsPrincipal u, HttpContext ctx) =>
+        {
+            var np = NormPlat(r.NoPolisi);
+            if (!PlatRx().IsMatch(np)) return Bad("Format plat tidak valid · contoh B 1234 ABC");
+            await using var db = dbf();
+            var lama = await db.ExecuteScalarAsync<string?>("SELECT NoPolisi FROM WHS_Kendaraan WHERE RegId = @regId", new { regId });
+            if (lama is null) return Results.NotFound(new { message = "Kendaraan tidak ditemukan" });
+            var baru = FormatPlat(np);
+            await db.ExecuteAsync("UPDATE WHS_Kendaraan SET NoPolisi = @baru WHERE RegId = @regId", new { baru, regId });
+            var dok = await db.ExecuteAsync("UPDATE OKRN SET VehicleNo = @baru WHERE RegId = @regId AND DocStatus = 'O'", new { baru, regId });
+            await Audit.Safe(db, u, ctx, "KENDARAAN_PLAT", "KENDARAAN", regId, $"{lama} -> {baru}; {dok} dokumen open ikut dikoreksi");
+            return Results.Ok(new { noPolisi = baru, dokumen = dok });
         });
 
         // Riwayat berat (read-only) untuk CMS

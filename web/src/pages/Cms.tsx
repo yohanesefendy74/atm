@@ -24,7 +24,8 @@ export function CmsList() {
   const [q, setQ] = useState('');
   const { data, error, loading, reload } = useLoad(() => get<Row[]>('/api/cms/docs', { status, objType: obj }), [status, obj]);
   const s = q.trim().toUpperCase();
-  const rows = (data ?? []).filter((r) => !s || [r.docEntry, r.krani, r.containerNo, r.noMobil, r.cardName, r.trxCode].some((v) => String(v ?? '').toUpperCase().includes(s)));
+  const rows0 = (data ?? []);
+  const rows = rows0.filter((r) => !s || [r.docEntry, r.krani, r.containerNo, r.noMobil, r.cardName, r.trxCode].some((v) => String(v ?? '').toUpperCase().includes(s)));
   const waitPt = (data ?? []).filter((r) => r.docStatus === 'O' && !r.ptCode).length;
   const edited = (data ?? []).filter((r) => Number(r.editedLines) > 0).length;
 
@@ -115,6 +116,7 @@ export function CmsList() {
                 <td data-label="KG" className="num">{fmt(r.qtyKg)}</td>
                 <td data-label="Status">
                   {r.docStatus === 'C' ? <span className="pill green">Close</span> : <span className="pill amber">Open</span>}
+                  {(r.catatanKrani || r.noMobilKrani) && <span className="pill amber" title={r.catatanKrani ?? ''}>Catatan krani</span>}
                   {Number(r.editedLines) > 0 && <span className="pill out">diedit</span>}
                 </td>
               </tr>
@@ -195,6 +197,7 @@ export function CmsDetail({ objType, docEntry }: { objType: string; docEntry: st
   const [bp, setBp] = useState({ code: '', name: '' });
   const [numAtCard, setNumAtCard] = useState('');
   const [bl, setBl] = useState('');
+  const [noMobil, setNoMobil] = useState('');
   const [edits, setEdits] = useState<Record<number, Edit>>({});
   const [retur, setRetur] = useState<Record<number, boolean | null>>({});
   const [busy, setBusy] = useState(false);
@@ -212,6 +215,7 @@ export function CmsDetail({ objType, docEntry }: { objType: string; docEntry: st
     setBp({ code: h.cardCode ?? '', name: h.cardName ?? '' });
     setNumAtCard(h.numAtCard ?? '');
     setBl(h.blNo ?? '');
+    setNoMobil(h.noMobil ?? '');
     const e: Record<number, Edit> = {};
     lines.forEach((l) => (e[l.lineNum] = { qty: String(l.qty), qty2: String(l.qty2), qtyPalet: String(l.qtyPalet), numAtCard: l.numAtCard ?? '', ruang: l.kodeRuangan ?? '', pt: l.ptCode ?? '', bl: l.noBL ?? '' }));
     setEdits(e);
@@ -237,11 +241,13 @@ export function CmsDetail({ objType, docEntry }: { objType: string; docEntry: st
     bp.code !== (h.cardCode ?? '') ||
     numAtCard !== (h.numAtCard ?? '') ||
     bl !== (h.blNo ?? '') ||
+    noMobil !== (h.noMobil ?? '') ||
     lines.some((l) => changed(l, 'qty') || changed(l, 'qty2') || changed(l, 'qtyPalet') || (edits[l.lineNum]?.numAtCard ?? '') !== (l.numAtCard ?? '') || (edits[l.lineNum]?.ruang ?? '') !== (l.kodeRuangan ?? '') || (edits[l.lineNum]?.pt ?? '') !== (l.ptCode ?? '') || (edits[l.lineNum]?.bl ?? '') !== (l.noBL ?? ''));
 
   const body = () => ({
     trxCode: trx,
     ptCode: pt.code || null,
+    noMobil: noMobil.trim() && noMobil !== (h.noMobil ?? '') ? noMobil.trim() : null,
     cardCode: cardType ? bp.code || null : null,
     numAtCard: numAtCard.trim() || null,
     blNo: bl.trim() || null,
@@ -332,9 +338,24 @@ export function CmsDetail({ objType, docEntry }: { objType: string; docEntry: st
       }
     >
       {err !== null && <ErrorBox error={err} />}
+      {(h.catatanKrani || h.noMobilKrani) && (
+        <div className="card stack tight" style={{ borderColor: 'var(--amber, #c98a00)' }}>
+          <strong>Catatan krani</strong>
+          {h.noMobilKrani && (
+            <div className="row">
+              <span className="grow">No. mobil di lapangan: <strong className="mono">{h.noMobilKrani}</strong> (tercatat {h.noMobil ?? '-'})</span>
+              {!closed && h.noMobilKrani !== noMobil && <button className="btn small outline" onClick={() => setNoMobil(h.noMobilKrani)}>Pakai no. ini</button>}
+            </div>
+          )}
+          {h.catatanKrani && <div className="small">{h.catatanKrani}</div>}
+        </div>
+      )}
       <div className="card grid3">
         <KV k="Warehouse" v={`${h.whsCode}${h.isTitipan ? ' · TITIPAN' : ''}`} />
-        <KV k="No. Mobil" v={h.noMobil ?? '-'} />
+        <label className="field">
+          <span className="label">No. Mobil</span>
+          <input className="input mono" value={noMobil} maxLength={15} disabled={closed} onChange={(e) => setNoMobil(e.target.value.toUpperCase())} aria-label="No. mobil" />
+        </label>
         <KV k="Container" v={h.containerNo ?? '-'} />
         <KV k="Tanggal" v={fmtDate(h.docDate)} />
         <KV k="Krani" v={h.krani} />

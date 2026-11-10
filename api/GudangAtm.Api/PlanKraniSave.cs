@@ -6,7 +6,7 @@ using Microsoft.Data.SqlClient;
 namespace GudangAtm.Api;
 
 public record TerimaLine(int PlanLine, decimal Qty, decimal Qty2, decimal QtyPalet, string? Brand, string? KodeRuangan, string? PtCode = null, string? NoBL = null);
-public record TerimaReq(long? RegId, DateTime? DocDate, List<TerimaLine> Lines, long? SesiId = null);
+public record TerimaReq(long? RegId, DateTime? DocDate, List<TerimaLine> Lines, long? SesiId = null, string? NoMobilAktual = null, string? Catatan = null);
 
 /// Krani menyimpan penerimaan (SPBB) / pengiriman (SPMB) terhadap dokumen rencana. Satu simpan = satu OKRN (penerimaan ke-N).
 public static class PlanKraniSave
@@ -125,6 +125,13 @@ public static class PlanKraniSave
                         WHERE h.ObjType = @objType AND h.DocEntry = @docEntry", new { id, objType, docEntry, ptLine = (string?)null }, tx);
 
                     var lineNum = 0;
+                    // Krani mencatat bila no. mobil di lapangan berbeda dari registrasi; Admin mengoreksi di CMS
+                    var nmk = string.IsNullOrWhiteSpace(r.NoMobilAktual) ? null : KendaraanEndpoints.FormatPlat(KendaraanEndpoints.NormPlat(r.NoMobilAktual));
+                    var cat = string.IsNullOrWhiteSpace(r.Catatan) ? null : r.Catatan.Trim();
+                    if (nmk is { Length: > 20 } || cat is { Length: > 300 }) return Bad("Catatan / no. mobil terlalu panjang");
+                    if (nmk is not null || cat is not null)
+                        await db.ExecuteAsync("UPDATE OKRN SET NoMobilKrani = @nmk, CatatanKrani = @cat WHERE ObjType = @objType AND DocEntry = @docEntry",
+                            new { nmk, cat = cat ?? (nmk is null ? null : $"No. mobil berbeda: {nmk}"), objType, docEntry }, tx);
                     foreach (var l in grp)
                     {
                         var pr = plan1[l.PlanLine];

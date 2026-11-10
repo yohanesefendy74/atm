@@ -93,6 +93,10 @@ class _TugasDetailState extends State<TugasDetail> {
   List<Map<String, dynamic>> _veh = [];
   // isian per baris dokumen; SPMB boleh beberapa isian per baris (PT berbeda, boleh campur)
   final _entries = <_Entry>[];
+  // catatan krani bila no. mobil di lapangan berbeda dari registrasi (Admin mengoreksi di CMS)
+  bool _mobilBeda = false;
+  final _nmAktual = TextEditingController();
+  final _catatan = TextEditingController();
   int? _regId;
   // SPBB: kontainer di dock + sampling berat per barang
   List<Map<String, dynamic>> _kont = [];
@@ -223,7 +227,17 @@ class _TugasDetailState extends State<TugasDetail> {
     if (items.isEmpty) return showError(context, 'Isi qty minimal satu baris');
     setState(() => _busy = true);
     try {
-      final r = await Api.post('/api/plan/${widget.planId}/simpan', {'regId': spbb ? null : _regId, 'sesiId': spbb ? _sesiId : null, 'lines': items});
+      if (_mobilBeda && _nmAktual.text.trim().isEmpty) {
+        setState(() => _busy = false);
+        return showError(context, 'Isi no. mobil yang sebenarnya');
+      }
+      final r = await Api.post('/api/plan/${widget.planId}/simpan', {
+        'regId': spbb ? null : _regId,
+        'sesiId': spbb ? _sesiId : null,
+        'lines': items,
+        'noMobilAktual': _mobilBeda ? _nmAktual.text.trim() : null,
+        'catatan': _catatan.text.trim().isEmpty ? null : _catatan.text.trim(),
+      });
       if (!mounted) return;
       showInfo(context, 'Tersimpan · penerimaan ke-${r['penerimaanKe']}');
       for (final e in _entries) {
@@ -232,6 +246,9 @@ class _TugasDetailState extends State<TugasDetail> {
         e.pal.clear();
       }
       _entries.removeWhere((e) => e.tambahan);
+      _mobilBeda = false;
+      _nmAktual.clear();
+      _catatan.clear();
       await _load();
     } catch (e) {
       if (mounted) showError(context, e);
@@ -307,6 +324,16 @@ class _TugasDetailState extends State<TugasDetail> {
                       onChanged: (v) => setState(() => _regId = v),
                     ),
                   ],
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: _mobilBeda,
+                    onChanged: (v) => setState(() => _mobilBeda = v ?? false),
+                    title: const Text('No. mobil di lapangan berbeda'),
+                    subtitle: const Text('Dicatat untuk Admin; Admin mengoreksi di CMS'),
+                  ),
+                  if (_mobilBeda) TextField(controller: _nmAktual, textCapitalization: TextCapitalization.characters, decoration: const InputDecoration(labelText: 'No. mobil sebenarnya (B 1234 ABC)')),
+                  const SizedBox(height: 8),
+                  TextField(controller: _catatan, maxLength: 300, decoration: const InputDecoration(labelText: 'Catatan untuk Admin (opsional)')),
                   const SizedBox(height: 12),
                   for (final l in _lines) _lineCard(l, spbb),
                   if (spbb && _sesiId != null) _samplingCard(),

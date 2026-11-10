@@ -127,10 +127,14 @@ public record CmsSaveRequest(
     string? CardCode,
     string? NumAtCard,
     string? BlNo,
-    List<CmsLineEdit>? Lines);
+    List<CmsLineEdit>? Lines,
+    string? NoMobil = null);   // Admin boleh mengoreksi no. kendaraan
 
 public class CmsHeaderRow
 {
+    public string? NoMobil { get; set; }
+    public string? NoMobilKrani { get; set; }
+    public string? CatatanKrani { get; set; }
     public string ObjType { get; set; } = "";
     public long DocEntry { get; set; }
     public DateTime DocDate { get; set; }

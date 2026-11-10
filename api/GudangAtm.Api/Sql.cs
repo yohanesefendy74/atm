@@ -250,7 +250,8 @@ SELECT  TOP 200
         COALESCE(p.PrcName, CASE WHEN ISNULL(h.U_IDU_Kode_PT, '') = '' THEN 'PT per baris' END) AS ptName,
         h.CardCode AS cardCode, c.CardName AS cardName, h.NumAtCard AS numAtCard, h.U_NoBL AS blNo,
         u.USER_CODE AS krani, h.DocStatus AS docStatus,
-        x.lineCount, x.qtyKg, x.qtySak, x.qtyPalet, x.editedLines
+        x.lineCount, x.qtyKg, x.qtySak, x.qtyPalet, x.editedLines,
+        h.CatatanKrani AS catatanKrani, h.NoMobilKrani AS noMobilKrani
 FROM    OKRN h
 LEFT JOIN OWHS w ON w.WhsCode = h.WhsCode
 LEFT JOIN OPRC p ON p.PrcCode = h.U_IDU_Kode_PT
@@ -273,7 +274,8 @@ SELECT  h.ObjType AS objType, h.DocEntry AS docEntry, h.DocDate AS docDate, h.Tr
         h.VehicleNo AS noMobil, h.ContainerNo AS containerNo,
         h.U_IDU_Kode_PT AS ptCode, p.PrcName AS ptName,
         h.CardCode AS cardCode, c.CardName AS cardName, c.CardType AS cardType,
-        h.NumAtCard AS numAtCard, h.U_NoBL AS blNo, u.USER_CODE AS krani, h.DocStatus AS docStatus
+        h.NumAtCard AS numAtCard, h.U_NoBL AS blNo, u.USER_CODE AS krani, h.DocStatus AS docStatus,
+        h.NoMobilKrani AS noMobilKrani, h.CatatanKrani AS catatanKrani
 FROM    OKRN h
 LEFT JOIN OWHS w ON w.WhsCode = h.WhsCode
 LEFT JOIN OPRC p ON p.PrcCode = h.U_IDU_Kode_PT
@@ -324,7 +326,8 @@ WHERE   ObjType = @objType AND DocEntry = @docEntry AND LineNum = @lineNum AND L
 
     public const string CmsUpdateHeader = @"
 UPDATE  OKRN
-SET     TrxCode = @trxCode, U_IDU_Kode_PT = @ptCode, CardCode = @cardCode, NumAtCard = @numAtCard, U_NoBL = @blNo
+SET     TrxCode = @trxCode, U_IDU_Kode_PT = @ptCode, CardCode = @cardCode, NumAtCard = @numAtCard, U_NoBL = @blNo,
+        VehicleNo = COALESCE(@noMobil, VehicleNo)
 WHERE   ObjType = @objType AND DocEntry = @docEntry AND BPLId = @bplId AND DocStatus = 'O'";
 
     /// Pindah ObjType (mis. KR 6720 <-> SS 6710): dokumen mendapat nomor baru dari SYS_NOURUT.

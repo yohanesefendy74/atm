@@ -158,9 +158,17 @@ ORDER BY LogTime DESC", new { objType, docEntry, bplId = u.BplId() }));
                     }, tx);
                 }
 
+                // No. kendaraan bisa dikoreksi Admin (mis. krani mencatat no. mobil berbeda)
+                string? noMobil = null;
+                if (!string.IsNullOrWhiteSpace(req.NoMobil))
+                {
+                    var np = KendaraanEndpoints.NormPlat(req.NoMobil);
+                    if (!System.Text.RegularExpressions.Regex.IsMatch(np, @"^[A-Z]{1,2}\d{1,4}[A-Z]{1,3}$")) return Bad("Format no. mobil tidak valid · contoh B 1234 ABC");
+                    noMobil = KendaraanEndpoints.FormatPlat(np);
+                }
                 var n = await db.ExecuteAsync(Sql.CmsUpdateHeader, new
                 {
-                    objType, docEntry, bplId = u.BplId(), trxCode = trx, ptCode = pt, cardCode = card,
+                    objType, docEntry, bplId = u.BplId(), trxCode = trx, ptCode = pt, cardCode = card, noMobil,
                     numAtCard = Clean(req.NumAtCard), blNo = group == "inbound" && trx != "RC" ? Clean(req.BlNo) : null,
                 }, tx);
                 if (n == 0) return Bad("Dokumen berubah oleh user lain, muat ulang");

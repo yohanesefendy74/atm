@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { get, post, type Row } from '../api';
+import { get, post, put, type Row } from '../api';
 import { ErrorBox, Page, SearchSelect, Spinner, StatusPill, errText, fmt, fmtDate, todayIso, useLoad, useToast, useWarehouses, whsOpts } from '../ui';
 
 const hm = (m?: number | null) => (m == null ? '-' : `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`);
@@ -143,7 +143,18 @@ export function AdminKendaraan() {
       <div className="stack tight"><WhsPick value={whs} onChange={setWhs} />
         <div className="chips">{[['dalam', 'Di dalam'], ['sesi', 'Timbang kontainer'], ['yard', 'Yard kontainer'], ['mobil', 'Riwayat tara mobil'], ['kontainer', 'Riwayat tara kontainer']].map(([k, t]) => <button key={k} className="chip" aria-pressed={tab === k} onClick={() => setTab(k)}>{t}</button>)}</div></div>}>
       {whs && <div className="card pad-s row"><button className="btn small" onClick={buatKode}>Buat kode persetujuan</button>{kode && <span className="mono"><strong>{kode}</strong> · berlaku 15 menit, sekali pakai</span>}</div>}
-      {tab === 'dalam' && T([['tiket', 'Tiket'], ['noPolisi', 'Plat'], ['sopir', 'Sopir'], ['keperluan', 'Keperluan'], ['planNo', 'Dokumen'], ['jamMasuk', 'Masuk'], ['selesaiKrani', 'Krani selesai']], dalam.data ?? [])}
+      {tab === 'dalam' && (
+        <div className="tablewrap"><table className="table cards"><thead><tr><th>Tiket</th><th>Plat</th><th>Sopir</th><th>Keperluan</th><th>Dokumen</th><th>Masuk</th><th /></tr></thead><tbody>
+          {(dalam.data ?? []).map((r) => (
+            <tr key={r.regId}><td data-label="Tiket" className="mono">{r.tiket}</td><td data-label="Plat" className="mono">{r.noPolisi}</td><td data-label="Sopir">{r.sopir}</td>
+              <td data-label="Keperluan">{r.keperluan}</td><td data-label="Dokumen" className="mono">{r.planNo ?? '-'}</td><td data-label="Masuk">{String(r.jamMasuk ?? '').replace('T', ' ').slice(0, 16)}</td>
+              <td><button className="btn small outline" onClick={async () => {
+                const v = prompt(`No. polisi baru untuk ${r.noPolisi}`, r.noPolisi);
+                if (!v || v === r.noPolisi) return;
+                try { const x = await put<Row>(`/api/cms/kendaraan/${r.regId}/plat`, { NoPolisi: v }); toast(`Plat diubah ke ${x.noPolisi} · ${x.dokumen} dokumen open ikut dikoreksi`); dalam.reload(); } catch (e) { toast(errText(e), true); }
+              }}>Ubah plat</button></td></tr>
+          ))}</tbody></table></div>
+      )}
       {tab === 'sesi' && (<>
         <input className="input" placeholder="Cari kontainer / SPBB / plat" value={qs} onChange={(e) => setQs(e.target.value)} />
         <div className="tablewrap"><table className="table cards"><thead><tr><th>Kontainer</th><th>SPBB</th><th>Status</th><th>Isi (T1-T2)</th><th>Kosong (T4-T3)</th><th>Net</th><th>Krani</th><th>Selisih</th><th /></tr></thead><tbody>

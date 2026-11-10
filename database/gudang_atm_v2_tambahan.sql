@@ -161,3 +161,8 @@ IF COL_LENGTH('dbo.WHS_SuratJalan1','PlanLine') IS NULL ALTER TABLE dbo.WHS_Sura
 IF COL_LENGTH('dbo.WHS_SuratJalan1','NoBL')     IS NULL ALTER TABLE dbo.WHS_SuratJalan1 ADD NoBL NVARCHAR(50) NULL;
 IF COL_LENGTH('dbo.WHS_SuratJalan1','PtCode')   IS NULL ALTER TABLE dbo.WHS_SuratJalan1 ADD PtCode NVARCHAR(30) NULL;
 GO
+
+/* Catatan krani bila no. mobil di lapangan berbeda; Admin bisa mengoreksi OKRN.VehicleNo di CMS */
+IF COL_LENGTH('dbo.OKRN','NoMobilKrani') IS NULL ALTER TABLE dbo.OKRN ADD NoMobilKrani NVARCHAR(20) NULL;   -- no. mobil menurut krani
+IF COL_LENGTH('dbo.OKRN','CatatanKrani') IS NULL ALTER TABLE dbo.OKRN ADD CatatanKrani NVARCHAR(300) NULL;
+GO
