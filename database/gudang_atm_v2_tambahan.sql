@@ -271,12 +271,18 @@ BEGIN
 END
 GO
 
-/* Lot QR untuk SPBB: label disiapkan Admin SEBELUM barang datang, jadi lot = nomor SPBB + baris
-   (contoh SPBB/2611/0012 baris 1 -> lot 26110012001). Barang yang diterima krani dari SPBB memakai lot ini.
+/* Lot QR untuk SPBB: label disiapkan Admin SEBELUM barang datang, jadi lot = nomor SPBB tanpa baris
+   (contoh SPBB/2611/0012 -> lot 26110012; item & container sudah ada di QR). Barang yang diterima krani dari SPBB memakai lot ini.
    Transaksi krani tanpa rencana (inbound bebas, hasil KR/RP) memakai lot = ObjType + DocEntry. */
 IF COL_LENGTH('dbo.WHS_Plan1','NoLot') IS NULL ALTER TABLE dbo.WHS_Plan1 ADD NoLot NVARCHAR(20) NULL;
 GO
-UPDATE l SET NoLot = REPLACE(SUBSTRING(p.PlanNo, 6, 20), '/', '') + RIGHT('000' + CAST(l.PlanLine AS VARCHAR(10)), 3)
+-- baris transaksi krani yang sempat memakai format lama (nomor SPBB + 3 digit baris) disamakan
+UPDATE d SET NoLot = REPLACE(SUBSTRING(p.PlanNo, 6, 20), '/', '')
+FROM dbo.KRN1 d
+JOIN dbo.OKRN h ON h.ObjType = d.ObjType AND h.DocEntry = d.DocEntry
+JOIN dbo.WHS_Plan p ON p.PlanId = h.PlanId AND p.Jenis = 'SPBB'
+WHERE d.NoLot = REPLACE(SUBSTRING(p.PlanNo, 6, 20), '/', '') + RIGHT('000' + CAST(d.PlanLine AS VARCHAR(10)), 3);
+UPDATE l SET NoLot = REPLACE(SUBSTRING(p.PlanNo, 6, 20), '/', '')
 FROM dbo.WHS_Plan1 l JOIN dbo.WHS_Plan p ON p.PlanId = l.PlanId
-WHERE p.Jenis = 'SPBB' AND l.NoLot IS NULL;
+WHERE p.Jenis = 'SPBB' AND ISNULL(l.NoLot, '') <> REPLACE(SUBSTRING(p.PlanNo, 6, 20), '/', '');
 GO

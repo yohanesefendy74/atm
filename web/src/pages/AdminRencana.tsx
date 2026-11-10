@@ -208,7 +208,7 @@ export function PlanDetail({ id }: { id: string }) {
           </tbody></table></div>
           {h.Jenis === 'SPBB' && h.Status !== 'Batal' && (
             <div className="card row">
-              <span className="grow small">Label QR palet SPBB disiapkan Admin sebelum barang datang. Lot di QR = nomor SPBB + baris.</span>
+              <span className="grow small">Label QR palet SPBB disiapkan Admin sebelum barang datang. Lot di QR = nomor SPBB.</span>
               <Link to={`/admin/plan/${id}/labels`} className="btn small">Cetak label QR</Link>
             </div>
           )}

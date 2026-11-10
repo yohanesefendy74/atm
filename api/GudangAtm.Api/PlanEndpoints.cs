@@ -146,7 +146,7 @@ ORDER BY CASE WHEN p.Status IN ('Terbit','Proses','Partial') THEN 0 ELSE 1 END, 
                 new { status = Clean(status), jenis = Clean(jenis), whs = Clean(whs), uid = u.UserId() }));
         });
 
-        // Label QR palet SPBB: disiapkan Admin sebelum barang datang. QR = yymmdd-item-container-L<lot SPBB>.
+        // Label QR palet SPBB: disiapkan Admin sebelum barang datang. QR = yymmdd-item-container-L<nomor SPBB>.
         cms.MapGet("/plan/{id:long}/labels", async (long id, ClaimsPrincipal u) =>
         {
             await using var db = dbf();
@@ -342,8 +342,8 @@ VALUES (@planId, @line, @src, @de, @ln, @cont, @item, @desc, @free, @brand, @siz
                             qb = (decimal)sap.Quantity, oq = (decimal)sap.OpenQty, qp = q.QtyPlan, q2 = karung,
                             pal = jenis == "SPBB" ? q.PaletCode : null, palN = jenis == "SPBB" ? q.PaletPlan : null, room = lineRoom,
                             bl = BlLine(q),
-                            // lot QR SPBB = nomor SPBB + baris (label dicetak Admin sebelum barang datang)
-                            lot = jenis == "SPBB" ? no[(jenis.Length + 1)..].Replace("/", "") + line.ToString("000") : null,
+                            // lot QR SPBB = nomor SPBB tanpa baris (label dicetak Admin sebelum barang datang)
+                            lot = jenis == "SPBB" ? no[(jenis.Length + 1)..].Replace("/", "") : null,
                         }, tx);
                 }
 

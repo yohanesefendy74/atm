@@ -57,7 +57,7 @@ export default function LabelPrint({ objType, docEntry }: { objType: string; doc
   );
 }
 
-/** Label palet SPBB: disiapkan Admin sebelum barang datang (lot = nomor SPBB + baris). */
+/** Label palet SPBB: disiapkan Admin sebelum barang datang (lot = nomor SPBB). */
 export function PlanLabelPrint({ planId }: { planId: string }) {
   return <LabelSheet url={`/api/cms/plan/${encodeURIComponent(planId)}/labels`} title="Label QR SPBB" eyebrow="Admin · label disiapkan sebelum barang datang" backTo={`/admin/plan/${planId}`} accent="in" />;
 }
