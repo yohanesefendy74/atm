@@ -464,7 +464,7 @@ public static class Helpers
                     bl = Helpers.Empty(l.NoBL),
                     tit = l.Titipan ?? false,
                     pt = Helpers.Empty(l.PtCode),
-                    lot = Helpers.Empty(l.NoLot),
+                    lot = flag == 1 ? null : Helpers.Empty(l.NoLot),   // masuk tanpa rencana: lot = dokumen ini
                 }, tx);
             }
 

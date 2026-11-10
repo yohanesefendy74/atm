@@ -270,3 +270,13 @@ BEGIN
     END
 END
 GO
+
+/* Lot QR untuk SPBB: label disiapkan Admin SEBELUM barang datang, jadi lot = nomor SPBB + baris
+   (contoh SPBB/2611/0012 baris 1 -> lot 26110012001). Barang yang diterima krani dari SPBB memakai lot ini.
+   Transaksi krani tanpa rencana (inbound bebas, hasil KR/RP) memakai lot = ObjType + DocEntry. */
+IF COL_LENGTH('dbo.WHS_Plan1','NoLot') IS NULL ALTER TABLE dbo.WHS_Plan1 ADD NoLot NVARCHAR(20) NULL;
+GO
+UPDATE l SET NoLot = REPLACE(SUBSTRING(p.PlanNo, 6, 20), '/', '') + RIGHT('000' + CAST(l.PlanLine AS VARCHAR(10)), 3)
+FROM dbo.WHS_Plan1 l JOIN dbo.WHS_Plan p ON p.PlanId = l.PlanId
+WHERE p.Jenis = 'SPBB' AND l.NoLot IS NULL;
+GO

@@ -206,6 +206,12 @@ export function PlanDetail({ id }: { id: string }) {
             {(data!.lines as Row[]).map((l) => <tr key={l.PlanLine}><td data-label="Item">{l.ItemCode}<div className="small muted">{l.Dscription}</div></td><td data-label="Container" className="mono">{l.ContainerNo ?? '-'}</td><td data-label="Ruangan" className="mono">{l.KodeRuangan ?? h.KodeRuangan ?? '-'}</td><td data-label="No. BL" className="mono">{l.NoBL ?? (h.titipan ? 'titipan' : '-')}</td>
               <td data-label="Rencana" className="num">{fmt(l.QtyPlan)}</td><td data-label="Realisasi" className="num">{fmt(l.QtyDone)}</td><td data-label="Sisa" className="num">{fmt(l.QtyOutstanding)}</td></tr>)}
           </tbody></table></div>
+          {h.Jenis === 'SPBB' && h.Status !== 'Batal' && (
+            <div className="card row">
+              <span className="grow small">Label QR palet SPBB disiapkan Admin sebelum barang datang. Lot di QR = nomor SPBB + baris.</span>
+              <Link to={`/admin/plan/${id}/labels`} className="btn small">Cetak label QR</Link>
+            </div>
+          )}
           {aktif && (
             <div className="stack">
               <button className="btn outline" onClick={bukaKrani}>Atur krani</button>

@@ -57,8 +57,8 @@ public static class PlanKraniSave
                 }
                 else return Bad("Pilih kendaraan yang sedang memuat");
 
-                var plan1 = (await db.QueryAsync<(int PlanLine, string ItemCode, string? Dscription, string? ContainerNo, string? BrandName, decimal QtyPlan, decimal QtyDone, string? PaletCode, string? KodeRuangan, string? Size, string? Type, string? Crop, string? NoBL)>(
-                    "SELECT PlanLine, ItemCode, Dscription, ContainerNo, BrandName, QtyPlan, QtyDone, PaletCode, KodeRuangan, Size, [Type], Crop, NoBL FROM WHS_Plan1 WITH (UPDLOCK) WHERE PlanId = @id", new { id }, tx)).ToDictionary(x => x.PlanLine);
+                var plan1 = (await db.QueryAsync<(int PlanLine, string ItemCode, string? Dscription, string? ContainerNo, string? BrandName, decimal QtyPlan, decimal QtyDone, string? PaletCode, string? KodeRuangan, string? Size, string? Type, string? Crop, string? NoBL, string? NoLot)>(
+                    "SELECT PlanLine, ItemCode, Dscription, ContainerNo, BrandName, QtyPlan, QtyDone, PaletCode, KodeRuangan, Size, [Type], Crop, NoBL, NoLot FROM WHS_Plan1 WITH (UPDLOCK) WHERE PlanId = @id", new { id }, tx)).ToDictionary(x => x.PlanLine);
                 foreach (var g in r.Lines.GroupBy(l => l.PlanLine))
                 {
                     if (!plan1.TryGetValue(g.Key, out var pg)) return Bad($"Baris {g.Key} tidak ada di dokumen");
@@ -140,7 +140,7 @@ public static class PlanKraniSave
                         var pr = plan1[l.PlanLine];
                         var ruang = l.KodeRuangan ?? pr.KodeRuangan ?? pl.KodeRuangan;
                         var brand = Helpers.Empty(l.Brand) ?? pr.BrandName;
-                        await db.ExecuteAsync(Sql.InsertLine, new { objType, docEntry, lineNum, itemCode = pr.ItemCode, uom = "KG", brand, origin = (string?)null, qty = l.Qty, qty2 = l.Qty2, qtyPalet = l.QtyPalet, flag, ruang, bl = pl.Titipan == true ? null : pl.Jenis == "SPMB" ? l.NoBL!.Trim() : pr.NoBL, tit = pl.Titipan == true, pt = (string?)null, lot = Helpers.Empty(l.NoLot) }, tx);
+                        await db.ExecuteAsync(Sql.InsertLine, new { objType, docEntry, lineNum, itemCode = pr.ItemCode, uom = "KG", brand, origin = (string?)null, qty = l.Qty, qty2 = l.Qty2, qtyPalet = l.QtyPalet, flag, ruang, bl = pl.Titipan == true ? null : pl.Jenis == "SPMB" ? l.NoBL!.Trim() : pr.NoBL, tit = pl.Titipan == true, pt = (string?)null, lot = pl.Jenis == "SPBB" ? pr.NoLot : Helpers.Empty(l.NoLot) }, tx);
                         await db.ExecuteAsync(@"UPDATE KRN1 SET PlanLine = @pl, ContainerNo = @c, KodeRuangan = @ru, U_IDU_Kode_PT = @ptl, PaletCode = @pc, Size = @sz, [Type] = @ty, Crop = @cr,
                             brand_asli = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN @asli END,
                             brand_diubah_oleh = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN @uid END,

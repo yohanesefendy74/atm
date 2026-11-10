@@ -137,7 +137,7 @@ WHERE   h.ObjType = @objType AND h.DocEntry = @docEntry";
     public const string InsertLine = @"
 INSERT INTO KRN1 (ObjType, DocEntry, LineNum, ItemCode, brand_name, Origin, qty, Qty2, QtyPalet, flags, LineStatus, KodeRuangan, NoBL, Titipan, U_IDU_Kode_PT, NoLot)
 VALUES (@objType, @docEntry, @lineNum, @itemCode, @brand, @origin, @qty, @qty2, @qtyPalet, @flag, 'O', @ruang, @bl, @tit, @pt,
-        CASE WHEN @flag = 1 THEN CONCAT(@objType, @docEntry) ELSE @lot END)";   // masuk: lot = ObjType + DocEntry (tercetak di QR)
+        COALESCE(@lot, CASE WHEN @flag = 1 THEN CONCAT(@objType, @docEntry) END))";   // masuk: lot SPBB (label dicetak Admin) atau ObjType + DocEntry
 
     /// Stok per ruangan untuk item + container di warehouse (dokumen yang sudah diposting).
     public const string StockPerRuangan = @"

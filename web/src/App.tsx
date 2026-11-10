@@ -10,7 +10,7 @@ import Home from './pages/Home';
 import { DocDetail, DocList } from './pages/Docs';
 import InboundNew from './pages/Inbound';
 import OutboundNew from './pages/Outbound';
-import LabelPrint from './pages/Labels';
+import LabelPrint, { PlanLabelPrint } from './pages/Labels';
 import { KpiReport, ReportsMenu, StockCardReport, StockContainerReport, StockItemReport, StockRuanganReport } from './pages/Reports';
 import { CmsDetail, CmsList } from './pages/Cms';
 
@@ -40,6 +40,8 @@ function route(path: string, isAdmin: boolean): ReactNode {
   if (path === '/reports/kpi') return <KpiReport />;
   if (path === '/admin/plan') return isAdmin ? <PlanList /> : <Forbidden />;
   if (path === '/admin/plan/baru') return isAdmin ? <PlanNew /> : <Forbidden />;
+  const pl = match('/admin/plan/:id/labels', path);
+  if (pl) return isAdmin ? <PlanLabelPrint planId={pl.id} /> : <Forbidden />;
   const pp = match('/admin/plan/:id', path);
   if (pp) return isAdmin ? <PlanDetail id={pp.id} /> : <Forbidden />;
   if (path === '/admin/jadwal') return isAdmin ? <AdminJadwal /> : <Forbidden />;

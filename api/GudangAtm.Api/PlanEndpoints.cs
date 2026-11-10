@@ -146,6 +146,35 @@ ORDER BY CASE WHEN p.Status IN ('Terbit','Proses','Partial') THEN 0 ELSE 1 END, 
                 new { status = Clean(status), jenis = Clean(jenis), whs = Clean(whs), uid = u.UserId() }));
         });
 
+        // Label QR palet SPBB: disiapkan Admin sebelum barang datang. QR = yymmdd-item-container-L<lot SPBB>.
+        cms.MapGet("/plan/{id:long}/labels", async (long id, ClaimsPrincipal u) =>
+        {
+            await using var db = dbf();
+            var h = await db.QueryFirstOrDefaultAsync<(string PlanNo, string Jenis, string WhsCode, string Status, DateTime? TglJadwal, DateTime CreatedAt, string? PtCode, string? PtName)?>(
+                @"SELECT p.PlanNo, p.Jenis, p.WhsCode, p.Status, p.TglJadwal, p.CreatedAt, p.U_IDU_Kode_PT, o.PrcName
+                  FROM WHS_Plan p LEFT JOIN OPRC o ON o.PrcCode = p.U_IDU_Kode_PT WHERE p.PlanId = @id", new { id });
+            if (h is null) return Results.NotFound(new { message = "Dokumen tidak ditemukan" });
+            if (!await PunyaAkses(db, null, u.UserId(), h.Value.WhsCode)) return Results.Forbid();
+            if (h.Value.Jenis != "SPBB") return Bad("Label disiapkan Admin hanya untuk SPBB");
+            if (h.Value.Status == "Batal") return Bad("SPBB dibatalkan");
+            if (string.IsNullOrWhiteSpace(h.Value.PtCode)) return Results.Json(new { message = "Label belum bisa dicetak: PT SPBB belum diisi" }, statusCode: 409);
+            var tgl = (h.Value.TglJadwal ?? h.Value.CreatedAt).Date;
+            var lines = await db.QueryAsync<(int PlanLine, string ItemCode, string? Dscription, string? BrandName, string? KodeRuangan, string? ContainerNo, decimal QtyPlan, decimal? Qty2Plan, int? PaletPlan, string? NoLot)>(
+                "SELECT PlanLine, ItemCode, Dscription, BrandName, KodeRuangan, ContainerNo, QtyPlan, Qty2Plan, PaletPlan, NoLot FROM WHS_Plan1 WHERE PlanId = @id ORDER BY PlanLine", new { id });
+            var room = await db.ExecuteScalarAsync<string?>("SELECT KodeRuangan FROM WHS_Plan WHERE PlanId = @id", new { id });
+            var items = lines.Select(l =>
+            {
+                var sak = l.Qty2Plan ?? 0; var pal = l.PaletPlan ?? 0;
+                return new
+                {
+                    itemCode = l.ItemCode, itemName = l.Dscription ?? l.ItemCode, brand = l.BrandName, kodeRuangan = l.KodeRuangan ?? room, containerNo = l.ContainerNo,
+                    packKg = sak > 0 ? Math.Round(l.QtyPlan / sak, 2) : 0, sakPerPalet = pal > 0 ? Math.Ceiling(sak / pal) : 0, qtyPalet = pal, noLot = l.NoLot,
+                    qr = $"{tgl:yyMMdd}-{l.ItemCode}-{l.ContainerNo}" + (string.IsNullOrEmpty(l.NoLot) ? "" : $"-L{l.NoLot}"),
+                };
+            }).ToList();
+            return Results.Ok(new { planNo = h.Value.PlanNo, docDate = tgl, containerNo = (string?)null, ptName = h.Value.PtName ?? h.Value.PtCode, items });
+        });
+
         cms.MapGet("/plan/{id:long}", async (long id, ClaimsPrincipal u) =>
         {
             await using var db = dbf();
@@ -302,8 +331,8 @@ VALUES (@no, @jenis, @whs, @bpl, @src, @jc, @batas, @total, @cc, @cn, @pt, 'Terb
                     line++;
                     await db.ExecuteAsync(@"
 INSERT WHS_Plan1 (PlanId, PlanLine, BaseType, BaseDocEntry, BaseLineNum, ContainerNo, ItemCode, Dscription, FreeTxt, BrandName, Size, [Type], Crop,
-                  QtyBase, OpenQtyBase, QtyPlan, Qty2Plan, PaletCode, PaletPlan, KodeRuangan, NoBL)
-VALUES (@planId, @line, @src, @de, @ln, @cont, @item, @desc, @free, @brand, @size, @type, @crop, @qb, @oq, @qp, @q2, @pal, @palN, @room, @bl)",
+                  QtyBase, OpenQtyBase, QtyPlan, Qty2Plan, PaletCode, PaletPlan, KodeRuangan, NoBL, NoLot)
+VALUES (@planId, @line, @src, @de, @ln, @cont, @item, @desc, @free, @brand, @size, @type, @crop, @qb, @oq, @qp, @q2, @pal, @palN, @room, @bl, @lot)",
                         new
                         {
                             planId, line, src, de = q.BaseDocEntry, ln = q.BaseLineNum,
@@ -313,6 +342,8 @@ VALUES (@planId, @line, @src, @de, @ln, @cont, @item, @desc, @free, @brand, @siz
                             qb = (decimal)sap.Quantity, oq = (decimal)sap.OpenQty, qp = q.QtyPlan, q2 = karung,
                             pal = jenis == "SPBB" ? q.PaletCode : null, palN = jenis == "SPBB" ? q.PaletPlan : null, room = lineRoom,
                             bl = BlLine(q),
+                            // lot QR SPBB = nomor SPBB + baris (label dicetak Admin sebelum barang datang)
+                            lot = jenis == "SPBB" ? no[(jenis.Length + 1)..].Replace("/", "") + line.ToString("000") : null,
                         }, tx);
                 }
 
