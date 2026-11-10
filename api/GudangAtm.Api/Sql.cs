@@ -57,7 +57,7 @@ SELECT  TOP 30
         g.ItmsGrpNam  AS groupName,
         ISNULL(i.InvntryUom, 'KG') AS uom
 FROM    OITM i
-JOIN    OITB g ON g.ItmsGrpCod = i.ItmsGrpCod
+LEFT JOIN OITB g ON g.ItmsGrpCod = i.ItmsGrpCod
 WHERE   i.ItemCode LIKE @q OR i.ItemName LIKE @q
 ORDER BY i.ItemCode";
 
@@ -112,11 +112,12 @@ WHERE   h.ObjType = @objType AND h.DocEntry = @docEntry AND h.BPLId = @bplId
   AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = h.WhsCode)";
 
     public const string DocLines = @"
-SELECT  d.LineNum AS lineNum, d.ItemCode AS itemCode, i.ItemName AS itemName, 'KG' AS uom,
+SELECT  d.LineNum AS lineNum, d.ItemCode AS itemCode, COALESCE(i.ItemName, sc.ItemName) AS itemName, 'KG' AS uom,
         d.brand_name AS brand, d.Origin AS origin, d.KodeRuangan AS kodeRuangan, d.qty AS qty, d.Qty2 AS qty2,
-        d.QtyPalet AS qtyPalet, d.flags AS flag
+        d.QtyPalet AS qtyPalet, d.flags AS flag, d.Peran AS peran
 FROM    KRN1 d
-JOIN    OITM i ON i.ItemCode = d.ItemCode
+LEFT JOIN OITM i ON i.ItemCode = d.ItemCode
+LEFT JOIN WHS_ItemScrap sc ON sc.ItemCode = d.ItemCode
 WHERE   d.ObjType = @objType AND d.DocEntry = @docEntry
 ORDER BY d.LineNum";
 
@@ -149,12 +150,13 @@ ORDER BY s.KodeRuangan, s.NoBL";
     /// Baris inbound asal untuk QR yymmdd-itemcode-container (sumber brand, origin, isi per sak / per palet).
     public const string PalletSource = @"
 SELECT  TOP 1
-        d.ItemCode AS itemCode, i.ItemName AS itemName, d.brand_name AS brand, d.Origin AS origin,
+        d.ItemCode AS itemCode, COALESCE(i.ItemName, sc.ItemName) AS itemName, d.brand_name AS brand, d.Origin AS origin,
         h.ContainerNo AS containerNo, h.DocDate AS inboundDate, h.WhsCode AS whsCode,
         d.qty AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet
 FROM    OKRN h
 JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
-JOIN    OITM i ON i.ItemCode = d.ItemCode
+LEFT JOIN OITM i ON i.ItemCode = d.ItemCode
+LEFT JOIN WHS_ItemScrap sc ON sc.ItemCode = d.ItemCode
 WHERE   d.flags = 1 AND d.ItemCode = @itemCode AND ISNULL(h.ContainerNo, '') = @containerNo AND h.BPLId = @bplId
 ORDER BY CASE WHEN CONVERT(char(6), h.DocDate, 12) = @yymmdd THEN 0 ELSE 1 END, h.DocDate";
 
@@ -166,33 +168,36 @@ WHERE   s.WhsCode = @whsCode AND s.ItemCode = @itemCode AND s.ContainerNo = ISNU
 
     /// Data label: hanya baris masuk (Flag 1). PT dicetak dari OPRC.PrcName.
     public const string LabelLines = @"
-SELECT  d.ItemCode AS itemCode, i.ItemName AS itemName, d.brand_name AS brand, d.KodeRuangan AS kodeRuangan,
+SELECT  d.ItemCode AS itemCode, COALESCE(i.ItemName, sc.ItemName) AS itemName, d.brand_name AS brand, d.KodeRuangan AS kodeRuangan,
         d.qty AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet
 FROM    KRN1 d
-JOIN    OITM i ON i.ItemCode = d.ItemCode
+LEFT JOIN OITM i ON i.ItemCode = d.ItemCode
+LEFT JOIN WHS_ItemScrap sc ON sc.ItemCode = d.ItemCode
 WHERE   d.ObjType = @objType AND d.DocEntry = @docEntry AND d.flags = 1
 ORDER BY d.LineNum";
 
     public const string StockPerItem = @"
-SELECT  s.ItemCode AS itemCode, i.ItemName AS itemName,
+SELECT  s.ItemCode AS itemCode, COALESCE(i.ItemName, sc.ItemName) AS itemName,
         SUM(s.Kg) AS kg, SUM(s.Sak) AS sak, SUM(s.Palet) AS palet,
         COUNT(DISTINCT NULLIF(s.ContainerNo, '')) AS containers, COUNT(DISTINCT NULLIF(s.KodeRuangan, '')) AS ruangan
 FROM    WHS_Saldo s
 JOIN    OWHS w ON w.WhsCode = s.WhsCode
-JOIN    OITM i ON i.ItemCode = s.ItemCode
+LEFT JOIN OITM i ON i.ItemCode = s.ItemCode
+LEFT JOIN WHS_ItemScrap sc ON sc.ItemCode = s.ItemCode
 WHERE   w.BPLid = @bplId AND (@whsCode IS NULL OR s.WhsCode = @whsCode) AND (@ruangan IS NULL OR s.KodeRuangan = @ruangan)
   AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = s.WhsCode)
-GROUP BY s.ItemCode, i.ItemName
+GROUP BY s.ItemCode, COALESCE(i.ItemName, sc.ItemName)
 HAVING  SUM(s.Kg) <> 0
 ORDER BY s.ItemCode";
 
     public const string StockPerContainer = @"
 SELECT  NULLIF(s.ContainerNo, '') AS containerNo, NULLIF(s.KodeRuangan, '') AS kodeRuangan, NULLIF(s.NoBL, '') AS noBL,
-        s.ItemCode AS itemCode, i.ItemName AS itemName, s.Brand AS brand,
+        s.ItemCode AS itemCode, COALESCE(i.ItemName, sc.ItemName) AS itemName, s.Brand AS brand,
         s.TglMasuk AS inboundDate, s.Kg AS kg, s.Sak AS sak, s.Palet AS palet, s.WhsCode AS whsCode
 FROM    WHS_Saldo s
 JOIN    OWHS w ON w.WhsCode = s.WhsCode
-JOIN    OITM i ON i.ItemCode = s.ItemCode
+LEFT JOIN OITM i ON i.ItemCode = s.ItemCode
+LEFT JOIN WHS_ItemScrap sc ON sc.ItemCode = s.ItemCode
 WHERE   w.BPLid = @bplId AND (@whsCode IS NULL OR s.WhsCode = @whsCode) AND (@ruangan IS NULL OR s.KodeRuangan = @ruangan)
   AND   (@bl IS NULL OR s.NoBL LIKE '%' + @bl + '%')
   AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = s.WhsCode)
@@ -284,14 +289,15 @@ LEFT JOIN OUSR u ON u.USERID = h.UserId
 WHERE   h.ObjType = @objType AND h.DocEntry = @docEntry AND h.BPLId = @bplId";
 
     public const string CmsLines = @"
-SELECT  d.LineNum AS lineNum, d.ItemCode AS itemCode, i.ItemName AS itemName, g.ItmsGrpNam AS groupName,
+SELECT  d.LineNum AS lineNum, d.ItemCode AS itemCode, COALESCE(i.ItemName, sc.ItemName) AS itemName, g.ItmsGrpNam AS groupName,
         'KG' AS uom, d.brand_name AS brand, d.Origin AS origin, d.KodeRuangan AS kodeRuangan, d.U_IDU_Kode_PT AS ptCode, d.NoBL AS noBL, d.flags AS flag,
         d.qty AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet,
         d.qty_scan AS qtyScan, d.qty2_scan AS qty2Scan, d.QtyPalet_scan AS qtyPaletScan,
-        d.NumAtCard AS numAtCard, d.LineStatus AS lineStatus
+        d.NumAtCard AS numAtCard, d.LineStatus AS lineStatus, d.Peran AS peran
 FROM    KRN1 d
-JOIN    OITM i ON i.ItemCode = d.ItemCode
-JOIN    OITB g ON g.ItmsGrpCod = i.ItmsGrpCod
+LEFT JOIN OITM i ON i.ItemCode = d.ItemCode
+LEFT JOIN WHS_ItemScrap sc ON sc.ItemCode = d.ItemCode
+LEFT JOIN OITB g ON g.ItmsGrpCod = i.ItmsGrpCod
 WHERE   d.ObjType = @objType AND d.DocEntry = @docEntry
 ORDER BY d.LineNum";
 

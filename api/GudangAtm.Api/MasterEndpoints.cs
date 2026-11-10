@@ -11,6 +11,7 @@ namespace GudangAtm.Api;
 public record SetupItem(string Kode, decimal Nilai);
 public record SetupSave(List<SetupItem> Items);
 public record RuanganReq(string? KodeRuangan, string? WhsCode, string? NamaRuangan, decimal KapasitasTon, bool Titipan, bool Aktif = true);
+public record ScrapReq(string? ItemCode, string ItemName, bool Aktif = true);
 public record PaletReq(string? PaletCode, decimal PanjangCm, decimal LebarCm, decimal TinggiCm, decimal BeratKg, bool Aktif = true);
 public record JenisContainerReq(string? Kode, string? Nama, decimal BatasMuatanKg, bool Aktif = true);
 public record DockReq(string? DockCode, string? WhsCode, string? Nama, bool Aktif = true);
@@ -147,6 +148,30 @@ WHERE (@whs IS NULL OR r.WhsCode = @whs) ORDER BY r.WhsCode, r.KodeRuangan", new
             var n = await db.ExecuteAsync("UPDATE WHS_MasterPalet SET PanjangCm = @pj, LebarCm = @lb, TinggiCm = @tg, BeratKg = @br, Aktif = @a WHERE PaletCode = @kode", new { kode, pj = p.PanjangCm, lb = p.LebarCm, tg = p.TinggiCm, br = p.BeratKg, a = p.Aktif });
             if (n == 0) return Results.NotFound(new { message = "Palet tidak ditemukan" });
             await Audit.Safe(db, u, ctx, "MST_PALET", "PALET", null, $"ubah {kode} {p.BeratKg} kg aktif={p.Aktif}");
+            return Results.Ok();
+        });
+
+        // ------------------------------------------------------------ Item scrap (kode khusus untuk scrap Repacking)
+        cms.MapGet("/master/scrap", async () => { await using var db = dbf(); return Results.Ok(await db.QueryAsync("SELECT ItemCode AS itemCode, ItemName AS itemName, Aktif AS aktif FROM WHS_ItemScrap ORDER BY ItemCode")); });
+        cms.MapPost("/master/scrap", async (ScrapReq p, ClaimsPrincipal u, HttpContext ctx) =>
+        {
+            var kode = (p.ItemCode ?? "").Trim().ToUpperInvariant();
+            if (!System.Text.RegularExpressions.Regex.IsMatch(kode, @"^[A-Z0-9][A-Z0-9\-_.]{1,49}$")) return Bad("Kode item scrap 2-50 karakter (huruf, angka, - _ .)");
+            if (string.IsNullOrWhiteSpace(p.ItemName) || p.ItemName.Length > 200) return Bad("Nama wajib (maks 200 karakter)");
+            await using var db = dbf();
+            if (await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WHS_ItemScrap WHERE ItemCode = @kode", new { kode }) > 0) return Bad("Kode sudah ada");
+            if (await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM OITM WHERE ItemCode = @kode", new { kode }) > 0) return Bad("Kode ini item biasa di SAP · pakai kode khusus scrap");
+            await db.ExecuteAsync("INSERT WHS_ItemScrap (ItemCode, ItemName, Aktif) VALUES (@kode, @nama, 1)", new { kode, nama = p.ItemName.Trim() });
+            await Audit.Safe(db, u, ctx, "MST_SCRAP", "SCRAP", null, $"buat {kode}");
+            return Results.Ok();
+        });
+        cms.MapPut("/master/scrap/{kode}", async (string kode, ScrapReq p, ClaimsPrincipal u, HttpContext ctx) =>
+        {
+            if (string.IsNullOrWhiteSpace(p.ItemName) || p.ItemName.Length > 200) return Bad("Nama wajib (maks 200 karakter)");
+            await using var db = dbf();
+            var n = await db.ExecuteAsync("UPDATE WHS_ItemScrap SET ItemName = @nama, Aktif = @a WHERE ItemCode = @kode", new { kode, nama = p.ItemName.Trim(), a = p.Aktif });
+            if (n == 0) return Results.NotFound(new { message = "Item scrap tidak ditemukan" });
+            await Audit.Safe(db, u, ctx, "MST_SCRAP", "SCRAP", null, $"ubah {kode} aktif={p.Aktif}");
             return Results.Ok();
         });
 

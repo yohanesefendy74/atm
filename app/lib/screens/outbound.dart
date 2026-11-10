@@ -206,6 +206,39 @@ class OutboundAddItemScreen extends StatefulWidget {
 class _OutboundAddItemScreenState extends State<OutboundAddItemScreen> {
   String? _ruang;
   String? _bl;
+  Map<String, dynamic>? _scrap;
+  final _scrapKg = TextEditingController();
+  final _scrapSak = TextEditingController();
+
+  @override
+  void dispose() {
+    _scrapKg.dispose();
+    _scrapSak.dispose();
+    super.dispose();
+  }
+
+  void _tambahScrap() {
+    final d = widget.draft;
+    final kg = double.tryParse(_scrapKg.text.replaceAll(',', '.')) ?? 0;
+    final sak = double.tryParse(_scrapSak.text.replaceAll(',', '.')) ?? 0;
+    if (_scrap == null) return showError(context, 'Pilih item scrap');
+    if (kg <= 0) return showError(context, 'Isi berat scrap (kg)');
+    if (_ruang == null) return showError(context, 'Pilih ruangan tujuan dulu');
+    if (_bl == null) return showError(context, 'Pilih No. BL (dari palet keluar)');
+    setState(() {
+      d.scrapLines.add(LineDraft(
+          itemCode: _scrap!['itemCode'].toString(),
+          itemName: (_scrap!['itemName'] ?? '').toString(),
+          qty: kg,
+          qty2: sak,
+          qtyPalet: 0,
+          kodeRuangan: _ruang,
+          noBL: _bl));
+      _scrap = null;
+      _scrapKg.clear();
+      _scrapSak.clear();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -257,6 +290,38 @@ class _OutboundAddItemScreenState extends State<OutboundAddItemScreen> {
               const SizedBox(height: 8),
             ],
             const Hint('Label QR Item Inbound bisa dicetak setelah Admin mengisi PT di CMS.'),
+            if (d.trxCode == 'RP') ...[
+              const SizedBox(height: 20),
+              const Text('Scrap', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              const Hint('Sisa repacking yang tidak jadi hasil. Pakai kode item scrap khusus. Sumber = Hasil + Scrap.'),
+              const SizedBox(height: 8),
+              ScrapItemField(value: _scrap, onChanged: (v) => setState(() => _scrap = v)),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(
+                    child: TextField(
+                        controller: _scrapKg,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(labelText: 'Berat (kg)'))),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: TextField(
+                        controller: _scrapSak,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(labelText: 'Sak / karung (opsional)'))),
+              ]),
+              const SizedBox(height: 8),
+              BigButton(label: 'Tambah scrap', outlined: true, onPressed: _tambahScrap),
+              const SizedBox(height: 8),
+              for (var i = 0; i < d.scrapLines.length; i++) ...[
+                LineTile(d.scrapLines[i],
+                    sakLabel: 'sak',
+                    badge: Pill('SCRAP · ${d.scrapLines[i].kodeRuangan ?? '-'} · BL ${d.scrapLines[i].noBL ?? '-'}', bg: C.amberTint, fg: C.amberText),
+                    onDelete: () => setState(() => d.scrapLines.removeAt(i))),
+                const SizedBox(height: 8),
+              ],
+            ],
           ]),
         ),
         Footer(children: [
@@ -777,8 +842,16 @@ class _OutboundSummaryScreenState extends State<OutboundSummaryScreen> {
               const SizedBox(height: 8),
               if (d.inLines.isEmpty) const Text('Tidak ada item masuk', style: TextStyle(color: C.muted)),
               for (final l in d.inLines) ...[
-                LineTile(l, sakLabel: 'sak', badge: const Pill('MASUK', bg: C.greenTint, fg: C.greenText)),
+                LineTile(l, sakLabel: 'sak', badge: Pill(d.trxCode == 'RP' ? 'HASIL' : 'MASUK', bg: C.greenTint, fg: C.greenText)),
                 const SizedBox(height: 8),
+              ],
+              if (d.scrapLines.isNotEmpty) ...[
+                Text('Scrap · ${d.scrapLines.length} item', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                for (final l in d.scrapLines) ...[
+                  LineTile(l, sakLabel: 'sak', badge: const Pill('SCRAP', bg: C.amberTint, fg: C.amberText)),
+                  const SizedBox(height: 8),
+                ],
               ],
             ],
           ]),

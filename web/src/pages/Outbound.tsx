@@ -4,7 +4,7 @@ import { useAuth } from '../auth';
 import { navigate } from '../router';
 import {
   ErrorBox, Icon, KV, LineForm, LineRow, Page, RuanganSelect, Steps, Totals, errText, fmt, fmtDate, num, todayIso, useToast,
-  useWarehouses, WarehouseSelect, type Line, type Warehouse,
+  useWarehouses, WarehouseSelect, SearchSelect, type Line, type Warehouse,
 } from '../ui';
 import Scanner from './Scanner';
 
@@ -46,6 +46,12 @@ export default function OutboundNew() {
   const [inLines, setInLines] = useState<Line[]>([]);
   const [ruangIn, setRuangIn] = useState('');
   const [blIn, setBlIn] = useState('');
+  // Repacking: SCRAP (kode item scrap khusus dari Master Data)
+  const [scrapLines, setScrapLines] = useState<Line[]>([]);
+  const [scrapItems, setScrapItems] = useState<Row[]>([]);
+  const [scrapCode, setScrapCode] = useState('');
+  const [scrapKg, setScrapKg] = useState('');
+  const [scrapSak, setScrapSak] = useState('');
   const [sel, setSel] = useState<number | null>(null);
   const [armed, setArmed] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -61,6 +67,9 @@ export default function OutboundNew() {
   const cur: Jenis = titipan ? 'OB' : jenis;
   const trx = titipan ? 'BT' : cur;
   const isAdj = cur !== 'OB';
+  useEffect(() => {
+    if (trx === 'RP' && !scrapItems.length) get<Row[]>('/api/master/scrap').then(setScrapItems).catch(() => {});
+  }, [trx, scrapItems.length]);
   const jenisLabel = { BT: 'BT · Titipan', OB: 'OB · Outbound', KR: 'KR · Penyesuaian', RP: 'RP · Repacking' }[trx];
 
   const next = (to: 'add' | 'scan') => {
@@ -144,6 +153,7 @@ export default function OutboundNew() {
         docDate: todayIso(),
         outLines: outLines.map((l) => ({ itemCode: l.itemCode, uom: 'KG', brand: l.brand, origin: l.origin, qty: Math.round(l.qty * 100) / 100, qty2: l.qty2, qtyPalet: l.qtyPalet, kodeRuangan: l.kodeRuangan })),
         inLines: isAdj ? inLines.map((l) => ({ itemCode: l.itemCode, uom: l.uom, brand: l.brand || null, origin: l.origin || null, qty: l.qty, qty2: l.qty2, qtyPalet: l.qtyPalet, kodeRuangan: l.kodeRuangan, noBL: l.noBL })) : [],
+        scrapLines: trx === 'RP' ? scrapLines.map((l) => ({ itemCode: l.itemCode, uom: 'KG', qty: l.qty, qty2: l.qty2, qtyPalet: 0, kodeRuangan: l.kodeRuangan, noBL: l.noBL })) : [],
       });
       toast(`Outbound ${r.docEntry} (${r.trxCode}) tersimpan`);
       navigate('/outbound', true);
@@ -269,6 +279,37 @@ export default function OutboundNew() {
           <LineRow key={i} l={l} sak="sak" badge={<span className="pill green">MASUK</span>} onDelete={() => setInLines(inLines.filter((_, j) => j !== i))} />
         ))}
         <p className="hint">Label QR Item Inbound bisa dicetak setelah Admin mengisi PT di CMS.</p>
+        {trx === 'RP' && (() => {
+          const bls = [...new Set(pallets.map((p) => p.noBL).filter(Boolean))];
+          const bl = bls.length === 1 ? bls[0] : blIn;
+          const addScrap = () => {
+            const it = scrapItems.find((x) => x.itemCode === scrapCode);
+            if (!it) return toast('Pilih item scrap', true);
+            if (num(scrapKg) <= 0) return toast('Isi berat scrap (kg)', true);
+            if (!ruangIn) return toast('Pilih ruangan tujuan dulu', true);
+            if (!bl) return toast('Pilih No. BL (dari palet keluar)', true);
+            setScrapLines([...scrapLines, { itemCode: String(it.itemCode), itemName: String(it.itemName ?? ''), groupName: 'SCRAP', uom: 'KG', brand: '', origin: '', qty: num(scrapKg), qty2: num(scrapSak), qtyPalet: 0, kodeRuangan: ruangIn, noBL: bl as string }]);
+            setScrapCode(''); setScrapKg(''); setScrapSak('');
+          };
+          return (
+            <div className="card">
+              <strong>Scrap</strong>
+              <p className="hint">Sisa repacking yang tidak jadi hasil, pakai kode item scrap khusus. Sumber = Hasil + Scrap. Ruangan & BL sama dengan isian di atas.</p>
+              <div className="field">
+                <label>Item scrap <span className="req">*</span></label>
+                <SearchSelect options={scrapItems.map((x) => ({ value: String(x.itemCode), label: `${x.itemCode} · ${x.itemName ?? ''}` }))} value={scrapCode} onChange={setScrapCode} placeholder={scrapItems.length ? 'Cari item scrap' : 'Belum ada item scrap · isi di Master Data'} />
+              </div>
+              <div className="formrow">
+                <div className="field"><label>Berat (kg) <span className="req">*</span></label><input className="input" inputMode="decimal" value={scrapKg} onChange={(e) => setScrapKg(e.target.value)} /></div>
+                <div className="field"><label>Sak / karung</label><input className="input" inputMode="decimal" value={scrapSak} onChange={(e) => setScrapSak(e.target.value)} /></div>
+              </div>
+              <button className="btn ghost" onClick={addScrap}><Icon name="plus" /> Tambah scrap</button>
+              {scrapLines.map((l, i) => (
+                <LineRow key={i} l={l} sak="sak" badge={<span className="pill amber">SCRAP</span>} onDelete={() => setScrapLines(scrapLines.filter((_, j) => j !== i))} />
+              ))}
+            </div>
+          );
+        })()}
       </Page>
     );
 
@@ -516,7 +557,11 @@ export default function OutboundNew() {
         <>
           <strong>Item Inbound · {inLines.length} item</strong>
           {inLines.map((l, i) => (
-            <LineRow key={i} l={l} sak="sak" badge={<span className="pill green">MASUK</span>} />
+            <LineRow key={i} l={l} sak="sak" badge={<span className="pill green">{trx === 'RP' ? 'HASIL' : 'MASUK'}</span>} />
+          ))}
+          {scrapLines.length > 0 && <strong>Scrap · {scrapLines.length} item</strong>}
+          {scrapLines.map((l, i) => (
+            <LineRow key={'s' + i} l={l} sak="sak" badge={<span className="pill amber">SCRAP</span>} />
           ))}
         </>
       )}

@@ -88,10 +88,12 @@ public static class KraniEndpoints
             if (string.IsNullOrWhiteSpace(req.NoMobil) && jenis == "OB") return Bad("No. mobil wajib diisi");
             var outLines = req.OutLines ?? new List<DocLine>();
             var inLines = req.InLines ?? new List<DocLine>();
+            var scrapLines = req.ScrapLines ?? new List<DocLine>();
             if (outLines.Count == 0) return Bad("Belum ada palet yang discan");
+            if (scrapLines.Count > 0 && jenis != "RP") return Bad("Scrap hanya untuk Repacking");
             if (jenis == "OB" && inLines.Count > 0) return Bad("Item Inbound hanya untuk KR / RP");
             var err = Helpers.ValidateHeader(req.NoMobil ?? "", req.ContainerNo, outLines.Count + inLines.Count, mobilRequired: jenis == "OB")
-                      ?? ValidateLines(outLines) ?? ValidateLines(inLines);
+                      ?? ValidateLines(outLines) ?? ValidateLines(inLines) ?? (scrapLines.Count > 0 ? ValidateLines(scrapLines) : null);
             if (err is not null) return Bad(err);
 
             await using var db = dbf();
@@ -103,8 +105,17 @@ public static class KraniEndpoints
 
             // Aturan v2: alasan wajib (KR), selisih berat Repacking, ruangan tidak boleh titipan untuk KR/RP
             decimal? selisih = null;
+            // Scrap: kode item khusus dari master WHS_ItemScrap; hasil Repacking tidak boleh memakai kode scrap
+            var kodeScrap = (await db.QueryAsync<string>("SELECT ItemCode FROM WHS_ItemScrap WHERE Aktif = 1")).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var bukanScrap = scrapLines.FirstOrDefault(l => !kodeScrap.Contains(l.ItemCode.Trim()));
+            if (bukanScrap is not null) return Bad($"{bukanScrap.ItemCode} bukan kode item scrap (Master Data · Item Scrap)");
+            var hasilScrap = inLines.FirstOrDefault(l => kodeScrap.Contains(l.ItemCode.Trim()));
+            if (hasilScrap is not null) return Bad($"{hasilScrap.ItemCode} adalah kode scrap · masukkan di bagian Scrap, bukan Hasil");
             if (jenis == "KR" && string.IsNullOrWhiteSpace(req.AlasanKode)) return Bad("Alasan penyesuaian wajib dipilih");
             if (req.AlasanKode == "lain" && (req.Catatan ?? "").Trim().Length < 5) return Bad("Catatan minimal 5 huruf bila alasan 'lain'");
+            // Scrap diperlakukan seperti item masuk (ruangan tujuan & BL sumber wajib); dipisah lagi sebelum disimpan
+            var nHasil = inLines.Count;
+            inLines = inLines.Concat(scrapLines).ToList();
             // Ruangan wajib: keluar = ruangan SUMBER (stok item+container per ruangan), masuk = ruangan TUJUAN.
             if (!string.IsNullOrWhiteSpace(req.KodeRuangan))
                 inLines = inLines.Select(l => string.IsNullOrWhiteSpace(l.KodeRuangan) ? l with { KodeRuangan = req.KodeRuangan } : l).ToList();
@@ -143,8 +154,9 @@ public static class KraniEndpoints
             }
             if (jenis == "RP")
             {
+                // Neraca berat: SUMBER = HASIL + SCRAP (selisih dibatasi REPACK_WARN_PCT)
                 var src = outLines.Sum(l => l.Qty); var hasil = inLines.Sum(l => l.Qty);
-                if (inLines.Count == 0) return Bad("Repacking harus punya item hasil");
+                if (nHasil == 0) return Bad("Repacking harus punya item hasil");
                 selisih = src <= 0 ? 0 : Math.Round(Math.Abs(src - hasil) / src * 100, 2);
                 var lim = await db.ExecuteScalarAsync<decimal?>("SELECT Nilai FROM WHS_Setup WHERE Kode = 'REPACK_WARN_PCT'") ?? 2m;
                 if (selisih > lim) return Bad($"Selisih berat Repacking {selisih:N2}% melebihi batas {lim:N0}% · periksa timbangan");
@@ -153,10 +165,14 @@ public static class KraniEndpoints
             var objType = jenis == "OB" ? "6710" : "6720";
             var lines = outLines.Select(l => (l, -1)).Concat(inLines.Select(l => (l, 1))).ToList();
             var saved = await SaveDoc(db, u, objType, trxCode, req.WhsCode, req.NoMobil ?? "", req.ContainerNo, req.DocDate, lines);
+            if (jenis == "RP")
+                // Peran baris: urutan simpan = sumber, hasil, scrap
+                await db.ExecuteAsync(@"UPDATE KRN1 SET Peran = CASE WHEN LineNum < @a THEN 'SUMBER' WHEN LineNum < @b THEN 'HASIL' ELSE 'SCRAP' END
+                    WHERE ObjType = @o AND DocEntry = @d", new { a = outLines.Count, b = outLines.Count + nHasil, o = saved.ObjType, d = saved.DocEntry });
             if (jenis != "OB")
                 await db.ExecuteAsync("UPDATE OKRN SET AlasanKode = @a, Catatan = @c, SelisihPersen = @s WHERE ObjType = @o AND DocEntry = @d",
                     new { a = Helpers.Empty(req.AlasanKode), c = Helpers.Empty(req.Catatan), s = selisih, o = saved.ObjType, d = saved.DocEntry });
-            await Audit.Safe(db, u, ctx, "CREATE", saved.ObjType, saved.DocEntry, $"{saved.TrxCode} {outLines.Count} keluar / {inLines.Count} masuk");
+            await Audit.Safe(db, u, ctx, "CREATE", saved.ObjType, saved.DocEntry, $"{saved.TrxCode} {outLines.Count} keluar / {nHasil} hasil / {inLines.Count - nHasil} scrap");
             return Results.Ok(saved);
         });
 
@@ -244,6 +260,13 @@ public static class KraniEndpoints
                     COUNT(DISTINCT NULLIF(ContainerNo, '')) AS containers, MIN(TglMasuk) AS tglMasuk
                 FROM WHS_Saldo WHERE WhsCode = @whs AND ItemCode = @itemCode AND (@r IS NULL OR KodeRuangan = @r) AND Kg > 0
                 GROUP BY NoBL, KodeRuangan ORDER BY MIN(TglMasuk), NoBL", new { whs, itemCode, r = Empty(ruangan) }));
+        });
+
+        // Item scrap (kode khusus, Repacking)
+        api.MapGet("/master/scrap", async () =>
+        {
+            await using var db = dbf();
+            return Results.Ok(await db.QueryAsync("SELECT ItemCode AS itemCode, ItemName AS itemName FROM WHS_ItemScrap WHERE Aktif = 1 ORDER BY ItemCode"));
         });
 
         // Daftar PT (krani memilih PT per baris pada SPMB)

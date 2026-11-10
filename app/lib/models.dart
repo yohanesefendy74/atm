@@ -141,6 +141,7 @@ class OutboundDraft {
   final DateTime date = DateTime.now();
   final List<ScannedPallet> pallets = [];
   final List<LineDraft> inLines = [];
+  final List<LineDraft> scrapLines = []; // RP: SCRAP (kode item scrap khusus)
 
   bool get isTitipan => warehouse?.isTitipan ?? false;
   String get trxCode => isTitipan ? 'BT' : jenis;
@@ -200,5 +201,6 @@ class OutboundDraft {
                 })
             .toList(),
         'inLines': isAdj ? inLines.map((l) => l.toJson()).toList() : <Map<String, dynamic>>[],
+        'scrapLines': trxCode == 'RP' ? scrapLines.map((l) => l.toJson()).toList() : <Map<String, dynamic>>[],
       };
 }

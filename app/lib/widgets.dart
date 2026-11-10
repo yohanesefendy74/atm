@@ -711,3 +711,55 @@ class _BlFieldState extends State<BlField> {
     );
   }
 }
+
+/// Item scrap Repacking: kode item khusus (Master Data · Item Scrap), bisa dicari.
+class ScrapItemField extends StatefulWidget {
+  const ScrapItemField({super.key, required this.value, required this.onChanged});
+  final Map<String, dynamic>? value;
+  final ValueChanged<Map<String, dynamic>?> onChanged;
+  @override
+  State<ScrapItemField> createState() => _ScrapItemFieldState();
+}
+
+class _ScrapItemFieldState extends State<ScrapItemField> {
+  static List<Map<String, dynamic>>? _cache;
+  List<Map<String, dynamic>> _list = _cache ?? [];
+
+  @override
+  void initState() {
+    super.initState();
+    Api.get('/api/master/scrap').then((r) {
+      _cache = (r as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      if (mounted) setState(() => _list = _cache!);
+    }).catchError((_) {});
+  }
+
+  String _label(Map<String, dynamic> p) => '${p['itemCode']} · ${p['itemName'] ?? ''}';
+
+  @override
+  Widget build(BuildContext context) {
+    final cur = widget.value;
+    return Autocomplete<Map<String, dynamic>>(
+      key: ValueKey('${cur?['itemCode']}|${_list.length}'),
+      initialValue: TextEditingValue(text: cur == null ? '' : _label(cur)),
+      displayStringForOption: _label,
+      optionsBuilder: (v) {
+        final q = v.text.trim().toUpperCase();
+        if (cur != null && v.text == _label(cur)) return _list;
+        return _list.where((p) => q.isEmpty || _label(p).toUpperCase().contains(q));
+      },
+      onSelected: widget.onChanged,
+      fieldViewBuilder: (context, ctrl, focus, onSubmit) => TextField(
+        controller: ctrl,
+        focusNode: focus,
+        decoration: InputDecoration(
+            labelText: 'Item scrap',
+            helperText: _list.isEmpty ? 'Belum ada item scrap · Admin isi di Master Data' : null,
+            suffixIcon: const Icon(Icons.arrow_drop_down)),
+        onChanged: (_) {
+          if (widget.value != null) widget.onChanged(null);
+        },
+      ),
+    );
+  }
+}

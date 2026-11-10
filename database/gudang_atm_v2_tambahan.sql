@@ -166,3 +166,14 @@ GO
 IF COL_LENGTH('dbo.OKRN','NoMobilKrani') IS NULL ALTER TABLE dbo.OKRN ADD NoMobilKrani NVARCHAR(20) NULL;   -- no. mobil menurut krani
 IF COL_LENGTH('dbo.OKRN','CatatanKrani') IS NULL ALTER TABLE dbo.OKRN ADD CatatanKrani NVARCHAR(300) NULL;
 GO
+
+/* Repacking: SUMBER (keluar), HASIL (masuk), SCRAP (masuk, kode item khusus yang didefinisikan user, tidak harus ada di OITM) */
+IF OBJECT_ID('dbo.WHS_ItemScrap') IS NULL
+CREATE TABLE dbo.WHS_ItemScrap (
+    ItemCode  NVARCHAR(50)  NOT NULL PRIMARY KEY,
+    ItemName  NVARCHAR(200) NOT NULL,
+    Aktif     BIT NOT NULL DEFAULT 1,
+    CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSDATETIME()
+);
+GO
+-- GRANT SELECT, INSERT, UPDATE ON dbo.WHS_ItemScrap TO gudang_app;

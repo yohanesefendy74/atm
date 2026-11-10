@@ -46,7 +46,8 @@ public record OutboundRequest(
     List<DocLine>? InLines,
     string? AlasanKode = null,
     string? Catatan = null,
-    string? KodeRuangan = null);
+    string? KodeRuangan = null,
+    List<DocLine>? ScrapLines = null);   // Repacking: SCRAP (kode item scrap khusus, masuk ke stok)
 
 public record SavedDoc(string ObjType, long DocEntry, string TrxCode);
 

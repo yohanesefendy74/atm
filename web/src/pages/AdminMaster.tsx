@@ -12,6 +12,8 @@ const CFG: Cfg[] = [
   { key: 'palet', title: 'Palet', path: 'palet', createable: true, fields: [
     { k: 'paletCode', label: 'Kode', pk: true }, { k: 'panjangCm', label: 'Panjang cm', type: 'number' }, { k: 'lebarCm', label: 'Lebar cm', type: 'number' },
     { k: 'tinggiCm', label: 'Tinggi cm', type: 'number' }, { k: 'beratKg', label: 'Berat kg', type: 'number' }, { k: 'aktif', label: 'Aktif', type: 'bool' }] },
+  { key: 'scrap', title: 'Item Scrap', path: 'scrap', createable: true, fields: [
+    { k: 'itemCode', label: 'Kode item scrap', pk: true, hint: 'kode khusus, bukan item SAP · dipakai di Repacking' }, { k: 'itemName', label: 'Nama' }, { k: 'aktif', label: 'Aktif', type: 'bool' }] },
   { key: 'jenis', title: 'Jenis Container', path: 'jenis-container', fields: [
     { k: 'kode', label: 'Kode', pk: true }, { k: 'nama', label: 'Nama' }, { k: 'batasMuatanKg', label: 'Batas muatan kg', type: 'number' }, { k: 'aktif', label: 'Aktif', type: 'bool' }] },
   { key: 'dock', title: 'Jalur (Dock)', path: 'dock', whsFilter: true, createable: true, fields: [

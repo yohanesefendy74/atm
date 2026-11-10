@@ -451,7 +451,7 @@ export function CmsDetail({ objType, docEntry }: { objType: string; docEntry: st
                   )}
                 </div>
               </td>
-              <td data-label="Arah">{Number(l.flag) === 1 ? <span className="pill green">MASUK</span> : <span className="pill out">KELUAR</span>}</td>
+              <td data-label="Arah">{l.peran === 'SCRAP' ? <span className="pill amber">SCRAP</span> : l.peran === 'HASIL' ? <span className="pill green">HASIL</span> : l.peran === 'SUMBER' ? <span className="pill out">SUMBER</span> : Number(l.flag) === 1 ? <span className="pill green">MASUK</span> : <span className="pill out">KELUAR</span>}</td>
               {(['qty', 'qty2', 'qtyPalet'] as const).map((k) => [
                 <td key={k} data-label={k === 'qty' ? 'Qty (KG)' : k === 'qty2' ? 'Qty 2' : 'Palet'} className="num">
                   <input
