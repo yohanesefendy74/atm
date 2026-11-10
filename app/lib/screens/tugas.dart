@@ -205,14 +205,62 @@ class _TugasDetailState extends State<TugasDetail> {
     }
   }
 
+  /// SPMB: scan QR palet -> ruangan, BL & PT diambil dari stok palet tersebut (PT dari SPBB asal palet).
+  Future<void> _scanSumber(_Entry e, String itemCode) async {
+    final qr = await Navigator.of(context).push<String>(MaterialPageRoute(builder: (_) => const ScanQrScreen()));
+    if (qr == null || !mounted) return;
+    try {
+      final r = await Api.get('/api/pallet', {'qr': qr, 'whsCode': _h!['whsCode'].toString()}) as Map;
+      if ('${r['itemCode']}' != itemCode) {
+        if (mounted) showError(context, 'QR ini untuk item ${r['itemCode']}, bukan $itemCode');
+        return;
+      }
+      final tit = _h!['titipan'] == true;
+      final rows = ((r['rooms'] as List?) ?? const [])
+          .map((x) => Map<String, dynamic>.from(x as Map))
+          .where((x) => (x['titipan'] == true) == tit && (x['ptCode'] ?? '').toString().isNotEmpty)
+          .toList();
+      if (rows.isEmpty) {
+        if (mounted) showError(context, 'Tidak ada stok ${tit ? 'titipan' : 'non-titipan'} untuk palet ini');
+        return;
+      }
+      Map<String, dynamic>? pick = rows.length == 1 ? rows.first : null;
+      if (pick == null && mounted) {
+        pick = await showModalBottomSheet<Map<String, dynamic>>(
+          context: context,
+          builder: (c) => SafeArea(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Padding(padding: EdgeInsets.all(16), child: Text('Pilih sumber stok palet ini', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700))),
+              for (final x in rows)
+                ListTile(
+                  title: Text('${x['kodeRuangan'] ?? '-'} · ${tit ? 'TITIPAN' : 'BL ${x['noBL'] ?? '-'}'} · PT ${x['ptCode']}'),
+                  subtitle: Text('Stok ${toD(x['stockKg']).toStringAsFixed(0)} kg'),
+                  onTap: () => Navigator.of(c).pop(x),
+                ),
+            ]),
+          ),
+        );
+      }
+      if (pick == null || !mounted) return;
+      final p = pick;
+      setState(() {
+        e.room = p['kodeRuangan']?.toString();
+        e.bl = p['noBL']?.toString();
+        e.pt = p['ptCode']?.toString();
+      });
+    } catch (err) {
+      if (mounted) showError(context, err);
+    }
+  }
+
   Future<void> _simpan() async {
     final spbb = _h?['jenis'] == 'SPBB';
     final items = <Map<String, dynamic>>[];
     for (final e in _entries) {
       final q = double.tryParse(e.qty.text.replaceAll(',', '.')) ?? 0;
       if (q <= 0) continue;
-      if (!spbb && (e.pt ?? '').isEmpty) return showError(context, 'Pilih PT untuk setiap baris yang diisi');
-      if (!spbb && _h?['titipan'] != true && (e.bl ?? '').isEmpty) return showError(context, 'Pilih BL sumber untuk setiap baris yang diisi');
+      if (!spbb && (e.pt ?? '').isEmpty) return showError(context, 'Pilih sumber stok (atau scan QR palet) untuk setiap baris yang diisi');
+      if (!spbb && _h?['titipan'] != true && (e.bl ?? '').isEmpty) return showError(context, 'Pilih sumber stok ber-BL untuk setiap baris yang diisi');
       items.add({
         'planLine': e.planLine,
         'qty': q,
@@ -419,7 +467,11 @@ class _TugasDetailState extends State<TugasDetail> {
               ]),
               if (!spbb) ...[
                 const SizedBox(height: 8),
-                PtField(value: e.pt, onChanged: (v) => setState(() => e.pt = v)),
+                OutlinedButton.icon(
+                  onPressed: () => _scanSumber(e, '${l['itemCode']}'),
+                  icon: const Icon(Icons.qr_code_scanner),
+                  label: const Text('Scan QR palet (isi ruangan, BL & PT)'),
+                ),
               ],
               const SizedBox(height: 8),
               RuanganField(
@@ -430,18 +482,30 @@ class _TugasDetailState extends State<TugasDetail> {
                 onChanged: (v) => setState(() {
                   e.room = v;
                   e.bl = null;
+                  e.pt = null;
                 }),
               ),
-              if (!spbb && _h!['titipan'] != true) ...[
+              if (!spbb) ...[
                 const SizedBox(height: 8),
-                BlField(whs: _h!['whsCode'].toString(), itemCode: '${l['itemCode']}', ruangan: e.room, value: e.bl, onChanged: (v) => setState(() => e.bl = v)),
+                SumberStokField(
+                  whs: _h!['whsCode'].toString(),
+                  itemCode: '${l['itemCode']}',
+                  ruangan: e.room,
+                  titipan: _h!['titipan'] == true,
+                  bl: e.bl,
+                  pt: e.pt,
+                  onChanged: (bl, pt) => setState(() {
+                    e.bl = bl;
+                    e.pt = pt;
+                  }),
+                ),
               ],
             ],
           if (!spbb && sisa > 0)
             TextButton.icon(
               onPressed: () => setState(() => _entries.add(_Entry(k, l['kodeRuangan']?.toString() ?? _h!['kodeRuangan']?.toString(), tambahan: true))),
               icon: const Icon(Icons.add),
-              label: const Text('Tambah baris PT lain'),
+              label: const Text('Tambah baris sumber lain (BL / PT lain)'),
             ),
         ]),
       ),

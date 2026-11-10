@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import 'api.dart';
 import 'models.dart';
@@ -640,19 +641,22 @@ class _PtFieldState extends State<PtField> {
 }
 
 
-/// BL sumber stok untuk item (saldo per ruangan + BL). Cari lalu pilih; teks bebas tidak diterima.
-class BlField extends StatefulWidget {
-  const BlField({super.key, required this.whs, required this.itemCode, required this.ruangan, required this.value, required this.onChanged});
+/// Sumber stok SPMB: ruangan + BL + PT dari saldo. PT tidak dipilih krani, mengikuti stok (PT dari SPBB / label QR).
+/// [titipan]: barang titipan (tanpa BL). Nilai = kunci 'BL|PT'.
+class SumberStokField extends StatefulWidget {
+  const SumberStokField({super.key, required this.whs, required this.itemCode, required this.ruangan, required this.titipan, required this.bl, required this.pt, required this.onChanged});
   final String whs;
   final String itemCode;
   final String? ruangan;
-  final String? value;
-  final ValueChanged<String?> onChanged;
+  final bool titipan;
+  final String? bl;
+  final String? pt;
+  final void Function(String? bl, String? pt) onChanged;
   @override
-  State<BlField> createState() => _BlFieldState();
+  State<SumberStokField> createState() => _SumberStokFieldState();
 }
 
-class _BlFieldState extends State<BlField> {
+class _SumberStokFieldState extends State<SumberStokField> {
   List<Map<String, dynamic>> _rows = [];
   String? _err;
 
@@ -663,7 +667,7 @@ class _BlFieldState extends State<BlField> {
   }
 
   @override
-  void didUpdateWidget(BlField old) {
+  void didUpdateWidget(SumberStokField old) {
     super.didUpdateWidget(old);
     if (old.ruangan != widget.ruangan || old.itemCode != widget.itemCode) _load();
   }
@@ -671,28 +675,33 @@ class _BlFieldState extends State<BlField> {
   Future<void> _load() async {
     if (widget.ruangan == null) return setState(() => _rows = []);
     try {
-      final r = await Api.get('/api/stok/bl', {'whs': widget.whs, 'itemCode': widget.itemCode, 'ruangan': widget.ruangan!, 'titipan': 'false'}) as List;
+      final r = await Api.get('/api/stok/bl', {'whs': widget.whs, 'itemCode': widget.itemCode, 'ruangan': widget.ruangan!, 'titipan': widget.titipan ? 'true' : 'false'}) as List;
       if (!mounted) return;
       setState(() {
         _err = null;
-        _rows = r.map((e) => Map<String, dynamic>.from(e as Map)).where((x) => (x['noBL'] ?? '').toString().isNotEmpty).toList();
+        _rows = r
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .where((x) => (x['ptCode'] ?? '').toString().isNotEmpty && (widget.titipan || (x['noBL'] ?? '').toString().isNotEmpty))
+            .toList();
       });
-      if (widget.value == null && _rows.length == 1) widget.onChanged(_rows.first['noBL'].toString());
+      if (widget.pt == null && _rows.length == 1) widget.onChanged(_rows.first['noBL']?.toString(), _rows.first['ptCode'].toString());
     } catch (e) {
       if (mounted) setState(() => _err = e.toString());
     }
   }
 
-  String _label(Map<String, dynamic> r) => '${r['noBL']} · stok ${toD(r['kg']).toStringAsFixed(0)} kg';
+  String _key(Map<String, dynamic> r) => '${r['noBL'] ?? ''}|${r['ptCode'] ?? ''}';
+  String _label(Map<String, dynamic> r) =>
+      '${widget.titipan ? 'TITIPAN' : 'BL ${r['noBL']}'} · PT ${r['ptCode']}${r['ptName'] != null ? ' ${r['ptName']}' : ''} · stok ${toD(r['kg']).toStringAsFixed(0)} kg';
 
   @override
   Widget build(BuildContext context) {
-    if (_err != null) return Hint('Gagal memuat BL: $_err', color: C.outbound);
-    if (widget.ruangan == null) return const Hint('Pilih ruangan sumber dulu untuk melihat BL', color: C.amberText);
-    if (_rows.isEmpty) return const Hint('Tidak ada stok ber-BL untuk item ini di ruangan tersebut', color: C.outbound);
-    final cur = _rows.where((r) => r['noBL'].toString() == widget.value).firstOrNull;
+    if (_err != null) return Hint('Gagal memuat stok: $_err', color: C.outbound);
+    if (widget.ruangan == null) return const Hint('Pilih ruangan sumber dulu, atau scan QR palet', color: C.amberText);
+    if (_rows.isEmpty) return const Hint('Tidak ada stok item ini di ruangan tersebut', color: C.outbound);
+    final cur = _rows.where((r) => _key(r) == '${widget.bl ?? ''}|${widget.pt ?? ''}').firstOrNull;
     return Autocomplete<Map<String, dynamic>>(
-      key: ValueKey('${widget.ruangan}|${widget.value}|${_rows.length}'),
+      key: ValueKey('${widget.ruangan}|${widget.bl}|${widget.pt}|${_rows.length}'),
       initialValue: TextEditingValue(text: cur == null ? '' : _label(cur)),
       displayStringForOption: _label,
       optionsBuilder: (v) {
@@ -700,17 +709,53 @@ class _BlFieldState extends State<BlField> {
         if (cur != null && v.text == _label(cur)) return _rows;
         return _rows.where((r) => q.isEmpty || _label(r).toUpperCase().contains(q));
       },
-      onSelected: (r) => widget.onChanged(r['noBL'].toString()),
+      onSelected: (r) => widget.onChanged(r['noBL']?.toString(), r['ptCode'].toString()),
       fieldViewBuilder: (context, ctrl, focus, onSubmit) => TextField(
         controller: ctrl,
         focusNode: focus,
-        decoration: const InputDecoration(labelText: 'No. BL sumber (wajib)', suffixIcon: Icon(Icons.arrow_drop_down)),
+        decoration: InputDecoration(
+            labelText: widget.titipan ? 'Sumber stok titipan & PT (wajib)' : 'Sumber stok: BL & PT (wajib)',
+            helperText: 'PT mengikuti stok dari SPBB (label QR), tidak dipilih',
+            suffixIcon: const Icon(Icons.arrow_drop_down)),
         onChanged: (_) {
-          if (widget.value != null) widget.onChanged(null);
+          if (widget.pt != null) widget.onChanged(null, null);
         },
       ),
     );
   }
+}
+
+/// Layar kamera sederhana: kembali dengan isi QR pertama yang terbaca.
+class ScanQrScreen extends StatefulWidget {
+  const ScanQrScreen({super.key, this.title = 'Scan QR palet'});
+  final String title;
+  @override
+  State<ScanQrScreen> createState() => _ScanQrScreenState();
+}
+
+class _ScanQrScreenState extends State<ScanQrScreen> {
+  final _ctl = MobileScannerController(detectionSpeed: DetectionSpeed.normal);
+  bool _done = false;
+
+  @override
+  void dispose() {
+    _ctl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: Text(widget.title)),
+        body: MobileScanner(
+          controller: _ctl,
+          onDetect: (cap) {
+            final raw = cap.barcodes.isEmpty ? null : cap.barcodes.first.rawValue;
+            if (_done || raw == null || raw.trim().isEmpty) return;
+            _done = true;
+            Navigator.of(context).pop(raw.trim());
+          },
+        ),
+      );
 }
 
 /// Item scrap Repacking: kode item khusus (Master Data · Item Scrap), bisa dicari.

@@ -135,25 +135,27 @@ FROM    OKRN h OUTER APPLY (SELECT SUM(d.qty) q, SUM(d.Qty2) s, SUM(d.QtyPalet) 
 WHERE   h.ObjType = @objType AND h.DocEntry = @docEntry";
 
     public const string InsertLine = @"
-INSERT INTO KRN1 (ObjType, DocEntry, LineNum, ItemCode, brand_name, Origin, qty, Qty2, QtyPalet, flags, LineStatus, KodeRuangan, NoBL, Titipan)
-VALUES (@objType, @docEntry, @lineNum, @itemCode, @brand, @origin, @qty, @qty2, @qtyPalet, @flag, 'O', @ruang, @bl, @tit)";
+INSERT INTO KRN1 (ObjType, DocEntry, LineNum, ItemCode, brand_name, Origin, qty, Qty2, QtyPalet, flags, LineStatus, KodeRuangan, NoBL, Titipan, U_IDU_Kode_PT)
+VALUES (@objType, @docEntry, @lineNum, @itemCode, @brand, @origin, @qty, @qty2, @qtyPalet, @flag, 'O', @ruang, @bl, @tit, @pt)";
 
     /// Stok per ruangan untuk item + container di warehouse (dokumen yang sudah diposting).
     public const string StockPerRuangan = @"
 SELECT  NULLIF(s.KodeRuangan, '') AS kodeRuangan, r.NamaRuangan AS namaRuangan, s.Titipan AS titipan,
-        CAST(ISNULL(r.Titipan, 0) AS bit) AS ruanganTitipan,
+        CAST(ISNULL(r.Titipan, 0) AS bit) AS ruanganTitipan, NULLIF(s.PtCode, '') AS ptCode, pc.PrcName AS ptName,
         NULLIF(s.NoBL, '') AS noBL, s.Kg AS stockKg, s.Sak AS stockSak, s.Palet AS stockPalet
 FROM    WHS_Saldo s
 LEFT JOIN WHS_MasterRuangan r ON r.KodeRuangan = s.KodeRuangan
+LEFT JOIN OPRC pc ON pc.PrcCode = s.PtCode
 WHERE   s.WhsCode = @whsCode AND s.ItemCode = @itemCode AND s.ContainerNo = ISNULL(@containerNo, '') AND s.Kg > 0
-ORDER BY s.KodeRuangan, s.Titipan, s.NoBL";
+ORDER BY s.KodeRuangan, s.Titipan, s.NoBL, s.PtCode";
 
     /// Baris inbound asal untuk QR yymmdd-itemcode-container (sumber brand, origin, isi per sak / per palet).
     public const string PalletSource = @"
 SELECT  TOP 1
         d.ItemCode AS itemCode, COALESCE(i.ItemName, sc.ItemName) AS itemName, d.brand_name AS brand, d.Origin AS origin,
         h.ContainerNo AS containerNo, h.DocDate AS inboundDate, h.WhsCode AS whsCode,
-        d.qty AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet
+        d.qty AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet,
+        COALESCE(NULLIF(d.U_IDU_Kode_PT, ''), NULLIF(h.U_IDU_Kode_PT, '')) AS ptCode
 FROM    OKRN h
 JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
 LEFT JOIN OITM i ON i.ItemCode = d.ItemCode
@@ -193,7 +195,7 @@ HAVING  SUM(s.Kg) <> 0
 ORDER BY s.ItemCode";
 
     public const string StockPerContainer = @"
-SELECT  NULLIF(s.ContainerNo, '') AS containerNo, NULLIF(s.KodeRuangan, '') AS kodeRuangan, NULLIF(s.NoBL, '') AS noBL, s.Titipan AS titipan,
+SELECT  NULLIF(s.ContainerNo, '') AS containerNo, NULLIF(s.KodeRuangan, '') AS kodeRuangan, NULLIF(s.NoBL, '') AS noBL, s.Titipan AS titipan, NULLIF(s.PtCode, '') AS ptCode,
         s.ItemCode AS itemCode, COALESCE(i.ItemName, sc.ItemName) AS itemName, s.Brand AS brand,
         s.TglMasuk AS inboundDate, s.Kg AS kg, s.Sak AS sak, s.Palet AS palet, s.WhsCode AS whsCode
 FROM    WHS_Saldo s

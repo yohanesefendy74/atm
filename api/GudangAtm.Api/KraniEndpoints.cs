@@ -147,10 +147,11 @@ public static class KraniEndpoints
                 inLines = inLines.Select(l => l with { NoBL = null }).ToList();
             }
             else if (outLines.Any(l => string.IsNullOrWhiteSpace(l.NoBL))) return Bad("Pilih BL sumber untuk setiap palet keluar");
-            foreach (var g in outLines.GroupBy(l => (l.ItemCode, Ruang: l.KodeRuangan!.Trim(), Bl: (l.NoBL ?? "").Trim())))
+            // PT keluar = PT stok sumber (dari SPBB / label QR). Aplikasi lama tanpa PT: dicek tanpa memisah PT.
+            foreach (var g in outLines.GroupBy(l => (l.ItemCode, Ruang: l.KodeRuangan!.Trim(), Bl: (l.NoBL ?? "").Trim(), Pt: Helpers.Empty(l.PtCode))))
             {
-                var stokKg = await db.ExecuteScalarAsync<decimal?>("SELECT Kg FROM WHS_Saldo WHERE WhsCode = @w AND ItemCode = @i AND KodeRuangan = @r AND ContainerNo = @c AND NoBL = @bl AND Titipan = @t",
-                    new { w = req.WhsCode, i = g.Key.ItemCode, r = g.Key.Ruang, c = cont, bl = g.Key.Bl, t = roomTitipan }) ?? 0;
+                var stokKg = await db.ExecuteScalarAsync<decimal?>("SELECT SUM(Kg) FROM WHS_Saldo WHERE WhsCode = @w AND ItemCode = @i AND KodeRuangan = @r AND ContainerNo = @c AND NoBL = @bl AND Titipan = @t AND (@pt IS NULL OR PtCode = @pt)",
+                    new { w = req.WhsCode, i = g.Key.ItemCode, r = g.Key.Ruang, c = cont, bl = g.Key.Bl, t = roomTitipan, pt = g.Key.Pt }) ?? 0;
                 var keluar = g.Sum(l => l.Qty);
                 if (keluar > stokKg + 0.01m) return Bad($"{g.Key.ItemCode} ruangan {g.Key.Ruang}{(roomTitipan ? " (titipan)" : $" BL {g.Key.Bl}")}: keluar {keluar:N0} kg melebihi stok {stokKg:N0} kg");
             }
@@ -163,6 +164,10 @@ public static class KraniEndpoints
                 if (bls.Count > 0 && inLines.Any(l => !bls.Contains(l.NoBL!.Trim())))
                     return Bad(jenis == "RP" ? "Hasil Repacking wajib membawa BL sumber (BL palet yang di-repack)" : "BL item masuk harus salah satu BL palet keluar");
             }
+            // Item masuk KR/RP (hasil & scrap) membawa PT stok sumber bila sumbernya satu PT; bila campur, Admin mengisi PT di CMS
+            var ptSumber = outLines.Select(l => Helpers.Empty(l.PtCode)).Distinct().ToList();
+            if (ptSumber.Count == 1 && ptSumber[0] is not null)
+                inLines = inLines.Select(l => string.IsNullOrWhiteSpace(l.PtCode) ? l with { PtCode = ptSumber[0] } : l).ToList();
             if (jenis == "RP")
             {
                 // Neraca berat: SUMBER = HASIL + SCRAP (selisih dibatasi REPACK_WARN_PCT)
@@ -205,7 +210,10 @@ public static class KraniEndpoints
             var src = await db.QueryFirstOrDefaultAsync<PalletSourceRow>(Sql.PalletSource, new { itemCode, containerNo, yymmdd, bplId = u.BplId() });
             if (src is null) return Results.NotFound(new { message = $"Palet {itemCode} container {containerNo} tidak ditemukan" });
             var stock = await db.QueryFirstAsync<StockRow>(Sql.StockForPallet, new { whsCode, itemCode, containerNo });
-            var rooms = await db.QueryAsync(Sql.StockPerRuangan, new { whsCode, itemCode, containerNo });
+            var rooms = (await db.QueryAsync(Sql.StockPerRuangan, new { whsCode, itemCode, containerNo })).ToList();
+            // PT mengikuti label QR (dokumen SPBB asal palet): bila ada stok ber-PT itu, sumber dibatasi ke PT tersebut
+            if (src.PtCode is not null && rooms.Any(r => (string?)r.ptCode == src.PtCode))
+                rooms = rooms.Where(r => (string?)r.ptCode == src.PtCode).ToList();
 
             decimal kgPerSak = src.Qty2 > 0 ? Math.Round(src.Qty / src.Qty2, 2) : 0;
             decimal sakPerPalet = src.QtyPalet > 0 ? Math.Ceiling(src.Qty2 / src.QtyPalet) : 0;
@@ -223,6 +231,7 @@ public static class KraniEndpoints
                 stock.StockKg,
                 stock.StockSak,
                 stock.StockPalet,
+                ptQr = src.PtCode,
                 rooms,   // stok per ruangan: krani memilih ruangan SUMBER (satu container bisa tersebar di beberapa ruangan)
             });
         });
@@ -267,10 +276,13 @@ public static class KraniEndpoints
         {
             await using var db = dbf();
             if (await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM USR9 WHERE UserId = @uid AND WhsCode = @whs", new { uid = u.UserId(), whs }) == 0) return Results.Forbid();
-            return Results.Ok(await db.QueryAsync(@"SELECT NULLIF(NoBL, '') AS noBL, NULLIF(KodeRuangan, '') AS kodeRuangan, Titipan AS titipan, SUM(Kg) AS kg, SUM(Sak) AS sak, SUM(Palet) AS palet,
-                    COUNT(DISTINCT NULLIF(ContainerNo, '')) AS containers, MIN(TglMasuk) AS tglMasuk
-                FROM WHS_Saldo WHERE WhsCode = @whs AND ItemCode = @itemCode AND (@r IS NULL OR KodeRuangan = @r) AND (@t IS NULL OR Titipan = @t) AND Kg > 0
-                GROUP BY NoBL, KodeRuangan, Titipan ORDER BY MIN(TglMasuk), NoBL", new { whs, itemCode, r = Empty(ruangan), t = titipan }));
+            // Sumber stok: ruangan + BL + PT (PT dari SPBB / label QR) + sifat barang
+            return Results.Ok(await db.QueryAsync(@"SELECT NULLIF(s.NoBL, '') AS noBL, NULLIF(s.KodeRuangan, '') AS kodeRuangan, s.Titipan AS titipan,
+                    NULLIF(s.PtCode, '') AS ptCode, MAX(pc.PrcName) AS ptName, SUM(s.Kg) AS kg, SUM(s.Sak) AS sak, SUM(s.Palet) AS palet,
+                    COUNT(DISTINCT NULLIF(s.ContainerNo, '')) AS containers, MIN(s.TglMasuk) AS tglMasuk
+                FROM WHS_Saldo s LEFT JOIN OPRC pc ON pc.PrcCode = s.PtCode
+                WHERE s.WhsCode = @whs AND s.ItemCode = @itemCode AND (@r IS NULL OR s.KodeRuangan = @r) AND (@t IS NULL OR s.Titipan = @t) AND s.Kg > 0
+                GROUP BY s.NoBL, s.KodeRuangan, s.Titipan, s.PtCode ORDER BY MIN(s.TglMasuk), s.NoBL", new { whs, itemCode, r = Empty(ruangan), t = titipan }));
         });
 
         // Item scrap (kode khusus, Repacking)
@@ -432,6 +444,7 @@ public static class Helpers
                     ruang = Helpers.Empty(l.KodeRuangan),
                     bl = Helpers.Empty(l.NoBL),
                     tit = l.Titipan ?? false,
+                    pt = Helpers.Empty(l.PtCode),
                 }, tx);
             }
 
