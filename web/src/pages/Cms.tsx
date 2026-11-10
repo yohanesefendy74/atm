@@ -130,7 +130,7 @@ export function CmsList() {
 }
 
 /** Kolom pencarian PT (OPRC) atau Business Partner (OCRD). */
-function Lookup(props: { url: string; query?: Record<string, string>; value: string; label: string; onChange: (code: string, name: string) => void; disabled?: boolean }) {
+export function Lookup(props: { url: string; query?: Record<string, string>; value: string; label: string; onChange: (code: string, name: string) => void; disabled?: boolean }) {
   const [q, setQ] = useState(props.value);
   const [list, setList] = useState<Row[]>([]);
   const [open, setOpen] = useState(false);

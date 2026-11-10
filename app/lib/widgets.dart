@@ -508,7 +508,7 @@ class LineTile extends StatelessWidget {
 
 
 /// Ruangan dari master (per gudang). Cari lalu pilih dari daftar; teks bebas tidak diterima.
-/// [titipan]: null = semua, true/false = hanya ruangan titipan / non-titipan.
+/// [titipan]: true = barang titipan -> hanya ruangan titipan; null/false = semua ruangan (ruangan titipan boleh untuk non-titipan).
 class RuanganField extends StatefulWidget {
   const RuanganField({super.key, required this.whs, required this.value, required this.onChanged, this.titipan, this.label = 'Ruangan'});
   final String whs;
@@ -545,7 +545,8 @@ class _RuanganFieldState extends State<RuanganField> {
       if (!mounted) return;
       setState(() {
         _err = null;
-        _rooms = list.where((r) => widget.titipan == null || (r['titipan'] == true) == widget.titipan).toList();
+        // Ruangan titipan boleh berisi barang titipan & non-titipan; barang titipan hanya di ruangan titipan
+        _rooms = list.where((r) => widget.titipan != true || r['titipan'] == true).toList();
       });
       if (widget.value == null && _rooms.length == 1) widget.onChanged(_rooms.first['kodeRuangan'].toString());
     } catch (e) {
@@ -553,7 +554,7 @@ class _RuanganFieldState extends State<RuanganField> {
     }
   }
 
-  String _label(Map<String, dynamic> r) => '${r['kodeRuangan']} · ${r['namaRuangan'] ?? ''}${r['titipan'] == true ? ' (titipan)' : ''}';
+  String _label(Map<String, dynamic> r) => '${r['kodeRuangan']} · ${r['namaRuangan'] ?? ''}${r['titipan'] == true ? ' (ruangan titipan)' : ''}';
 
   @override
   Widget build(BuildContext context) {
@@ -670,7 +671,7 @@ class _BlFieldState extends State<BlField> {
   Future<void> _load() async {
     if (widget.ruangan == null) return setState(() => _rows = []);
     try {
-      final r = await Api.get('/api/stok/bl', {'whs': widget.whs, 'itemCode': widget.itemCode, 'ruangan': widget.ruangan!}) as List;
+      final r = await Api.get('/api/stok/bl', {'whs': widget.whs, 'itemCode': widget.itemCode, 'ruangan': widget.ruangan!, 'titipan': 'false'}) as List;
       if (!mounted) return;
       setState(() {
         _err = null;

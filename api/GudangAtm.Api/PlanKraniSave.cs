@@ -27,7 +27,7 @@ public static class PlanKraniSave
             try
             {
                 var p = await db.QueryFirstOrDefaultAsync<(long PlanId, string PlanNo, string Jenis, string WhsCode, string Status, string? KodeRuangan, bool? Titipan, string? PtCode)?>(
-                    @"SELECT p.PlanId, p.PlanNo, p.Jenis, p.WhsCode, p.Status, p.KodeRuangan, rm.Titipan, p.U_IDU_Kode_PT AS PtCode
+                    @"SELECT p.PlanId, p.PlanNo, p.Jenis, p.WhsCode, p.Status, p.KodeRuangan, CAST(COALESCE(p.Titipan, rm.Titipan, 0) AS BIT) AS Titipan, p.U_IDU_Kode_PT AS PtCode
                       FROM WHS_Plan p WITH (UPDLOCK) JOIN WHS_PlanKrani k ON k.PlanId = p.PlanId AND k.UserId = @uid
                       LEFT JOIN WHS_MasterRuangan rm ON rm.KodeRuangan = p.KodeRuangan WHERE p.PlanId = @id", new { id, uid = u.UserId() }, tx);
                 if (p is null) return Results.NotFound(new { message = "Dokumen tidak ditemukan atau bukan tugas Anda" });
@@ -84,7 +84,8 @@ public static class PlanKraniSave
                         var rt = await db.QueryFirstOrDefaultAsync<(bool Titipan, string WhsCode)?>("SELECT Titipan, WhsCode FROM WHS_MasterRuangan WHERE KodeRuangan = @k AND Aktif = 1", new { k = ruang }, tx);
                         if (rt is null) return Bad($"Ruangan {ruang} tidak ditemukan atau nonaktif");
                         if (rt.Value.WhsCode != pl.WhsCode) return Bad($"Ruangan {ruang} bukan milik gudang {pl.WhsCode}");
-                        if (pl.Titipan is not null && rt.Value.Titipan != pl.Titipan) return Bad("Titipan dan non-titipan tidak boleh dicampur dalam satu dokumen");
+                        // Ruangan titipan boleh untuk barang non-titipan; barang titipan wajib di ruangan titipan
+                        if (pl.Titipan == true && !rt.Value.Titipan) return Bad($"Ruangan {ruang} bukan ruangan titipan · barang titipan hanya boleh di ruangan titipan");
                     }
                 }
                 if (pl.Jenis == "SPBB" && string.IsNullOrWhiteSpace(pl.PtCode) == false) { /* PT terisi dari dokumen */ }
@@ -92,8 +93,8 @@ public static class PlanKraniSave
                 if (pl.Jenis == "SPMB")
                     foreach (var g in r.Lines.GroupBy(l => (plan1[l.PlanLine].ItemCode, R: (l.KodeRuangan ?? plan1[l.PlanLine].KodeRuangan ?? pl.KodeRuangan ?? "").Trim(), Bl: pl.Titipan == true ? "" : l.NoBL!.Trim())))
                     {
-                        var stok = await db.ExecuteScalarAsync<decimal?>("SELECT SUM(Kg) FROM WHS_Saldo WHERE WhsCode = @w AND ItemCode = @i AND KodeRuangan = @r AND NoBL = @bl",
-                            new { w = pl.WhsCode, i = g.Key.ItemCode, r = g.Key.R, bl = g.Key.Bl }, tx) ?? 0;
+                        var stok = await db.ExecuteScalarAsync<decimal?>("SELECT SUM(Kg) FROM WHS_Saldo WHERE WhsCode = @w AND ItemCode = @i AND KodeRuangan = @r AND NoBL = @bl AND Titipan = @t",
+                            new { w = pl.WhsCode, i = g.Key.ItemCode, r = g.Key.R, bl = g.Key.Bl, t = pl.Titipan == true }, tx) ?? 0;
                         if (g.Sum(x => x.Qty) > stok + 0.01m) return Bad($"{g.Key.ItemCode} ruangan {g.Key.R} BL {g.Key.Bl}: muat {g.Sum(x => x.Qty):N0} kg melebihi stok {stok:N0} kg");
                     }
 
@@ -137,7 +138,7 @@ public static class PlanKraniSave
                         var pr = plan1[l.PlanLine];
                         var ruang = l.KodeRuangan ?? pr.KodeRuangan ?? pl.KodeRuangan;
                         var brand = Helpers.Empty(l.Brand) ?? pr.BrandName;
-                        await db.ExecuteAsync(Sql.InsertLine, new { objType, docEntry, lineNum, itemCode = pr.ItemCode, uom = "KG", brand, origin = (string?)null, qty = l.Qty, qty2 = l.Qty2, qtyPalet = l.QtyPalet, flag, ruang, bl = pl.Titipan == true ? null : pl.Jenis == "SPMB" ? l.NoBL!.Trim() : pr.NoBL }, tx);
+                        await db.ExecuteAsync(Sql.InsertLine, new { objType, docEntry, lineNum, itemCode = pr.ItemCode, uom = "KG", brand, origin = (string?)null, qty = l.Qty, qty2 = l.Qty2, qtyPalet = l.QtyPalet, flag, ruang, bl = pl.Titipan == true ? null : pl.Jenis == "SPMB" ? l.NoBL!.Trim() : pr.NoBL, tit = pl.Titipan == true }, tx);
                         await db.ExecuteAsync(@"UPDATE KRN1 SET PlanLine = @pl, ContainerNo = @c, KodeRuangan = @ru, U_IDU_Kode_PT = @ptl, PaletCode = @pc, Size = @sz, [Type] = @ty, Crop = @cr,
                             brand_asli = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN @asli END,
                             brand_diubah_oleh = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN @uid END,

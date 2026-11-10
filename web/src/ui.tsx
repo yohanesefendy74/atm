@@ -487,8 +487,9 @@ export const whsOpts = (list: Warehouse[] | null) => (list ?? []).map((w) => ({ 
 export function RuanganSelect(props: { whs: string; value: string; onChange: (v: string) => void; titipan?: boolean; placeholder?: string; disabled?: boolean }) {
   const { data } = useLoad(() => (props.whs ? get<Row[]>('/api/master/ruangan', { whs: props.whs }) : Promise.resolve([] as Row[])), [props.whs]);
   const opts = (data ?? [])
-    .filter((r) => props.titipan === undefined || !!r.titipan === props.titipan)
-    .map((r) => ({ value: String(r.kodeRuangan), label: `${r.kodeRuangan} · ${r.namaRuangan ?? ''}${r.titipan ? ' (titipan)' : ''}` }));
+    // barang titipan hanya di ruangan titipan; ruangan titipan boleh untuk barang non-titipan
+    .filter((r) => props.titipan !== true || !!r.titipan)
+    .map((r) => ({ value: String(r.kodeRuangan), label: `${r.kodeRuangan} · ${r.namaRuangan ?? ''}${r.titipan ? ' (ruangan titipan)' : ''}` }));
   useEffect(() => {
     if (!props.value && opts.length === 1) props.onChange(opts[0].value);
     // eslint-disable-next-line react-hooks/exhaustive-deps

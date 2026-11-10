@@ -73,10 +73,12 @@ public static class KraniEndpoints
             if (isTitipan is null) return Bad($"Warehouse {req.WhsCode} tidak ada di hak akses Anda");
             var (rerr, roomTitipan) = await Helpers.CekRuangan(db, req.WhsCode, req.Lines.Select(l => l.KodeRuangan), "tujuan");
             if (rerr is not null) return Bad(rerr);
-            if (isTitipan.Value && !roomTitipan) return Bad("Gudang titipan harus memakai ruangan titipan");
+            // Titipan = sifat barang. Gudang titipan: selalu titipan. Ruangan titipan boleh berisi non-titipan; barang titipan wajib di ruangan titipan.
+            var titipan = isTitipan.Value || (req.Titipan ?? roomTitipan);
+            if (titipan && !roomTitipan) return Bad("Barang titipan hanya boleh di ruangan titipan");
 
-            var saved = await SaveDoc(db, u, "6730", isTitipan.Value || roomTitipan ? "BT" : "IB", req.WhsCode, req.NoMobil,
-                req.ContainerNo, req.DocDate, req.Lines.Select(l => (l, 1)).ToList());
+            var saved = await SaveDoc(db, u, "6730", titipan ? "BT" : "IB", req.WhsCode, req.NoMobil,
+                req.ContainerNo, req.DocDate, req.Lines.Select(l => (l with { Titipan = titipan, NoBL = titipan ? null : l.NoBL }, 1)).ToList());
             await Audit.Safe(db, u, ctx, "CREATE", saved.ObjType, saved.DocEntry, $"{saved.TrxCode} {req.Lines.Count} baris");
             return Results.Ok(saved);
         });
@@ -102,6 +104,7 @@ public static class KraniEndpoints
                 new { userId = u.UserId(), whsCode = req.WhsCode });
             if (isTitipan is null) return Bad($"Warehouse {req.WhsCode} tidak ada di hak akses Anda");
             if (isTitipan.Value && jenis != "OB") return Bad("KR dan RP tidak boleh di warehouse titipan");
+            // Sifat barang keluar mengikuti stok sumber yang dipilih krani (aplikasi lama tanpa tanda: ikut ruangan / gudang)
 
             // Aturan v2: alasan wajib (KR), selisih berat Repacking, ruangan tidak boleh titipan untuk KR/RP
             decimal? selisih = null;
@@ -119,17 +122,25 @@ public static class KraniEndpoints
             // Ruangan wajib: keluar = ruangan SUMBER (stok item+container per ruangan), masuk = ruangan TUJUAN.
             if (!string.IsNullOrWhiteSpace(req.KodeRuangan))
                 inLines = inLines.Select(l => string.IsNullOrWhiteSpace(l.KodeRuangan) ? l with { KodeRuangan = req.KodeRuangan } : l).ToList();
-            var (rerr, roomTitipan) = await Helpers.CekRuangan(db, req.WhsCode, outLines.Select(l => l.KodeRuangan), "sumber");
+            var (rerr, srcRoomTitipan) = await Helpers.CekRuangan(db, req.WhsCode, outLines.Select(l => l.KodeRuangan), "sumber");
             if (rerr is not null) return Bad(rerr);
+            var tset = new HashSet<bool>();
+            foreach (var l in outLines)
+                tset.Add(isTitipan.Value || (l.Titipan ?? await db.ExecuteScalarAsync<bool>("SELECT ISNULL(Titipan, 0) FROM WHS_MasterRuangan WHERE KodeRuangan = @k", new { k = l.KodeRuangan!.Trim() })));
+            if (tset.Count > 1) return Bad("Barang titipan dan non-titipan tidak boleh dicampur dalam satu dokumen");
+            var roomTitipan = tset.Single();   // sifat barang dokumen ini
+            if (roomTitipan && !srcRoomTitipan) return Bad("Barang titipan hanya ada di ruangan titipan");
+            outLines = outLines.Select(l => l with { Titipan = roomTitipan }).ToList();
             if (inLines.Count > 0)
             {
-                var (rerr2, inTitipan) = await Helpers.CekRuangan(db, req.WhsCode, inLines.Select(l => l.KodeRuangan), "tujuan");
+                var (rerr2, inRoomTitipan) = await Helpers.CekRuangan(db, req.WhsCode, inLines.Select(l => l.KodeRuangan), "tujuan");
                 if (rerr2 is not null) return Bad(rerr2);
-                if (inTitipan != roomTitipan) return Bad("Titipan dan non-titipan tidak boleh dicampur dalam satu dokumen");
+                if (roomTitipan && !inRoomTitipan) return Bad("Barang titipan hanya boleh di ruangan titipan");
+                inLines = inLines.Select(l => l with { Titipan = roomTitipan }).ToList();
             }
-            if (jenis != "OB" && roomTitipan) return Bad("KR dan RP tidak boleh di ruangan titipan");
+            if (jenis != "OB" && roomTitipan) return Bad("KR dan RP tidak boleh untuk barang titipan");
             var cont = (req.ContainerNo ?? "").Replace(" ", "").ToUpperInvariant();
-            // Saldo per BL (barang titipan tanpa BL): setiap palet keluar wajib punya BL sumber; stok dicek per item + ruangan + BL + container
+            // Saldo per BL (barang titipan tanpa BL): setiap palet keluar wajib punya BL sumber; stok dicek per item + ruangan + BL + container + sifat barang
             if (roomTitipan)
             {
                 outLines = outLines.Select(l => l with { NoBL = null }).ToList();
@@ -138,10 +149,10 @@ public static class KraniEndpoints
             else if (outLines.Any(l => string.IsNullOrWhiteSpace(l.NoBL))) return Bad("Pilih BL sumber untuk setiap palet keluar");
             foreach (var g in outLines.GroupBy(l => (l.ItemCode, Ruang: l.KodeRuangan!.Trim(), Bl: (l.NoBL ?? "").Trim())))
             {
-                var stokKg = await db.ExecuteScalarAsync<decimal?>("SELECT Kg FROM WHS_Saldo WHERE WhsCode = @w AND ItemCode = @i AND KodeRuangan = @r AND ContainerNo = @c AND NoBL = @bl",
-                    new { w = req.WhsCode, i = g.Key.ItemCode, r = g.Key.Ruang, c = cont, bl = g.Key.Bl }) ?? 0;
+                var stokKg = await db.ExecuteScalarAsync<decimal?>("SELECT Kg FROM WHS_Saldo WHERE WhsCode = @w AND ItemCode = @i AND KodeRuangan = @r AND ContainerNo = @c AND NoBL = @bl AND Titipan = @t",
+                    new { w = req.WhsCode, i = g.Key.ItemCode, r = g.Key.Ruang, c = cont, bl = g.Key.Bl, t = roomTitipan }) ?? 0;
                 var keluar = g.Sum(l => l.Qty);
-                if (keluar > stokKg + 0.01m) return Bad($"{g.Key.ItemCode} ruangan {g.Key.Ruang} BL {g.Key.Bl}: keluar {keluar:N0} kg melebihi stok {stokKg:N0} kg");
+                if (keluar > stokKg + 0.01m) return Bad($"{g.Key.ItemCode} ruangan {g.Key.Ruang}{(roomTitipan ? " (titipan)" : $" BL {g.Key.Bl}")}: keluar {keluar:N0} kg melebihi stok {stokKg:N0} kg");
             }
             // Item masuk KR/RP wajib membawa BL sumber: BL palet keluar (satu BL -> otomatis; beberapa BL -> krani memilih per item)
             if (inLines.Count > 0 && !roomTitipan)
@@ -252,14 +263,14 @@ public static class KraniEndpoints
 
         // ---------------------------------------------------------------- Laporan
         // Saldo item per ruangan + BL (+ container) untuk memilih BL sumber (SPMB)
-        api.MapGet("/stok/bl", async (string whs, string itemCode, string? ruangan, ClaimsPrincipal u) =>
+        api.MapGet("/stok/bl", async (string whs, string itemCode, string? ruangan, bool? titipan, ClaimsPrincipal u) =>
         {
             await using var db = dbf();
             if (await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM USR9 WHERE UserId = @uid AND WhsCode = @whs", new { uid = u.UserId(), whs }) == 0) return Results.Forbid();
-            return Results.Ok(await db.QueryAsync(@"SELECT NULLIF(NoBL, '') AS noBL, NULLIF(KodeRuangan, '') AS kodeRuangan, SUM(Kg) AS kg, SUM(Sak) AS sak, SUM(Palet) AS palet,
+            return Results.Ok(await db.QueryAsync(@"SELECT NULLIF(NoBL, '') AS noBL, NULLIF(KodeRuangan, '') AS kodeRuangan, Titipan AS titipan, SUM(Kg) AS kg, SUM(Sak) AS sak, SUM(Palet) AS palet,
                     COUNT(DISTINCT NULLIF(ContainerNo, '')) AS containers, MIN(TglMasuk) AS tglMasuk
-                FROM WHS_Saldo WHERE WhsCode = @whs AND ItemCode = @itemCode AND (@r IS NULL OR KodeRuangan = @r) AND Kg > 0
-                GROUP BY NoBL, KodeRuangan ORDER BY MIN(TglMasuk), NoBL", new { whs, itemCode, r = Empty(ruangan) }));
+                FROM WHS_Saldo WHERE WhsCode = @whs AND ItemCode = @itemCode AND (@r IS NULL OR KodeRuangan = @r) AND (@t IS NULL OR Titipan = @t) AND Kg > 0
+                GROUP BY NoBL, KodeRuangan, Titipan ORDER BY MIN(TglMasuk), NoBL", new { whs, itemCode, r = Empty(ruangan), t = titipan }));
         });
 
         // Item scrap (kode khusus, Repacking)
@@ -280,6 +291,13 @@ public static class KraniEndpoints
         {
             await using var db = dbf();
             return Results.Ok(await db.QueryAsync(Sql.StockPerItem, new { bplId = u.BplId(), userId = u.UserId(), whsCode = Empty(whsCode), ruangan = Empty(ruangan) }));
+        });
+
+        // Isi ruangan: titipan vs non-titipan
+        api.MapGet("/reports/stock-ruangan", async (string? whsCode, string? ruangan, ClaimsPrincipal u) =>
+        {
+            await using var db = dbf();
+            return Results.Ok(await db.QueryAsync(Sql.StockPerRuanganReport, new { bplId = u.BplId(), userId = u.UserId(), whsCode = Empty(whsCode), ruangan = Empty(ruangan) }));
         });
 
         api.MapGet("/reports/stock-container", async (string? whsCode, string? ruangan, string? bl, ClaimsPrincipal u) =>
@@ -315,8 +333,9 @@ public static class KraniEndpoints
 
 public static class Helpers
 {
-    /// Semua stok dan transaksi wajib punya ruangan. Cek: terisi, ada & aktif, milik gudang ini, dan tidak mencampur titipan dengan non-titipan.
-    /// Mengembalikan (pesan salah, apakah ruangan titipan).
+    /// Semua stok dan transaksi wajib punya ruangan. Cek: terisi, ada & aktif, milik gudang ini.
+    /// Mengembalikan (pesan salah, apakah SEMUA ruangan adalah ruangan titipan). Ruangan titipan boleh berisi barang non-titipan;
+    /// barang titipan hanya boleh di ruangan titipan (dicek pemanggil).
     public static async Task<(string? Err, bool Titipan)> CekRuangan(SqlConnection db, string whs, IEnumerable<string?> kodes, string konteks)
     {
         var list = kodes.ToList();
@@ -330,8 +349,7 @@ public static class Helpers
             if (r.Value.WhsCode != whs) return ($"Ruangan {k} bukan milik gudang {whs}", false);
             flags.Add(r.Value.Titipan);
         }
-        if (flags.Count > 1) return ("Titipan dan non-titipan tidak boleh dicampur dalam satu dokumen", false);
-        return (null, flags.Single());
+        return (null, flags.All(f => f));
     }
 
     public static string? Empty(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
@@ -413,6 +431,7 @@ public static class Helpers
                     flag,
                     ruang = Helpers.Empty(l.KodeRuangan),
                     bl = Helpers.Empty(l.NoBL),
+                    tit = l.Titipan ?? false,
                 }, tx);
             }
 

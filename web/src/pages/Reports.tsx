@@ -7,6 +7,7 @@ export function ReportsMenu() {
   const items: [string, string, string, string][] = [
     ['/reports/stock-card', 'Kartu Stok', 'Mutasi masuk/keluar per item + saldo berjalan', 'chart'],
     ['/reports/stock-item', 'Stock per Barang', 'Saldo KG, sak, palet per item', 'in'],
+    ['/reports/stock-ruangan', 'Stock per Ruangan', 'Isi ruangan: barang titipan vs non-titipan', 'in'],
     ['/reports/stock-container', 'Stock per Container', 'Saldo per container & item', 'scan'],
     ['/reports/kpi', 'KPI Gudang', 'Jumlah dokumen, tonase & palet keluar-masuk', 'truck'],
   ];
@@ -52,6 +53,8 @@ export function StockItemReport() {
                 <th className="num">KG</th>
                 <th className="num">Sak</th>
                 <th className="num">Palet</th>
+                <th className="num">Titipan KG</th>
+                <th className="num">Non-titipan KG</th>
                 <th className="num">Container</th>
               </tr>
             </thead>
@@ -64,11 +67,61 @@ export function StockItemReport() {
                   <td className="num" data-label="KG">{fmt(r.kg)}</td>
                   <td className="num" data-label="Sak">{fmt(r.sak)}</td>
                   <td className="num" data-label="Palet">{fmt(r.palet)}</td>
+                  <td className="num" data-label="Titipan KG">{fmt(r.titipanKg)}</td>
+                  <td className="num" data-label="Non-titipan KG">{fmt(r.nonTitipanKg)}</td>
                   <td className="num" data-label="Container">{fmt(r.containers)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {data.length === 0 && <div className="empty">Tidak ada stok</div>}
+        </>
+      )}
+    </Page>
+  );
+}
+
+/** Isi tiap ruangan: total barang titipan dan non-titipan (ruangan titipan boleh berisi keduanya). */
+export function StockRuanganReport() {
+  const [whs, setWhs] = useState('');
+  const { data, error, reload } = useLoad(() => get<Row[]>('/api/reports/stock-ruangan', { whsCode: whs }), [whs]);
+  const sum = (k: string) => (data ?? []).reduce((s, r) => s + Number(r[k] ?? 0), 0);
+  return (
+    <Page eyebrow="Laporan" title="Stock per Ruangan" backTo="/reports" extra={<WhsFilter value={whs} onChange={setWhs} />}>
+      {error !== null && <ErrorBox error={error} onRetry={reload} />}
+      {!data && error === null && <Spinner />}
+      {data && (
+        <>
+          <Totals items={[['Titipan KG', fmt(sum('titipanKg'))], ['Non-titipan KG', fmt(sum('nonTitipanKg'))], ['Total KG', fmt(sum('kg'))]]} />
+          <div className="tablewrap"><table className="table cards">
+            <thead>
+              <tr>
+                <th>Ruangan</th>
+                <th className="num">Titipan KG</th>
+                <th className="num">Titipan palet</th>
+                <th className="num">Non-titipan KG</th>
+                <th className="num">Non-titipan palet</th>
+                <th className="num">Total KG</th>
+                <th className="num">Item</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((r) => (
+                <tr key={`${r.whsCode}-${r.kodeRuangan}`}>
+                  <td data-label="Ruangan">
+                    <span className="mono"><strong>{r.kodeRuangan ?? 'tanpa ruangan'}</strong></span> · {r.namaRuangan ?? ''}
+                    <div className="small">{r.whsCode} {r.ruanganTitipan && <span className="pill amber">Ruangan titipan</span>}</div>
+                  </td>
+                  <td className="num" data-label="Titipan KG">{fmt(r.titipanKg)}</td>
+                  <td className="num" data-label="Titipan palet">{fmt(r.titipanPalet)}</td>
+                  <td className="num" data-label="Non-titipan KG">{fmt(r.nonTitipanKg)}</td>
+                  <td className="num" data-label="Non-titipan palet">{fmt(r.nonTitipanPalet)}</td>
+                  <td className="num" data-label="Total KG"><strong>{fmt(r.kg)}</strong></td>
+                  <td className="num" data-label="Item">{fmt(r.items)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table></div>
           {data.length === 0 && <div className="empty">Tidak ada stok</div>}
         </>
       )}
@@ -101,7 +154,7 @@ export function StockContainerReport() {
                 <td data-label="Container" className="mono">
                   <strong>{r.containerNo ?? 'tanpa kontainer'}</strong>
                   <div className="small">{r.kodeRuangan ? `Ruangan ${r.kodeRuangan}` : <span className="pill amber">Tanpa ruangan</span>}</div>
-                  <div className="small">{r.noBL ? `BL ${r.noBL}` : <span className="pill amber">Tanpa BL</span>}</div>
+                  <div className="small">{r.titipan ? <span className="pill amber">Titipan</span> : r.noBL ? `BL ${r.noBL}` : <span className="pill amber">Tanpa BL</span>}</div>
                 </td>
                 <td data-label="Item">
                   <span className="mono">{r.itemCode}</span> · {r.itemName} {r.brand ? `· ${r.brand}` : ''}

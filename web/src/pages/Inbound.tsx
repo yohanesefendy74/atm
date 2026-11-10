@@ -20,6 +20,7 @@ export default function InboundNew() {
   const [cont, setCont] = useState('');
   const [lines, setLines] = useState<Line[]>([]);
   const [ruang, setRuang] = useState('');
+  const [titipanBrg, setTitipanBrg] = useState(false); // barang titipan (gudang titipan: selalu)
   const [err, setErr] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
@@ -47,6 +48,7 @@ export default function InboundNew() {
         containerNo: cont,
         docDate: todayIso(),
         lines: lines.map((l) => ({ itemCode: l.itemCode, uom: l.uom, brand: l.brand || null, origin: l.origin || null, qty: l.qty, qty2: l.qty2, qtyPalet: l.qtyPalet, kodeRuangan: l.kodeRuangan })),
+        titipan: !!wh?.isTitipan || titipanBrg,
       });
       toast(`Inbound ${r.docEntry} (${r.trxCode}) tersimpan · Menunggu PT`);
       navigate('/inbound', true);
@@ -81,6 +83,12 @@ export default function InboundNew() {
           <WarehouseSelect id="wh" list={whs.data ?? []} value={wh?.whsCode ?? ''} onChange={setWh} />
           <span className="hint">{wh?.isTitipan ? 'Warehouse titipan: transaksi otomatis BT (Barang Titipan)' : 'Daftar sesuai hak akses akun Anda'}</span>
         </div>
+        {!wh?.isTitipan && (
+          <label className="field row">
+            <input type="checkbox" checked={titipanBrg} onChange={(e) => { setTitipanBrg(e.target.checked); setRuang(''); }} />
+            <span>Barang titipan (BT) · hanya ke ruangan titipan. Ruangan titipan tetap boleh untuk barang biasa.</span>
+          </label>
+        )}
         <label className="field">
           <span className="label">
             No. Mobil <span className="req">*</span>
@@ -124,7 +132,7 @@ export default function InboundNew() {
       >
         <div className="field">
           <label>Ruangan tujuan <span className="req">*</span></label>
-          <RuanganSelect whs={wh?.whsCode ?? ''} value={ruang} onChange={setRuang} titipan={wh?.isTitipan ? true : undefined} />
+          <RuanganSelect whs={wh?.whsCode ?? ''} value={ruang} onChange={setRuang} titipan={wh?.isTitipan || titipanBrg ? true : undefined} />
           <p className="hint">Berlaku untuk barang yang ditambahkan berikutnya. Satu container boleh masuk ke beberapa ruangan.</p>
         </div>
         <LineForm onAdd={(l) => (ruang ? setLines([...lines, { ...l, kodeRuangan: ruang }]) : toast('Pilih ruangan tujuan dulu', true))} />

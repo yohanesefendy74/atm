@@ -11,7 +11,7 @@ import { DocDetail, DocList } from './pages/Docs';
 import InboundNew from './pages/Inbound';
 import OutboundNew from './pages/Outbound';
 import LabelPrint from './pages/Labels';
-import { KpiReport, ReportsMenu, StockCardReport, StockContainerReport, StockItemReport } from './pages/Reports';
+import { KpiReport, ReportsMenu, StockCardReport, StockContainerReport, StockItemReport, StockRuanganReport } from './pages/Reports';
 import { CmsDetail, CmsList } from './pages/Cms';
 
 function Forbidden() {
@@ -35,6 +35,7 @@ function route(path: string, isAdmin: boolean): ReactNode {
   if (path === '/reports') return <ReportsMenu />;
   if (path === '/reports/stock-item') return <StockItemReport />;
   if (path === '/reports/stock-container') return <StockContainerReport />;
+  if (path === '/reports/stock-ruangan') return <StockRuanganReport />;
   if (path === '/reports/stock-card') return <StockCardReport />;
   if (path === '/reports/kpi') return <KpiReport />;
   if (path === '/admin/plan') return isAdmin ? <PlanList /> : <Forbidden />;

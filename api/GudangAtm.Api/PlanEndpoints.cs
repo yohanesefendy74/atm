@@ -9,7 +9,8 @@ namespace GudangAtm.Api;
 
 public record PlanLineReq(int BaseDocEntry, int BaseLineNum, decimal QtyPlan, string? ContainerNo, string? KodeRuangan, string? PaletCode, int? PaletPlan, string? FreeTxt, string? NoBL = null);
 public record PlanCreateReq(string Jenis, string WhsCode, string Src, List<int> Docs, string KodeRuangan, string? CardCodeTitipan,
-    string? PtCode, string? JenisContainer, string? EtaDatang, DateTime? TglJadwal, List<int>? Kranis, List<PlanLineReq> Lines, string? NoBL = null);
+    string? PtCode, string? JenisContainer, string? EtaDatang, DateTime? TglJadwal, List<int>? Kranis, List<PlanLineReq> Lines, string? NoBL = null,
+    bool? Titipan = null);   // barang titipan; null = aplikasi lama (ikut ruangan)
 public record PlanKraniReq(List<int> Kranis);
 public record PlanTutupReq(string Alasan);
 
@@ -135,7 +136,7 @@ ORDER BY h.DocDate DESC, h.DocNum DESC";
             await using var db = dbf();
             return Results.Ok(await db.QueryAsync(@"
 SELECT TOP 300 p.PlanId AS planId, p.PlanNo AS planNo, p.Jenis AS jenis, p.WhsCode AS whsCode, p.CardName AS cardName, p.Status AS status, p.CloseReason AS closeReason,
-       p.KodeRuangan AS kodeRuangan, r.Titipan AS titipan, p.CardCodeTitipan AS cardCodeTitipan, p.TglJadwal AS tglJadwal, p.EtaDatang AS etaDatang,
+       p.KodeRuangan AS kodeRuangan, CAST(COALESCE(p.Titipan, r.Titipan, 0) AS bit) AS titipan, CAST(ISNULL(r.Titipan, 0) AS bit) AS ruanganTitipan, p.CardCodeTitipan AS cardCodeTitipan, p.TglJadwal AS tglJadwal, p.EtaDatang AS etaDatang,
        (SELECT SUM(QtyPlan) FROM WHS_Plan1 WHERE PlanId = p.PlanId) AS qtyPlan, (SELECT SUM(QtyDone) FROM WHS_Plan1 WHERE PlanId = p.PlanId) AS qtyDone,
        (SELECT STRING_AGG(CAST(BaseDocNum AS NVARCHAR(20)), ', ') FROM WHS_PlanDoc WHERE PlanId = p.PlanId) AS dokumen, p.CreatedAt AS createdAt
 FROM WHS_Plan p LEFT JOIN WHS_MasterRuangan r ON r.KodeRuangan = p.KodeRuangan
@@ -148,7 +149,7 @@ ORDER BY CASE WHEN p.Status IN ('Terbit','Proses','Partial') THEN 0 ELSE 1 END, 
         cms.MapGet("/plan/{id:long}", async (long id, ClaimsPrincipal u) =>
         {
             await using var db = dbf();
-            var p = await db.QueryFirstOrDefaultAsync(@"SELECT p.*, r.NamaRuangan AS namaRuangan, r.Titipan AS titipan FROM WHS_Plan p LEFT JOIN WHS_MasterRuangan r ON r.KodeRuangan = p.KodeRuangan WHERE p.PlanId = @id", new { id });
+            var p = await db.QueryFirstOrDefaultAsync(@"SELECT p.*, r.NamaRuangan AS namaRuangan, CAST(COALESCE(p.Titipan, r.Titipan, 0) AS bit) AS titipan, CAST(ISNULL(r.Titipan, 0) AS bit) AS ruanganTitipan FROM WHS_Plan p LEFT JOIN WHS_MasterRuangan r ON r.KodeRuangan = p.KodeRuangan WHERE p.PlanId = @id", new { id });
             if (p is null) return Results.NotFound(new { message = "Dokumen tidak ditemukan" });
             if (!await PunyaAkses(db, null, u.UserId(), (string)p.WhsCode)) return Results.Forbid();
             var docs = await db.QueryAsync("SELECT BaseType AS baseType, BaseDocEntry AS baseDocEntry, BaseDocNum AS baseDocNum, CardCode AS cardCode, CardName AS cardName, NumAtCard AS numAtCard FROM WHS_PlanDoc WHERE PlanId = @id", new { id });
@@ -180,11 +181,13 @@ ORDER BY CASE WHEN p.Status IN ('Terbit','Proses','Partial') THEN 0 ELSE 1 END, 
                 if (!await PunyaAkses(db, tx, u.UserId(), r.WhsCode)) return Results.Forbid();
                 var room = await db.QueryFirstOrDefaultAsync<(string WhsCode, bool Titipan, bool Aktif)?>("SELECT WhsCode, Titipan, Aktif FROM WHS_MasterRuangan WHERE KodeRuangan = @k", new { k = r.KodeRuangan }, tx);
                 if (room is null || room.Value.WhsCode != r.WhsCode || !room.Value.Aktif) return Bad("Ruangan tidak valid untuk warehouse ini");
-                var titipan = room.Value.Titipan;
+                // Titipan = sifat barang. Ruangan titipan boleh untuk barang non-titipan; barang titipan wajib di ruangan titipan.
+                var titipan = r.Titipan ?? room.Value.Titipan;
+                if (titipan && !room.Value.Titipan) return Bad("Barang titipan hanya boleh di ruangan titipan");
                 string? titCode = Clean(r.CardCodeTitipan), titName = null;
                 if (titipan)
                 {
-                    if (titCode is null) return Bad("Ruangan titipan: kode customer titipan wajib diisi");
+                    if (titCode is null) return Bad("Barang titipan: kode customer titipan wajib diisi");
                     titName = await db.ExecuteScalarAsync<string?>("SELECT CardName FROM OCRD WHERE CardCode = @c AND CardType = 'C'", new { c = titCode }, tx);
                     if (titName is null) return Bad("Kode customer titipan tidak ada di master customer");
                 }
@@ -233,7 +236,7 @@ ORDER BY CASE WHEN p.Status IN ('Terbit','Proses','Partial') THEN 0 ELSE 1 END, 
                     var lineRoom = Clean(l.KodeRuangan) ?? r.KodeRuangan;
                     var lr = await db.QueryFirstOrDefaultAsync<(string WhsCode, bool Titipan, bool Aktif)?>("SELECT WhsCode, Titipan, Aktif FROM WHS_MasterRuangan WHERE KodeRuangan = @k", new { k = lineRoom }, tx);
                     if (lr is null || lr.Value.WhsCode != r.WhsCode || !lr.Value.Aktif) return Bad($"{sap.ItemCode}: ruangan tidak valid");
-                    if (lr.Value.Titipan != titipan) return Bad($"{sap.ItemCode}: titipan dan non-titipan tidak boleh dicampur dalam satu dokumen");
+                    if (titipan && !lr.Value.Titipan) return Bad($"{sap.ItemCode}: ruangan {lineRoom} bukan ruangan titipan · barang titipan hanya boleh di ruangan titipan");
 
                     if (jenis == "SPBB")
                     {
@@ -263,10 +266,10 @@ ORDER BY CASE WHEN p.Status IN ('Terbit','Proses','Partial') THEN 0 ELSE 1 END, 
                 var h0 = heads[0];
                 var planId = await db.ExecuteScalarAsync<long>(@"
 INSERT WHS_Plan (PlanNo, Jenis, WhsCode, BplId, BaseType, JenisContainer, BatasMuatanKg, TotalPlanKg, CardCode, CardName, U_IDU_Kode_PT, Status, CreatedBy,
-                 TglJadwal, EtaDatang, KodeRuangan, CardCodeTitipan, CardNameTitipan)
+                 TglJadwal, EtaDatang, KodeRuangan, CardCodeTitipan, CardNameTitipan, Titipan)
 OUTPUT INSERTED.PlanId
-VALUES (@no, @jenis, @whs, @bpl, @src, @jc, @batas, @total, @cc, @cn, @pt, 'Terbit', @uid, @tgl, @eta, @room, @tc, @tn)",
-                    new { no, jenis, whs = r.WhsCode, bpl = u.BplId(), src, jc, batas, total, cc = h0.CardCode, cn = h0.CardName, pt, uid = u.UserId(), tgl = r.TglJadwal?.Date, eta, room = r.KodeRuangan, tc = titCode, tn = titName }, tx);
+VALUES (@no, @jenis, @whs, @bpl, @src, @jc, @batas, @total, @cc, @cn, @pt, 'Terbit', @uid, @tgl, @eta, @room, @tc, @tn, @tit)",
+                    new { no, jenis, whs = r.WhsCode, bpl = u.BplId(), src, jc, batas, total, cc = h0.CardCode, cn = h0.CardName, pt, uid = u.UserId(), tgl = r.TglJadwal?.Date, eta, room = r.KodeRuangan, tc = titCode, tn = titName, tit = titipan }, tx);
 
                 foreach (var h in heads)
                     await db.ExecuteAsync("INSERT WHS_PlanDoc (PlanId, BaseType, BaseDocEntry, BaseObjType, BaseDocNum, CardCode, CardName, NumAtCard, BaseDocDate) VALUES (@planId, @src, @de, NULL, @dn, @cc, @cn, @na, @dd)",
@@ -394,7 +397,7 @@ VALUES (@planId, @line, @src, @de, @ln, @cont, @item, @desc, @free, @brand, @siz
             await using var db = dbf();
             return Results.Ok(await db.QueryAsync(@"
 SELECT p.PlanId AS planId, p.PlanNo AS planNo, p.Jenis AS jenis, p.WhsCode AS whsCode, p.CardName AS cardName, p.Status AS status,
-       p.KodeRuangan AS kodeRuangan, r.Titipan AS titipan, p.TglJadwal AS tglJadwal, p.EtaDatang AS etaDatang, p.DockCode AS dockCode, p.JadwalMulai AS jadwalMulai,
+       p.KodeRuangan AS kodeRuangan, CAST(COALESCE(p.Titipan, r.Titipan, 0) AS bit) AS titipan, CAST(ISNULL(r.Titipan, 0) AS bit) AS ruanganTitipan, p.TglJadwal AS tglJadwal, p.EtaDatang AS etaDatang, p.DockCode AS dockCode, p.JadwalMulai AS jadwalMulai,
        (SELECT SUM(QtyPlan) FROM WHS_Plan1 WHERE PlanId = p.PlanId) AS qtyPlan, (SELECT SUM(QtyDone) FROM WHS_Plan1 WHERE PlanId = p.PlanId) AS qtyDone
 FROM WHS_Plan p JOIN WHS_PlanKrani k ON k.PlanId = p.PlanId AND k.UserId = @uid
 LEFT JOIN WHS_MasterRuangan r ON r.KodeRuangan = p.KodeRuangan
@@ -406,7 +409,7 @@ ORDER BY p.PlanId DESC", new { uid = u.UserId(), jenis = Clean(jenis) }));
         {
             await using var db = dbf();
             var p = await db.QueryFirstOrDefaultAsync(@"SELECT p.PlanId AS planId, p.PlanNo AS planNo, p.Jenis AS jenis, p.WhsCode AS whsCode, p.CardName AS cardName, p.Status AS status,
-                p.KodeRuangan AS kodeRuangan, r.Titipan AS titipan, p.CardCodeTitipan AS cardCodeTitipan, p.CardNameTitipan AS cardNameTitipan, p.U_IDU_Kode_PT AS ptCode
+                p.KodeRuangan AS kodeRuangan, CAST(COALESCE(p.Titipan, r.Titipan, 0) AS bit) AS titipan, CAST(ISNULL(r.Titipan, 0) AS bit) AS ruanganTitipan, p.CardCodeTitipan AS cardCodeTitipan, p.CardNameTitipan AS cardNameTitipan, p.U_IDU_Kode_PT AS ptCode
                 FROM WHS_Plan p JOIN WHS_PlanKrani k ON k.PlanId = p.PlanId AND k.UserId = @uid LEFT JOIN WHS_MasterRuangan r ON r.KodeRuangan = p.KodeRuangan WHERE p.PlanId = @id", new { id, uid = u.UserId() });
             if (p is null) return Results.NotFound(new { message = "Dokumen tidak ditemukan atau bukan tugas Anda" });
             var lines = await db.QueryAsync(@"SELECT PlanLine AS planLine, ItemCode AS itemCode, Dscription AS dscription, ContainerNo AS containerNo, BrandName AS brandName, Size AS size, [Type] AS [type], Crop AS crop,

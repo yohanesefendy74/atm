@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { get, post, put, type Row } from '../api';
 import { ErrorBox, ItemSearch, Page, SearchSelect, Spinner, errText, useLoad, useToast, useWarehouses, whsOpts } from '../ui';
 
-type Field = { k: string; label: string; type?: 'text' | 'number' | 'bool' | 'whs' | 'gateway' | 'enum' | 'item'; opts?: string[]; pk?: boolean; hint?: string };
+type Field = { ro?: boolean; k: string; label: string; type?: 'text' | 'number' | 'bool' | 'whs' | 'gateway' | 'enum' | 'item'; opts?: string[]; pk?: boolean; hint?: string };
 type Cfg = { key: string; title: string; path: string; fields: Field[]; pkPut?: boolean; whsFilter?: boolean; createable?: boolean };
 
 const CFG: Cfg[] = [
   { key: 'ruangan', title: 'Ruangan', path: 'ruangan', whsFilter: true, createable: true, fields: [
     { k: 'kodeRuangan', label: 'Kode', pk: true, hint: 'mis. RG-A1' }, { k: 'whsCode', label: 'Gudang', type: 'whs' }, { k: 'namaRuangan', label: 'Nama' },
-    { k: 'kapasitasTon', label: 'Kapasitas (ton)', type: 'number' }, { k: 'titipan', label: 'Titipan', type: 'bool' }, { k: 'aktif', label: 'Aktif', type: 'bool' }] },
+    { k: 'kapasitasTon', label: 'Kapasitas (ton)', type: 'number' }, { k: 'titipan', label: 'Ruangan titipan', type: 'bool', hint: 'boleh berisi barang titipan & non-titipan' }, { k: 'aktif', label: 'Aktif', type: 'bool' },
+    { k: 'stokTitipanKg', label: 'Stok titipan kg', ro: true }, { k: 'stokNonTitipanKg', label: 'Stok non-titipan kg', ro: true }] },
   { key: 'palet', title: 'Palet', path: 'palet', createable: true, fields: [
     { k: 'paletCode', label: 'Kode', pk: true }, { k: 'panjangCm', label: 'Panjang cm', type: 'number' }, { k: 'lebarCm', label: 'Lebar cm', type: 'number' },
     { k: 'tinggiCm', label: 'Tinggi cm', type: 'number' }, { k: 'beratKg', label: 'Berat kg', type: 'number' }, { k: 'aktif', label: 'Aktif', type: 'bool' }] },
@@ -77,7 +78,7 @@ function MasterTable({ cfg }: { cfg: Cfg }) {
       {form && (
         <div className="card stack">
           <strong>{isNew ? 'Tambah' : 'Ubah'} {cfg.title}</strong>
-          {cfg.fields.map((f) => (
+          {cfg.fields.filter((f) => !f.ro).map((f) => (
             <label key={f.k} className="stack tight">
               <span className="small muted">{f.label}</span>
               {f.type === 'bool' ? (

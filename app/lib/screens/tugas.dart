@@ -138,7 +138,8 @@ class _TugasDetailState extends State<TugasDetail> {
         if (_sesiId != null && !kont.any((k) => toI(k['sesiId']) == _sesiId)) _sesiId = null;
         _h = h;
         _lines = lines;
-        _ruang = ruang.where((x) => h['titipan'] == null || x['titipan'] == h['titipan']).toList();
+        // Barang titipan hanya di ruangan titipan; barang non-titipan boleh di ruangan mana saja (termasuk ruangan titipan)
+        _ruang = ruang.where((x) => h['titipan'] != true || x['titipan'] == true).toList();
         _veh = veh;
         if (veh.length == 1) _regId = toI(veh.first['regId']);
         for (final l in lines) {
@@ -293,7 +294,7 @@ class _TugasDetailState extends State<TugasDetail> {
               : ListView(padding: const EdgeInsets.all(16), children: [
                   Box(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text('${h['cardName'] ?? '-'}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                    if (h['titipan'] == true) const Hint('Ruangan titipan · barang tidak boleh dicampur dengan non-titipan'),
+                    if (h['titipan'] == true) const Hint('Barang titipan · hanya ke ruangan titipan, tanpa No. BL'),
                   ])),
                   const SizedBox(height: 12),
                   if (spbb) ...[

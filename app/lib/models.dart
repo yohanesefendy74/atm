@@ -64,6 +64,8 @@ class InboundDraft {
   String containerNo = '';
   final DateTime date = DateTime.now();
   final List<LineDraft> lines = [];
+  bool titipan = false; // barang titipan (wajib di ruangan titipan); gudang titipan selalu titipan
+  bool get isTitipan => (warehouse?.isTitipan ?? false) || titipan;
 
   double get totalKg => lines.fold(0, (s, l) => s + l.qty);
   double get totalSak => lines.fold(0, (s, l) => s + l.qty2);
@@ -75,6 +77,7 @@ class InboundDraft {
         'containerNo': containerNo,
         'docDate': date.toIso8601String().substring(0, 10),
         'lines': lines.map((l) => l.toJson()).toList(),
+        'titipan': isTitipan,
       };
 }
 
@@ -104,8 +107,9 @@ class ScannedPallet {
   bool titipan = false;
 
   /// Satu baris saldo = ruangan + BL. Kunci dipakai dropdown.
-  static String sumberKey(Map<String, dynamic> r) => '${r['kodeRuangan'] ?? ''}|${r['noBL'] ?? ''}';
-  String? get sumber => kodeRuangan == null ? null : '$kodeRuangan|${noBL ?? ''}';
+  /// Satu baris saldo = ruangan + BL + sifat barang (ruangan titipan bisa berisi titipan & non-titipan).
+  static String sumberKey(Map<String, dynamic> r) => '${r['kodeRuangan'] ?? ''}|${r['noBL'] ?? ''}|${r['titipan'] == true ? 'T' : 'N'}';
+  String? get sumber => kodeRuangan == null ? null : '$kodeRuangan|${noBL ?? ''}|${titipan ? 'T' : 'N'}';
   void pilihSumber(Map<String, dynamic> r) {
     kodeRuangan = r['kodeRuangan']?.toString();
     noBL = r['noBL']?.toString();
@@ -160,8 +164,9 @@ class OutboundDraft {
   List<Map<String, dynamic>> outLines() {
     final map = <String, Map<String, dynamic>>{};
     for (final p in pallets) {
-      final m = map.putIfAbsent('${p.itemCode}|${p.kodeRuangan ?? ''}|${p.noBL ?? ''}', () => {
+      final m = map.putIfAbsent('${p.itemCode}|${p.kodeRuangan ?? ''}|${p.noBL ?? ''}|${p.titipan}', () => {
             'itemCode': p.itemCode,
+            'titipan': p.titipan,
             'kodeRuangan': p.kodeRuangan,
             'noBL': p.noBL,
             'itemName': p.itemName,
@@ -198,6 +203,7 @@ class OutboundDraft {
                   'qtyPalet': l['qtyPalet'],
                   'kodeRuangan': l['kodeRuangan'],
                   'noBL': l['noBL'],
+                  'titipan': l['titipan'],
                 })
             .toList(),
         'inLines': isAdj ? inLines.map((l) => l.toJson()).toList() : <Map<String, dynamic>>[],

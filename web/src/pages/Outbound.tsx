@@ -24,7 +24,8 @@ type Pallet = {
   kgManual: number | null;
   rooms: Row[]; // stok item+container per ruangan
   kodeRuangan: string; // ruangan SUMBER (wajib)
-  noBL: string; // BL sumber (saldo per BL, wajib)
+  noBL: string; // BL sumber (saldo per BL, wajib untuk non-titipan)
+  titipan: boolean; // sifat stok sumber (ruangan titipan bisa berisi titipan & non-titipan)
 };
 const kgAuto = (p: Pallet) => p.sak * p.kgPerSak;
 const kgOf = (p: Pallet) => p.kgManual ?? kgAuto(p);
@@ -104,6 +105,7 @@ export default function OutboundNew() {
         rooms: (r.rooms as Row[]) ?? [],
         kodeRuangan: ((r.rooms as Row[]) ?? []).length === 1 ? String((r.rooms as Row[])[0].kodeRuangan ?? '') : '',
         noBL: ((r.rooms as Row[]) ?? []).length === 1 ? String((r.rooms as Row[])[0].noBL ?? '') : '',
+        titipan: ((r.rooms as Row[]) ?? []).length === 1 ? !!(r.rooms as Row[])[0].titipan : false,
       };
       const nth = pallets.filter((x) => x.itemCode === p.itemCode).length + 1;
       setContainer(r.containerNo);
@@ -130,7 +132,7 @@ export default function OutboundNew() {
   // palet digabung per item; tiap palet discan = 1 QtyPalet
   const outLines = Object.values(
     pallets.reduce<Record<string, Row>>((acc, p) => {
-      const l = (acc[`${p.itemCode}|${p.kodeRuangan}|${p.noBL}`] ??= { itemCode: p.itemCode, itemName: p.itemName, brand: p.brand, origin: p.origin, kodeRuangan: p.kodeRuangan, noBL: p.noBL, uom: 'KG', qty: 0, qty2: 0, qtyPalet: 0, partial: 0 });
+      const l = (acc[`${p.itemCode}|${p.kodeRuangan}|${p.noBL}|${p.titipan}`] ??= { itemCode: p.itemCode, itemName: p.itemName, brand: p.brand, origin: p.origin, kodeRuangan: p.kodeRuangan, noBL: p.noBL, titipan: p.titipan, uom: 'KG', qty: 0, qty2: 0, qtyPalet: 0, partial: 0 });
       l.qty += kgOf(p);
       l.qty2 += p.sak;
       l.qtyPalet += 1;
@@ -141,7 +143,7 @@ export default function OutboundNew() {
 
   const save = async () => {
     if (pallets.some((p) => !p.kodeRuangan)) return setErr(new Error('Pilih ruangan sumber untuk setiap palet'));
-    if (pallets.some((p) => !p.noBL && !p.rooms.some((r) => String(r.kodeRuangan) === p.kodeRuangan && r.titipan))) return setErr(new Error('Stok palet belum punya No. BL. Minta Admin mengisi BL stok lama dulu.'));
+    if (pallets.some((p) => !p.noBL && !p.titipan)) return setErr(new Error('Stok palet belum punya No. BL. Minta Admin mengisi BL stok lama dulu.'));
     setBusy(true);
     setErr(null);
     try {
@@ -151,7 +153,7 @@ export default function OutboundNew() {
         noMobil: mobil.trim().toUpperCase(),
         containerNo: container,
         docDate: todayIso(),
-        outLines: outLines.map((l) => ({ itemCode: l.itemCode, uom: 'KG', brand: l.brand, origin: l.origin, qty: Math.round(l.qty * 100) / 100, qty2: l.qty2, qtyPalet: l.qtyPalet, kodeRuangan: l.kodeRuangan })),
+        outLines: outLines.map((l) => ({ itemCode: l.itemCode, uom: 'KG', brand: l.brand, origin: l.origin, qty: Math.round(l.qty * 100) / 100, qty2: l.qty2, qtyPalet: l.qtyPalet, kodeRuangan: l.kodeRuangan, noBL: l.noBL || null, titipan: !!l.titipan })),
         inLines: isAdj ? inLines.map((l) => ({ itemCode: l.itemCode, uom: l.uom, brand: l.brand || null, origin: l.origin || null, qty: l.qty, qty2: l.qty2, qtyPalet: l.qtyPalet, kodeRuangan: l.kodeRuangan, noBL: l.noBL })) : [],
         scrapLines: trx === 'RP' ? scrapLines.map((l) => ({ itemCode: l.itemCode, uom: 'KG', qty: l.qty, qty2: l.qty2, qtyPalet: 0, kodeRuangan: l.kodeRuangan, noBL: l.noBL })) : [],
       });
@@ -399,12 +401,12 @@ export default function OutboundNew() {
             ) : (
               <div className="field">
                 <label>Ruangan &amp; BL sumber <span className="req">*</span></label>
-                <select className="input" value={p.kodeRuangan ? `${p.kodeRuangan}|${p.noBL}` : ''}
-                  onChange={(e) => { const [k, b] = e.target.value.split('|'); update(p.id, { kodeRuangan: k ?? '', noBL: b ?? '' }); }}>
+                <select className="input" value={p.kodeRuangan ? `${p.kodeRuangan}|${p.noBL}|${p.titipan ? 'T' : 'N'}` : ''}
+                  onChange={(e) => { const [k, b, t] = e.target.value.split('|'); update(p.id, { kodeRuangan: k ?? '', noBL: b ?? '', titipan: t === 'T' }); }}>
                   <option value="">Pilih ruangan &amp; BL</option>
                   {p.rooms.map((r) => (
-                    <option key={`${r.kodeRuangan}|${r.noBL}`} value={`${r.kodeRuangan ?? ''}|${r.noBL ?? ''}`}>
-                      {r.kodeRuangan ?? '-'} · BL {r.noBL ?? 'BELUM ADA'} · {fmt(r.stockKg)} kg · {fmt(r.stockSak)} krg
+                    <option key={`${r.kodeRuangan}|${r.noBL}|${r.titipan}`} value={`${r.kodeRuangan ?? ''}|${r.noBL ?? ''}|${r.titipan ? 'T' : 'N'}`}>
+                      {r.kodeRuangan ?? '-'} · {r.titipan ? 'TITIPAN' : `BL ${r.noBL ?? 'BELUM ADA'}`} · {fmt(r.stockKg)} kg · {fmt(r.stockSak)} krg
                     </option>
                   ))}
                 </select>

@@ -21,7 +21,8 @@ public record DocLine(
     decimal Qty2,
     decimal QtyPalet,
     string? KodeRuangan = null,    // keluar: ruangan SUMBER stok; masuk: ruangan TUJUAN
-    string? NoBL = null);          // No. BL: keluar = BL sumber stok (wajib); masuk = BL barang (KR/RP: dari BL palet keluar)
+    string? NoBL = null,           // No. BL: keluar = BL sumber stok (wajib); masuk = BL barang (KR/RP: dari BL palet keluar)
+    bool? Titipan = null);         // sifat barang: keluar = sifat stok sumber; masuk = diisi server dari dokumen
 
 /// Inbound: header + baris detail (semua Flag 1). TrxCode IB/BT ditentukan server dari OWHS.External.
 public record InboundRequest(
@@ -29,7 +30,8 @@ public record InboundRequest(
     string NoMobil,
     string? ContainerNo,
     DateTime? DocDate,
-    List<DocLine> Lines);
+    List<DocLine> Lines,
+    bool? Titipan = null);   // barang titipan (ruangan titipan boleh berisi titipan & non-titipan); null = aplikasi lama: ikut ruangan
 
 /// Outbound: Jenis OB / KR / RP.
 ///   OB -> ObjType 6710, TrxCode OB (atau BT bila warehouse titipan)

@@ -135,17 +135,18 @@ FROM    OKRN h OUTER APPLY (SELECT SUM(d.qty) q, SUM(d.Qty2) s, SUM(d.QtyPalet) 
 WHERE   h.ObjType = @objType AND h.DocEntry = @docEntry";
 
     public const string InsertLine = @"
-INSERT INTO KRN1 (ObjType, DocEntry, LineNum, ItemCode, brand_name, Origin, qty, Qty2, QtyPalet, flags, LineStatus, KodeRuangan, NoBL)
-VALUES (@objType, @docEntry, @lineNum, @itemCode, @brand, @origin, @qty, @qty2, @qtyPalet, @flag, 'O', @ruang, @bl)";
+INSERT INTO KRN1 (ObjType, DocEntry, LineNum, ItemCode, brand_name, Origin, qty, Qty2, QtyPalet, flags, LineStatus, KodeRuangan, NoBL, Titipan)
+VALUES (@objType, @docEntry, @lineNum, @itemCode, @brand, @origin, @qty, @qty2, @qtyPalet, @flag, 'O', @ruang, @bl, @tit)";
 
     /// Stok per ruangan untuk item + container di warehouse (dokumen yang sudah diposting).
     public const string StockPerRuangan = @"
-SELECT  NULLIF(s.KodeRuangan, '') AS kodeRuangan, r.NamaRuangan AS namaRuangan, CAST(ISNULL(r.Titipan, 0) AS bit) AS titipan,
+SELECT  NULLIF(s.KodeRuangan, '') AS kodeRuangan, r.NamaRuangan AS namaRuangan, s.Titipan AS titipan,
+        CAST(ISNULL(r.Titipan, 0) AS bit) AS ruanganTitipan,
         NULLIF(s.NoBL, '') AS noBL, s.Kg AS stockKg, s.Sak AS stockSak, s.Palet AS stockPalet
 FROM    WHS_Saldo s
 LEFT JOIN WHS_MasterRuangan r ON r.KodeRuangan = s.KodeRuangan
 WHERE   s.WhsCode = @whsCode AND s.ItemCode = @itemCode AND s.ContainerNo = ISNULL(@containerNo, '') AND s.Kg > 0
-ORDER BY s.KodeRuangan, s.NoBL";
+ORDER BY s.KodeRuangan, s.Titipan, s.NoBL";
 
     /// Baris inbound asal untuk QR yymmdd-itemcode-container (sumber brand, origin, isi per sak / per palet).
     public const string PalletSource = @"
@@ -179,6 +180,7 @@ ORDER BY d.LineNum";
     public const string StockPerItem = @"
 SELECT  s.ItemCode AS itemCode, COALESCE(i.ItemName, sc.ItemName) AS itemName,
         SUM(s.Kg) AS kg, SUM(s.Sak) AS sak, SUM(s.Palet) AS palet,
+        SUM(CASE WHEN s.Titipan = 1 THEN s.Kg ELSE 0 END) AS titipanKg, SUM(CASE WHEN s.Titipan = 0 THEN s.Kg ELSE 0 END) AS nonTitipanKg,
         COUNT(DISTINCT NULLIF(s.ContainerNo, '')) AS containers, COUNT(DISTINCT NULLIF(s.KodeRuangan, '')) AS ruangan
 FROM    WHS_Saldo s
 JOIN    OWHS w ON w.WhsCode = s.WhsCode
@@ -191,7 +193,7 @@ HAVING  SUM(s.Kg) <> 0
 ORDER BY s.ItemCode";
 
     public const string StockPerContainer = @"
-SELECT  NULLIF(s.ContainerNo, '') AS containerNo, NULLIF(s.KodeRuangan, '') AS kodeRuangan, NULLIF(s.NoBL, '') AS noBL,
+SELECT  NULLIF(s.ContainerNo, '') AS containerNo, NULLIF(s.KodeRuangan, '') AS kodeRuangan, NULLIF(s.NoBL, '') AS noBL, s.Titipan AS titipan,
         s.ItemCode AS itemCode, COALESCE(i.ItemName, sc.ItemName) AS itemName, s.Brand AS brand,
         s.TglMasuk AS inboundDate, s.Kg AS kg, s.Sak AS sak, s.Palet AS palet, s.WhsCode AS whsCode
 FROM    WHS_Saldo s
@@ -203,6 +205,24 @@ WHERE   w.BPLid = @bplId AND (@whsCode IS NULL OR s.WhsCode = @whsCode) AND (@ru
   AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = s.WhsCode)
   AND   s.Kg <> 0
 ORDER BY s.NoBL, s.ContainerNo, s.KodeRuangan, s.ItemCode";
+
+    /// Isi ruangan: total barang titipan vs non-titipan (ruangan titipan boleh berisi keduanya).
+    public const string StockPerRuanganReport = @"
+SELECT  s.WhsCode AS whsCode, NULLIF(s.KodeRuangan, '') AS kodeRuangan, r.NamaRuangan AS namaRuangan,
+        CAST(ISNULL(r.Titipan, 0) AS bit) AS ruanganTitipan, r.KapasitasTon AS kapasitasTon,
+        SUM(CASE WHEN s.Titipan = 1 THEN s.Kg ELSE 0 END) AS titipanKg, SUM(CASE WHEN s.Titipan = 1 THEN s.Sak ELSE 0 END) AS titipanSak,
+        SUM(CASE WHEN s.Titipan = 1 THEN s.Palet ELSE 0 END) AS titipanPalet,
+        SUM(CASE WHEN s.Titipan = 0 THEN s.Kg ELSE 0 END) AS nonTitipanKg, SUM(CASE WHEN s.Titipan = 0 THEN s.Sak ELSE 0 END) AS nonTitipanSak,
+        SUM(CASE WHEN s.Titipan = 0 THEN s.Palet ELSE 0 END) AS nonTitipanPalet,
+        SUM(s.Kg) AS kg, COUNT(DISTINCT s.ItemCode) AS items
+FROM    WHS_Saldo s
+JOIN    OWHS w ON w.WhsCode = s.WhsCode
+LEFT JOIN WHS_MasterRuangan r ON r.KodeRuangan = s.KodeRuangan
+WHERE   w.BPLid = @bplId AND (@whsCode IS NULL OR s.WhsCode = @whsCode) AND (@ruangan IS NULL OR s.KodeRuangan = @ruangan)
+  AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = s.WhsCode)
+GROUP BY s.WhsCode, s.KodeRuangan, r.NamaRuangan, r.Titipan, r.KapasitasTon
+HAVING  SUM(s.Kg) <> 0
+ORDER BY s.WhsCode, s.KodeRuangan";
 
     public const string StockCard = @"
 SELECT  h.DocDate AS docDate, h.ObjType AS objType, h.DocEntry AS docEntry, h.TrxCode AS trxCode,
@@ -248,7 +268,7 @@ WHERE   h.BPLId = @bplId AND h.DocDate BETWEEN @from AND @to
 SELECT  TOP 200
         h.ObjType AS objType, h.DocEntry AS docEntry, h.DocDate AS docDate, h.TrxCode AS trxCode,
         h.WhsCode AS whsCode, w.WhsName AS whsName,
-        CAST(CASE WHEN w.[External] = 'Y' THEN 1 ELSE 0 END AS bit) AS isTitipan,
+        CAST(CASE WHEN w.[External] = 'Y' OR EXISTS (SELECT 1 FROM KRN1 t WHERE t.ObjType = h.ObjType AND t.DocEntry = h.DocEntry AND t.Titipan = 1) THEN 1 ELSE 0 END AS bit) AS isTitipan,
         h.VehicleNo AS noMobil, h.ContainerNo AS containerNo,
         -- PT di header, atau per baris (SPMB): tampil 'PER BARIS' bila semua baris sudah ber-PT
         COALESCE(NULLIF(h.U_IDU_Kode_PT, ''), CASE WHEN NOT EXISTS (SELECT 1 FROM KRN1 z WHERE z.ObjType = h.ObjType AND z.DocEntry = h.DocEntry AND ISNULL(z.U_IDU_Kode_PT, '') = '') THEN 'PER BARIS' END) AS ptCode,
@@ -275,7 +295,9 @@ ORDER BY CASE WHEN h.DocStatus = 'O' THEN 0 ELSE 1 END, h.DocDate DESC, h.DocEnt
     public const string CmsHeader = @"
 SELECT  h.ObjType AS objType, h.DocEntry AS docEntry, h.DocDate AS docDate, h.TrxCode AS trxCode,
         h.WhsCode AS whsCode, w.WhsName AS whsName,
-        CAST(CASE WHEN w.[External] = 'Y' THEN 1 ELSE 0 END AS bit) AS isTitipan,
+        -- titipan: warehouse titipan ATAU barang di dokumen ini titipan (ruangan titipan boleh berisi non-titipan)
+        CAST(CASE WHEN w.[External] = 'Y' OR EXISTS (SELECT 1 FROM KRN1 t WHERE t.ObjType = h.ObjType AND t.DocEntry = h.DocEntry AND t.Titipan = 1) THEN 1 ELSE 0 END AS bit) AS isTitipan,
+        CAST(CASE WHEN w.[External] = 'Y' THEN 1 ELSE 0 END AS bit) AS whsTitipan,
         h.VehicleNo AS noMobil, h.ContainerNo AS containerNo,
         h.U_IDU_Kode_PT AS ptCode, p.PrcName AS ptName,
         h.CardCode AS cardCode, c.CardName AS cardName, c.CardType AS cardType,

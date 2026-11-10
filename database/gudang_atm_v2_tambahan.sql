@@ -177,3 +177,96 @@ CREATE TABLE dbo.WHS_ItemScrap (
 );
 GO
 -- GRANT SELECT, INSERT, UPDATE ON dbo.WHS_ItemScrap TO gudang_app;
+
+/* ===================================================================================================
+   Titipan = sifat BARANG, bukan ruangan.
+   - Ruangan titipan (WHS_MasterRuangan.Titipan = 1) boleh berisi barang titipan DAN non-titipan.
+     Ruangan non-titipan hanya untuk barang non-titipan.
+   - Per baris transaksi: KRN1.Titipan; per rencana: WHS_Plan.Titipan; saldo per ruangan dipisah titipan / non-titipan.
+   - Satu dokumen / satu rencana / satu Surat Jalan tetap tidak boleh mencampur titipan dan non-titipan.
+   Setelah script ini: jalankan ulang saldo.sql lalu EXEC dbo.usp_WHS_SaldoRebuild.
+   =================================================================================================== */
+IF COL_LENGTH('dbo.KRN1','Titipan') IS NULL ALTER TABLE dbo.KRN1 ADD Titipan BIT NULL;
+IF COL_LENGTH('dbo.WHS_Plan','Titipan') IS NULL ALTER TABLE dbo.WHS_Plan ADD Titipan BIT NULL;
+GO
+-- Data lama: dulu titipan ditentukan ruangan / warehouse / TrxCode BT
+UPDATE p SET Titipan = ISNULL(r.Titipan, 0)
+FROM dbo.WHS_Plan p LEFT JOIN dbo.WHS_MasterRuangan r ON r.KodeRuangan = p.KodeRuangan
+WHERE p.Titipan IS NULL;
+UPDATE d SET Titipan = CASE WHEN h.TrxCode = 'BT' OR ISNULL(r.Titipan, 0) = 1 OR w.[External] = 'Y' THEN 1 ELSE 0 END
+FROM dbo.KRN1 d
+JOIN dbo.OKRN h ON h.ObjType = d.ObjType AND h.DocEntry = d.DocEntry
+LEFT JOIN dbo.WHS_MasterRuangan r ON r.KodeRuangan = d.KodeRuangan
+LEFT JOIN dbo.OWHS w ON w.WhsCode = h.WhsCode
+WHERE d.Titipan IS NULL;
+GO
+CREATE OR ALTER TRIGGER dbo.TR_WHS_Plan_Titipan ON dbo.WHS_Plan AFTER INSERT, UPDATE AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (SELECT 1 FROM inserted i WHERE ISNULL(i.Titipan, 0) = 1 AND i.Status <> 'Batal' AND NULLIF(LTRIM(RTRIM(i.CardCodeTitipan)), '') IS NULL)
+    BEGIN
+        RAISERROR('Barang titipan: kode customer titipan wajib diisi pada SPBB/SPMB.', 16, 1);
+        ROLLBACK TRANSACTION; RETURN;
+    END
+    IF EXISTS (SELECT 1 FROM inserted i JOIN dbo.WHS_MasterRuangan r ON r.KodeRuangan = i.KodeRuangan WHERE ISNULL(i.Titipan, 0) = 1 AND r.Titipan = 0)
+    BEGIN
+        RAISERROR('Barang titipan hanya boleh di ruangan titipan.', 16, 1);
+        ROLLBACK TRANSACTION; RETURN;
+    END
+    IF EXISTS (SELECT 1 FROM inserted i JOIN dbo.WHS_MasterRuangan r ON r.KodeRuangan = i.KodeRuangan WHERE r.WhsCode <> i.WhsCode)
+    BEGIN
+        RAISERROR('Ruangan bukan milik warehouse dokumen ini.', 16, 1);
+        ROLLBACK TRANSACTION;
+    END
+END
+GO
+/* Baris: barang titipan wajib di ruangan titipan; baris rencana harus sama sifatnya dengan rencana */
+CREATE OR ALTER TRIGGER dbo.TR_KRN1_TitipanCampur ON dbo.KRN1 AFTER INSERT, UPDATE AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (SELECT 1 FROM inserted i JOIN dbo.WHS_MasterRuangan ri ON ri.KodeRuangan = i.KodeRuangan
+               WHERE ISNULL(i.Titipan, 0) = 1 AND ri.Titipan = 0)
+    BEGIN
+        RAISERROR('Barang titipan hanya boleh di ruangan titipan.', 16, 1);
+        ROLLBACK TRANSACTION; RETURN;
+    END
+    IF EXISTS (SELECT 1 FROM inserted i
+               JOIN dbo.OKRN h ON h.ObjType = i.ObjType AND h.DocEntry = i.DocEntry
+               JOIN dbo.WHS_Plan p ON p.PlanId = h.PlanId
+               WHERE p.Titipan IS NOT NULL AND i.Titipan IS NOT NULL AND p.Titipan <> i.Titipan)
+    BEGIN
+        RAISERROR('Titipan dan non-titipan tidak boleh dicampur: baris tidak sesuai rencana.', 16, 1);
+        ROLLBACK TRANSACTION;
+    END
+END
+GO
+CREATE OR ALTER TRIGGER dbo.TR_KRN1_TitipanSatuDokumen ON dbo.KRN1 AFTER INSERT, UPDATE AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (SELECT 1
+               FROM (SELECT DISTINCT ObjType, DocEntry FROM inserted) d
+               JOIN dbo.KRN1 k ON k.ObjType = d.ObjType AND k.DocEntry = d.DocEntry
+               GROUP BY d.ObjType, d.DocEntry
+               HAVING COUNT(DISTINCT ISNULL(k.Titipan, 0)) > 1)
+    BEGIN
+        RAISERROR('Titipan dan non-titipan tidak boleh dicampur dalam satu dokumen.', 16, 1);
+        ROLLBACK TRANSACTION;
+    END
+END
+GO
+CREATE OR ALTER TRIGGER dbo.TR_WHS_SuratJalanPlan_TitipanCampur ON dbo.WHS_SuratJalanPlan AFTER INSERT, UPDATE AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (SELECT 1
+               FROM dbo.WHS_SuratJalanPlan a
+               JOIN dbo.WHS_Plan pa ON pa.PlanId = a.PlanId
+               JOIN dbo.WHS_SuratJalanPlan b ON b.SjId = a.SjId AND b.PlanId <> a.PlanId
+               JOIN dbo.WHS_Plan pb ON pb.PlanId = b.PlanId
+               WHERE ISNULL(pa.Titipan, 0) <> ISNULL(pb.Titipan, 0)
+                 AND a.SjId IN (SELECT SjId FROM inserted))
+    BEGIN
+        RAISERROR('Titipan dan non-titipan tidak boleh dicampur dalam satu Surat Jalan.', 16, 1);
+        ROLLBACK TRANSACTION;
+    END
+END
+GO

@@ -20,7 +20,7 @@ public static class SuratJalanEndpoints
         {
             await using var db = dbf();
             return Results.Ok(await db.QueryAsync(@"
-SELECT p.PlanId AS planId, p.PlanNo AS planNo, p.CardCode AS cardCode, p.CardName AS cardName, r.Titipan AS titipan,
+SELECT p.PlanId AS planId, p.PlanNo AS planNo, p.CardCode AS cardCode, p.CardName AS cardName, CAST(COALESCE(p.Titipan, r.Titipan, 0) AS bit) AS titipan,
        (SELECT SUM(QtyDone) FROM WHS_Plan1 WHERE PlanId = p.PlanId) AS kg,
        (SELECT TOP 1 NumAtCard FROM WHS_SuratJalanPlan WHERE PlanId = p.PlanId ORDER BY SjId DESC) AS poTerakhir
 FROM WHS_Plan p LEFT JOIN WHS_MasterRuangan r ON r.KodeRuangan = p.KodeRuangan
@@ -63,7 +63,7 @@ WHERE EXISTS (SELECT 1 FROM WHS_SuratJalanPlan sp JOIN WHS_Plan p ON p.PlanId = 
             {
                 var ids = r.Plans.Select(p => p.PlanId).ToArray();
                 var ps = (await db.QueryAsync<(long PlanId, string WhsCode, string Jenis, string Status, string CardCode, string? CardName, bool? Titipan)>(
-                    "SELECT p.PlanId, p.WhsCode, p.Jenis, p.Status, p.CardCode, p.CardName, rm.Titipan FROM WHS_Plan p LEFT JOIN WHS_MasterRuangan rm ON rm.KodeRuangan = p.KodeRuangan WHERE p.PlanId IN @ids", new { ids }, tx)).ToList();
+                    "SELECT p.PlanId, p.WhsCode, p.Jenis, p.Status, p.CardCode, p.CardName, CAST(COALESCE(p.Titipan, rm.Titipan, 0) AS BIT) AS Titipan FROM WHS_Plan p LEFT JOIN WHS_MasterRuangan rm ON rm.KodeRuangan = p.KodeRuangan WHERE p.PlanId IN @ids", new { ids }, tx)).ToList();
                 if (ps.Count != ids.Length) return Bad("Ada SPMB yang tidak ditemukan");
                 if (ps.Any(p => p.Jenis != "SPMB")) return Bad("Surat Jalan hanya untuk SPMB");
                 if (ps.Any(p => p.WhsCode != r.WhsCode)) return Bad("SPMB harus dari gudang yang sama");

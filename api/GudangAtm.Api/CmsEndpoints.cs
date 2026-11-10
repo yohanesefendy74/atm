@@ -118,7 +118,7 @@ ORDER BY LogTime DESC", new { objType, docEntry, bplId = u.BplId() }));
 
                 var group = Group(h.ObjType, h.TrxCode);
                 if (!AllowedTrx(group, h.IsTitipan).Contains(trx))
-                    return Bad($"TrxCode {trx} tidak boleh untuk dokumen ini{(h.IsTitipan ? " (warehouse titipan)" : "")}");
+                    return Bad($"TrxCode {trx} tidak boleh untuk dokumen ini{(h.IsTitipan ? " (barang titipan)" : "")}");
 
                 var lines = (await db.QueryAsync<CmsLineRow>(Sql.CmsLines, new { objType, docEntry }, tx)).ToList();
                 var newObjType = TargetObjType(trx, h.ObjType);
@@ -172,6 +172,10 @@ ORDER BY LogTime DESC", new { objType, docEntry, bplId = u.BplId() }));
                     numAtCard = Clean(req.NumAtCard), blNo = group == "inbound" && trx != "RC" ? Clean(req.BlNo) : null,
                 }, tx);
                 if (n == 0) return Bad("Dokumen berubah oleh user lain, muat ulang");
+                // Inbound: sifat barang mengikuti TrxCode (BT = titipan; IB/RC = non-titipan)
+                if (group == "inbound")
+                    await db.ExecuteAsync("UPDATE KRN1 SET Titipan = @t WHERE ObjType = @objType AND DocEntry = @docEntry AND flags = 1",
+                        new { t = trx == "BT", objType, docEntry }, tx);
 
                 var finalEntry = docEntry;
                 if (newObjType != h.ObjType)
@@ -193,6 +197,12 @@ ORDER BY LogTime DESC", new { objType, docEntry, bplId = u.BplId() }));
                     (newObjType != h.ObjType ? $"; nomor lama {h.ObjType}/{docEntry}" : ""));
                 await tx.CommitAsync();
                 return Results.Ok(new { objType = newObjType, docEntry = finalEntry, renumbered = newObjType != h.ObjType });
+            }
+            catch (SqlException ex) when (ex.Class == 16)
+            {
+                // pesan dari trigger (mis. barang titipan di ruangan non-titipan)
+                try { await tx.RollbackAsync(); } catch { }
+                return Bad(ex.Message);
             }
             catch
             {
@@ -225,7 +235,7 @@ ORDER BY LogTime DESC", new { objType, docEntry, bplId = u.BplId() }));
                 // Saldo per BL: baris masuk memakai BL baris atau BL header; baris keluar wajib BL baris (BL sumber stok)
                 // barang titipan tidak memakai BL
                 var titipanDoc = h.IsTitipan || h.TrxCode == "BT"
-                    || await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM KRN1 d JOIN WHS_MasterRuangan r ON r.KodeRuangan = d.KodeRuangan WHERE d.ObjType = @objType AND d.DocEntry = @docEntry AND r.Titipan = 1", new { objType, docEntry }, tx) > 0;
+                    || await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM KRN1 d WHERE d.ObjType = @objType AND d.DocEntry = @docEntry AND d.Titipan = 1", new { objType, docEntry }, tx) > 0;
                 foreach (var l in lines.Where(l => !titipanDoc && string.IsNullOrWhiteSpace(l.NoBL) && (l.Flag != 1 || string.IsNullOrWhiteSpace(h.BlNo))))
                     errors.Add($"Baris {l.LineNum + 1} ({l.ItemCode}) belum punya No. BL");
 

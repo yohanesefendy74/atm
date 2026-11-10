@@ -93,6 +93,16 @@ class _InboundHeaderScreenState extends State<InboundHeaderScreen> {
                   Hint(_draft.warehouse?.isTitipan ?? false
                       ? 'Warehouse titipan: transaksi otomatis BT (Barang Titipan)'
                       : 'Daftar sesuai hak akses akun Anda'),
+                  if (!(_draft.warehouse?.isTitipan ?? false)) ...[
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Barang titipan (BT)'),
+                      subtitle: const Text('Barang milik customer. Hanya bisa ke ruangan titipan. Ruangan titipan tetap boleh untuk barang biasa.'),
+                      value: _draft.titipan,
+                      onChanged: (v) => setState(() => _draft.titipan = v),
+                    ),
+                  ],
                   const SizedBox(height: 18),
                   const FieldLabel('No. Mobil', required: true),
                   TextField(controller: _mobil, inputFormatters: [upperCase], style: monoStyle, decoration: const InputDecoration(hintText: 'B 9123 KXT')),
@@ -139,6 +149,7 @@ class _InboundDetailScreenState extends State<InboundDetailScreen> {
             Pill(d.warehouse?.code ?? '-', bg: C.ground, fg: C.ink, monoFont: true),
             Pill(d.noMobil, bg: C.ground, fg: C.ink, monoFont: true),
             if (d.containerNo.isNotEmpty) Pill(d.containerNo, bg: C.ground, fg: C.ink, monoFont: true),
+            if (d.isTitipan) const Pill('TITIPAN', bg: C.amberTint, fg: C.amberText),
           ]),
         ),
         Expanded(
@@ -146,7 +157,7 @@ class _InboundDetailScreenState extends State<InboundDetailScreen> {
             RuanganField(
               whs: d.warehouse!.code,
               value: _ruang,
-              titipan: d.warehouse!.isTitipan ? true : null,
+              titipan: d.isTitipan ? true : null,
               label: 'Ruangan tujuan',
               onChanged: (v) => setState(() => _ruang = v),
             ),

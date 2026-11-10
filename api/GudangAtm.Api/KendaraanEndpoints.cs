@@ -125,7 +125,7 @@ WHERE k.WhsCode = @whs AND (@status IS NULL AND k.Status = 'Di dalam' OR k.Statu
             var jenis = keperluan == "Bongkar" ? "SPBB" : "SPMB";
             var cont = (container ?? "").ToUpperInvariant().Replace(" ", "").Replace("-", "");
             return Results.Ok(await db.QueryAsync(@"
-SELECT TOP 20 p.PlanNo AS planNo, p.Jenis AS jenis, p.CardName AS party, p.Status AS status, r.Titipan AS titipan, p.EtaDatang AS eta,
+SELECT TOP 20 p.PlanNo AS planNo, p.Jenis AS jenis, p.CardName AS party, p.Status AS status, CAST(COALESCE(p.Titipan, r.Titipan, 0) AS bit) AS titipan, p.EtaDatang AS eta,
        (SELECT TOP 1 UserId FROM WHS_PlanKrani WHERE PlanId = p.PlanId) AS kraniId
 FROM WHS_Plan p LEFT JOIN WHS_MasterRuangan r ON r.KodeRuangan = p.KodeRuangan
 WHERE p.WhsCode = @whs AND p.Jenis = @jenis AND p.Status IN ('Terbit','Proses')
@@ -183,7 +183,7 @@ ORDER BY p.PlanId DESC", new { whs, jenis, cont }));
                     var no = Clean(r.PlanNo)?.ToUpperInvariant();
                     if (no is null || !Regex.IsMatch(no, @"^SP(BB|MB)/\d{4}/\d{4}$")) return Bad("Format dokumen salah · contoh SPBB/2610/0014");
                     if (no[..4] != (r.Keperluan == "Bongkar" ? "SPBB" : "SPMB")) return Bad(r.Keperluan == "Bongkar" ? "Bongkar memakai dokumen SPBB, bukan SPMB" : "Muat memakai dokumen SPMB, bukan SPBB");
-                    var p = await db.QueryFirstOrDefaultAsync<(long PlanId, string WhsCode, string Status, bool? Titipan)?>("SELECT p.PlanId, p.WhsCode, p.Status, rm.Titipan FROM WHS_Plan p LEFT JOIN WHS_MasterRuangan rm ON rm.KodeRuangan = p.KodeRuangan WHERE p.PlanNo = @no", new { no }, tx);
+                    var p = await db.QueryFirstOrDefaultAsync<(long PlanId, string WhsCode, string Status, bool? Titipan)?>("SELECT p.PlanId, p.WhsCode, p.Status, CAST(COALESCE(p.Titipan, rm.Titipan, 0) AS BIT) AS Titipan FROM WHS_Plan p LEFT JOIN WHS_MasterRuangan rm ON rm.KodeRuangan = p.KodeRuangan WHERE p.PlanNo = @no", new { no }, tx);
                     if (p is null) return Bad("Dokumen tidak ditemukan");
                     if (p.Value.WhsCode != r.WhsCode) return Bad($"Dokumen untuk {p.Value.WhsCode}, bukan gudang ini ({r.WhsCode})");
                     if (p.Value.Status == "Partial") return Bad("Dokumen Partial (masih ada outstanding) tidak bisa untuk registrasi kendaraan masuk");

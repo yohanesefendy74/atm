@@ -41,6 +41,7 @@ class ReportsMenu extends StatelessWidget {
         child: ListView(padding: const EdgeInsets.all(20), children: [
           item(Icons.receipt_long_outlined, 'Kartu Stok', 'Mutasi masuk/keluar per item + saldo berjalan', const StockCardScreen()),
           item(Icons.inventory_2_outlined, 'Stock per Barang', 'Saldo KG, sak, palet per item', const StockItemScreen()),
+          item(Icons.meeting_room_outlined, 'Stock per Ruangan', 'Isi ruangan: barang titipan vs non-titipan', const StockRuanganScreen()),
           item(Icons.view_week_outlined, 'Stock per Container', 'Saldo per container & item', const StockContainerScreen()),
           item(Icons.speed_outlined, 'KPI Gudang', 'Jumlah dokumen, tonase & palet keluar-masuk', const KpiScreen()),
         ]),
@@ -156,9 +157,72 @@ class _StockItemScreenState extends State<StockItemScreen> {
               const SizedBox(height: 12),
               _table(
                 ['ITEM', 'KG', 'SAK', 'PLT'],
-                [for (final r in rows) ['${r['itemCode']}\n${r['itemName'] ?? ''}', fmt(toD(r['kg'])), fmt(toD(r['sak'])), fmt(toD(r['palet']))]],
+                [for (final r in rows) ['${r['itemCode']}\n${r['itemName'] ?? ''}${toD(r['titipanKg']) != 0 ? '\ntitipan ${fmt(toD(r['titipanKg']))} · non ${fmt(toD(r['nonTitipanKg']))}' : ''}', fmt(toD(r['kg'])), fmt(toD(r['sak'])), fmt(toD(r['palet']))]],
                 flex: [3, 2, 1, 1],
               ),
+            ]);
+          },
+        ),
+      );
+}
+
+/// Isi tiap ruangan: total barang titipan dan non-titipan (ruangan titipan boleh berisi keduanya).
+class StockRuanganScreen extends StatefulWidget {
+  const StockRuanganScreen({super.key});
+  @override
+  State<StockRuanganScreen> createState() => _StockRuanganScreenState();
+}
+
+class _StockRuanganScreenState extends State<StockRuanganScreen> {
+  String? _whs;
+  late Future<List<Map<String, dynamic>>> _f = _load(null);
+
+  Future<List<Map<String, dynamic>>> _load(String? whs) async {
+    final r = await Api.get('/api/reports/stock-ruangan', {'whsCode': whs}) as List;
+    return r.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) => _ReportPage(
+        title: 'Stock per Ruangan',
+        filter: _WhsFilter(onChanged: (v) => setState(() {
+              _whs = v;
+              _f = _load(_whs);
+            })),
+        body: FutureBuilder<List<Map<String, dynamic>>>(
+          future: _f,
+          builder: (c, s) {
+            if (s.hasError) return ErrorView(s.error.toString(), onRetry: () => setState(() => _f = _load(_whs)));
+            if (!s.hasData) return const Loading();
+            final rows = s.data!;
+            final tt = rows.fold<double>(0, (a, r) => a + toD(r['titipanKg']));
+            final tn = rows.fold<double>(0, (a, r) => a + toD(r['nonTitipanKg']));
+            return ListView(padding: const EdgeInsets.all(20), children: [
+              TotalsBar([('Titipan KG', fmt(tt)), ('Non-titipan KG', fmt(tn)), ('Total KG', fmt(tt + tn))]),
+              const SizedBox(height: 12),
+              for (final r in rows) ...[
+                Box(
+                  padding: const EdgeInsets.all(14),
+                  radius: 14,
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Expanded(child: Text('${r['kodeRuangan'] ?? 'tanpa ruangan'}', style: const TextStyle(fontFamily: mono, fontWeight: FontWeight.w700, fontSize: 15))),
+                      if (r['ruanganTitipan'] == true) const Pill('RUANGAN TITIPAN', bg: C.amberTint, fg: C.amberText),
+                    ]),
+                    Text('${r['whsCode']} · ${r['namaRuangan'] ?? ''} · ${toD(r['items']).toStringAsFixed(0)} item', style: const TextStyle(fontSize: 13, color: C.muted)),
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      Expanded(child: KV('Titipan KG', fmt(toD(r['titipanKg'])))),
+                      Expanded(child: KV('Non-titipan KG', fmt(toD(r['nonTitipanKg'])))),
+                      Expanded(child: KV('Total KG', fmt(toD(r['kg'])))),
+                    ]),
+                    const SizedBox(height: 4),
+                    Text('Palet: titipan ${fmt(toD(r['titipanPalet']))} · non-titipan ${fmt(toD(r['nonTitipanPalet']))}', style: const TextStyle(fontSize: 12, color: C.muted)),
+                  ]),
+                ),
+                const SizedBox(height: 10),
+              ],
+              if (rows.isEmpty) const Text('Tidak ada stok', textAlign: TextAlign.center),
             ]);
           },
         ),
@@ -199,7 +263,7 @@ class _StockContainerScreenState extends State<StockContainerScreen> {
                       Text('masuk ${fmtDate(toDate(r['inboundDate']))}', style: const TextStyle(fontSize: 12, color: C.muted)),
                     ]),
                     Text('${r['itemCode']} · ${r['itemName'] ?? ''} · ${r['brand'] ?? ''}', style: const TextStyle(fontSize: 13, color: C.muted)),
-                    Text('Ruangan ${r['kodeRuangan'] ?? 'BELUM ADA'} · BL ${r['noBL'] ?? 'BELUM ADA'}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: r['kodeRuangan'] == null ? C.outbound : C.ink)),
+                    Text('Ruangan ${r['kodeRuangan'] ?? 'BELUM ADA'} · ${r['titipan'] == true ? 'TITIPAN' : 'BL ${r['noBL'] ?? 'BELUM ADA'}'}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: r['kodeRuangan'] == null ? C.outbound : C.ink)),
                     const SizedBox(height: 8),
                     Row(children: [
                       Expanded(child: KV('KG', fmt(toD(r['kg'])))),

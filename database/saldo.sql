@@ -2,7 +2,7 @@
    Saldo diperbarui saat Admin POSTING dokumen di CMS (transaksi yang sama). Laporan stok & cek stok membaca tabel ini.
    Kartu stok tetap dari transaksi (OKRN/KRN1). Jalankan sekali dengan akun admin; aman diulang.
    Setelah membuat tabel, jalankan:  EXEC dbo.usp_WHS_SaldoRebuild;   (isi awal dari semua dokumen yang sudah diposting)
-   Kunci saldo: gudang + ruangan + item + container + No. BL.
+   Kunci saldo: gudang + ruangan + item + container + No. BL + titipan (barang titipan / non-titipan).
    No. BL per baris: KRN1.NoBL; baris masuk tanpa NoBL memakai OKRN.U_NoBL (diisi otomatis saat posting). */
 USE WORKSHOP_STAGING;
 GO
@@ -30,7 +30,8 @@ CREATE TABLE dbo.WHS_Saldo (
     TglMasuk    DATE          NULL,           -- tanggal masuk pertama (umur stok)
     UpdatedAt   DATETIME2(0)  NOT NULL DEFAULT SYSDATETIME(),
     NoBL        NVARCHAR(50)  NOT NULL DEFAULT '',
-    CONSTRAINT PK_WHS_Saldo PRIMARY KEY (WhsCode, KodeRuangan, ItemCode, ContainerNo, NoBL)
+    Titipan     BIT           NOT NULL DEFAULT 0,   -- barang titipan (ruangan titipan boleh berisi titipan & non-titipan)
+    CONSTRAINT PK_WHS_Saldo PRIMARY KEY (WhsCode, KodeRuangan, ItemCode, ContainerNo, NoBL, Titipan)
 );
 GO
 /* Saldo per BL: upgrade tabel lama (PK tanpa NoBL) */
@@ -41,6 +42,16 @@ BEGIN
     ALTER TABLE dbo.WHS_Saldo ADD NoBL NVARCHAR(50) NOT NULL CONSTRAINT DF_WHS_Saldo_NoBL DEFAULT '';
     ALTER TABLE dbo.WHS_Saldo DROP CONSTRAINT PK_WHS_Saldo;
     ALTER TABLE dbo.WHS_Saldo ADD CONSTRAINT PK_WHS_Saldo PRIMARY KEY (WhsCode, KodeRuangan, ItemCode, ContainerNo, NoBL);
+END
+GO
+/* Saldo per sifat barang (titipan / non-titipan): upgrade */
+IF COL_LENGTH('dbo.KRN1','Titipan') IS NULL ALTER TABLE dbo.KRN1 ADD Titipan BIT NULL;
+GO
+IF COL_LENGTH('dbo.WHS_Saldo','Titipan') IS NULL
+BEGIN
+    ALTER TABLE dbo.WHS_Saldo ADD Titipan BIT NOT NULL CONSTRAINT DF_WHS_Saldo_Titipan DEFAULT 0;
+    ALTER TABLE dbo.WHS_Saldo DROP CONSTRAINT PK_WHS_Saldo;
+    ALTER TABLE dbo.WHS_Saldo ADD CONSTRAINT PK_WHS_Saldo PRIMARY KEY (WhsCode, KodeRuangan, ItemCode, ContainerNo, NoBL, Titipan);
 END
 GO
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_WHS_Saldo_Item' AND object_id = OBJECT_ID('dbo.WHS_Saldo'))
@@ -55,21 +66,21 @@ BEGIN
     MERGE dbo.WHS_Saldo WITH (HOLDLOCK) AS s
     USING (
         SELECT h.WhsCode, ISNULL(d.KodeRuangan, '') AS KodeRuangan, d.ItemCode, ISNULL(COALESCE(d.ContainerNo, h.ContainerNo), '') AS ContainerNo,
-               ISNULL(COALESCE(NULLIF(d.NoBL, ''), CASE WHEN d.flags = 1 THEN NULLIF(h.U_NoBL, '') END), '') AS NoBL,
+               ISNULL(COALESCE(NULLIF(d.NoBL, ''), CASE WHEN d.flags = 1 THEN NULLIF(h.U_NoBL, '') END), '') AS NoBL, CAST(ISNULL(d.Titipan, CASE WHEN h.TrxCode = 'BT' THEN 1 ELSE 0 END) AS BIT) AS Titipan,
                SUM(d.qty * d.flags) AS Kg, SUM(ISNULL(d.Qty2, 0) * d.flags) AS Sak, SUM(ISNULL(d.QtyPalet, 0) * d.flags) AS Palet,
                MAX(CASE WHEN d.flags = 1 THEN d.brand_name END) AS Brand,
                MIN(CASE WHEN d.flags = 1 THEN CAST(h.DocDate AS DATE) END) AS TglMasuk
         FROM dbo.OKRN h JOIN dbo.KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
         WHERE h.ObjType = @ObjType AND h.DocEntry = @DocEntry
-        GROUP BY h.WhsCode, ISNULL(d.KodeRuangan, ''), d.ItemCode, ISNULL(COALESCE(d.ContainerNo, h.ContainerNo), ''), ISNULL(COALESCE(NULLIF(d.NoBL, ''), CASE WHEN d.flags = 1 THEN NULLIF(h.U_NoBL, '') END), '')
+        GROUP BY h.WhsCode, ISNULL(d.KodeRuangan, ''), d.ItemCode, ISNULL(COALESCE(d.ContainerNo, h.ContainerNo), ''), ISNULL(COALESCE(NULLIF(d.NoBL, ''), CASE WHEN d.flags = 1 THEN NULLIF(h.U_NoBL, '') END), ''), CAST(ISNULL(d.Titipan, CASE WHEN h.TrxCode = 'BT' THEN 1 ELSE 0 END) AS BIT)
     ) AS m
-    ON s.WhsCode = m.WhsCode AND s.KodeRuangan = m.KodeRuangan AND s.ItemCode = m.ItemCode AND s.ContainerNo = m.ContainerNo AND s.NoBL = m.NoBL
+    ON s.WhsCode = m.WhsCode AND s.KodeRuangan = m.KodeRuangan AND s.ItemCode = m.ItemCode AND s.ContainerNo = m.ContainerNo AND s.NoBL = m.NoBL AND s.Titipan = m.Titipan
     WHEN MATCHED THEN UPDATE SET Kg = s.Kg + m.Kg, Sak = s.Sak + m.Sak, Palet = s.Palet + m.Palet,
         Brand = COALESCE(m.Brand, s.Brand),
         TglMasuk = CASE WHEN s.TglMasuk IS NULL OR m.TglMasuk < s.TglMasuk THEN COALESCE(m.TglMasuk, s.TglMasuk) ELSE s.TglMasuk END,
         UpdatedAt = SYSDATETIME()
-    WHEN NOT MATCHED THEN INSERT (WhsCode, KodeRuangan, ItemCode, ContainerNo, NoBL, Kg, Sak, Palet, Brand, TglMasuk)
-        VALUES (m.WhsCode, m.KodeRuangan, m.ItemCode, m.ContainerNo, m.NoBL, m.Kg, m.Sak, m.Palet, m.Brand, m.TglMasuk);
+    WHEN NOT MATCHED THEN INSERT (WhsCode, KodeRuangan, ItemCode, ContainerNo, NoBL, Titipan, Kg, Sak, Palet, Brand, TglMasuk)
+        VALUES (m.WhsCode, m.KodeRuangan, m.ItemCode, m.ContainerNo, m.NoBL, m.Titipan, m.Kg, m.Sak, m.Palet, m.Brand, m.TglMasuk);
     -- baris yang habis tidak perlu disimpan
     DELETE s FROM dbo.WHS_Saldo s
     WHERE s.Kg = 0 AND s.Sak = 0 AND s.Palet = 0
@@ -85,13 +96,13 @@ BEGIN
     SET NOCOUNT ON;
     BEGIN TRAN;
     DELETE dbo.WHS_Saldo WITH (TABLOCKX);
-    INSERT dbo.WHS_Saldo (WhsCode, KodeRuangan, ItemCode, ContainerNo, NoBL, Kg, Sak, Palet, Brand, TglMasuk)
-    SELECT h.WhsCode, ISNULL(d.KodeRuangan, ''), d.ItemCode, ISNULL(COALESCE(d.ContainerNo, h.ContainerNo), ''), ISNULL(COALESCE(NULLIF(d.NoBL, ''), CASE WHEN d.flags = 1 THEN NULLIF(h.U_NoBL, '') END), ''),
+    INSERT dbo.WHS_Saldo (WhsCode, KodeRuangan, ItemCode, ContainerNo, NoBL, Titipan, Kg, Sak, Palet, Brand, TglMasuk)
+    SELECT h.WhsCode, ISNULL(d.KodeRuangan, ''), d.ItemCode, ISNULL(COALESCE(d.ContainerNo, h.ContainerNo), ''), ISNULL(COALESCE(NULLIF(d.NoBL, ''), CASE WHEN d.flags = 1 THEN NULLIF(h.U_NoBL, '') END), ''), CAST(ISNULL(d.Titipan, CASE WHEN h.TrxCode = 'BT' THEN 1 ELSE 0 END) AS BIT),
            SUM(d.qty * d.flags), SUM(ISNULL(d.Qty2, 0) * d.flags), SUM(ISNULL(d.QtyPalet, 0) * d.flags),
            MAX(CASE WHEN d.flags = 1 THEN d.brand_name END), MIN(CASE WHEN d.flags = 1 THEN CAST(h.DocDate AS DATE) END)
     FROM dbo.OKRN h JOIN dbo.KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
     WHERE h.DocStatus = 'C'
-    GROUP BY h.WhsCode, ISNULL(d.KodeRuangan, ''), d.ItemCode, ISNULL(COALESCE(d.ContainerNo, h.ContainerNo), ''), ISNULL(COALESCE(NULLIF(d.NoBL, ''), CASE WHEN d.flags = 1 THEN NULLIF(h.U_NoBL, '') END), '')
+    GROUP BY h.WhsCode, ISNULL(d.KodeRuangan, ''), d.ItemCode, ISNULL(COALESCE(d.ContainerNo, h.ContainerNo), ''), ISNULL(COALESCE(NULLIF(d.NoBL, ''), CASE WHEN d.flags = 1 THEN NULLIF(h.U_NoBL, '') END), ''), CAST(ISNULL(d.Titipan, CASE WHEN h.TrxCode = 'BT' THEN 1 ELSE 0 END) AS BIT)
     HAVING SUM(d.qty * d.flags) <> 0 OR SUM(ISNULL(d.Qty2, 0) * d.flags) <> 0 OR SUM(ISNULL(d.QtyPalet, 0) * d.flags) <> 0;
     COMMIT;
 END
@@ -100,16 +111,16 @@ GO
 /* 5. Cek: saldo vs jumlah transaksi (harus kosong) */
 CREATE OR ALTER VIEW dbo.vw_WHS_SaldoSelisih AS
 SELECT COALESCE(s.WhsCode, t.WhsCode) AS WhsCode, COALESCE(s.KodeRuangan, t.KodeRuangan) AS KodeRuangan,
-       COALESCE(s.ItemCode, t.ItemCode) AS ItemCode, COALESCE(s.ContainerNo, t.ContainerNo) AS ContainerNo, COALESCE(s.NoBL, t.NoBL) AS NoBL,
+       COALESCE(s.ItemCode, t.ItemCode) AS ItemCode, COALESCE(s.ContainerNo, t.ContainerNo) AS ContainerNo, COALESCE(s.NoBL, t.NoBL) AS NoBL, COALESCE(s.Titipan, t.Titipan) AS Titipan,
        ISNULL(s.Kg, 0) AS SaldoKg, ISNULL(t.Kg, 0) AS TransaksiKg
 FROM dbo.WHS_Saldo s
 FULL JOIN (
     SELECT h.WhsCode, ISNULL(d.KodeRuangan, '') AS KodeRuangan, d.ItemCode, ISNULL(COALESCE(d.ContainerNo, h.ContainerNo), '') AS ContainerNo,
-           ISNULL(COALESCE(NULLIF(d.NoBL, ''), CASE WHEN d.flags = 1 THEN NULLIF(h.U_NoBL, '') END), '') AS NoBL, SUM(d.qty * d.flags) AS Kg
+           ISNULL(COALESCE(NULLIF(d.NoBL, ''), CASE WHEN d.flags = 1 THEN NULLIF(h.U_NoBL, '') END), '') AS NoBL, CAST(ISNULL(d.Titipan, CASE WHEN h.TrxCode = 'BT' THEN 1 ELSE 0 END) AS BIT) AS Titipan, SUM(d.qty * d.flags) AS Kg
     FROM dbo.OKRN h JOIN dbo.KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
     WHERE h.DocStatus = 'C'
-    GROUP BY h.WhsCode, ISNULL(d.KodeRuangan, ''), d.ItemCode, ISNULL(COALESCE(d.ContainerNo, h.ContainerNo), ''), ISNULL(COALESCE(NULLIF(d.NoBL, ''), CASE WHEN d.flags = 1 THEN NULLIF(h.U_NoBL, '') END), '')
-) t ON t.WhsCode = s.WhsCode AND t.KodeRuangan = s.KodeRuangan AND t.ItemCode = s.ItemCode AND t.ContainerNo = s.ContainerNo AND t.NoBL = s.NoBL
+    GROUP BY h.WhsCode, ISNULL(d.KodeRuangan, ''), d.ItemCode, ISNULL(COALESCE(d.ContainerNo, h.ContainerNo), ''), ISNULL(COALESCE(NULLIF(d.NoBL, ''), CASE WHEN d.flags = 1 THEN NULLIF(h.U_NoBL, '') END), ''), CAST(ISNULL(d.Titipan, CASE WHEN h.TrxCode = 'BT' THEN 1 ELSE 0 END) AS BIT)
+) t ON t.WhsCode = s.WhsCode AND t.KodeRuangan = s.KodeRuangan AND t.ItemCode = s.ItemCode AND t.ContainerNo = s.ContainerNo AND t.NoBL = s.NoBL AND t.Titipan = s.Titipan
 WHERE ABS(ISNULL(s.Kg, 0) - ISNULL(t.Kg, 0)) > 0.001;
 GO
 

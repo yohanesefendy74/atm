@@ -83,6 +83,8 @@ public static partial class MasterEndpoints
             return Results.Ok(await db.QueryAsync(@"
 SELECT r.KodeRuangan AS kodeRuangan, r.WhsCode AS whsCode, w.WhsName AS whsName, r.NamaRuangan AS namaRuangan,
        r.KapasitasTon AS kapasitasTon, r.Titipan AS titipan, r.Aktif AS aktif,
+       (SELECT SUM(s.Kg) FROM WHS_Saldo s WHERE s.KodeRuangan = r.KodeRuangan AND s.Titipan = 1) AS stokTitipanKg,
+       (SELECT SUM(s.Kg) FROM WHS_Saldo s WHERE s.KodeRuangan = r.KodeRuangan AND s.Titipan = 0) AS stokNonTitipanKg,
        (SELECT COUNT(*) FROM KRN1 k WHERE k.KodeRuangan = r.KodeRuangan)
      + (SELECT COUNT(*) FROM WHS_Plan p WHERE p.KodeRuangan = r.KodeRuangan)
      + (SELECT COUNT(*) FROM WHS_Plan1 p1 WHERE p1.KodeRuangan = r.KodeRuangan) AS dipakai
@@ -112,8 +114,14 @@ WHERE (@whs IS NULL OR r.WhsCode = @whs) ORDER BY r.WhsCode, r.KodeRuangan", new
             await using var db = dbf();
             var cur = await db.QueryFirstOrDefaultAsync<(bool Titipan, bool Aktif)?>("SELECT Titipan, Aktif FROM WHS_MasterRuangan WHERE KodeRuangan = @kode", new { kode });
             if (cur is null) return Results.NotFound(new { message = "Ruangan tidak ditemukan" });
-            var dipakai = await db.ExecuteScalarAsync<int>(@"SELECT (SELECT COUNT(*) FROM KRN1 WHERE KodeRuangan = @kode) + (SELECT COUNT(*) FROM WHS_Plan WHERE KodeRuangan = @kode) + (SELECT COUNT(*) FROM WHS_Plan1 WHERE KodeRuangan = @kode)", new { kode });
-            if (cur.Value.Titipan != r.Titipan && dipakai > 0) return Bad("Tanda titipan tidak bisa diubah: ruangan sudah dipakai transaksi");
+            // Ruangan titipan boleh berisi barang titipan & non-titipan. Tanda titipan hanya bisa dicabut bila tidak ada barang titipan / rencana titipan aktif.
+            if (cur.Value.Titipan && !r.Titipan)
+            {
+                var stokTit = await db.ExecuteScalarAsync<decimal?>("SELECT SUM(Kg) FROM WHS_Saldo WHERE KodeRuangan = @kode AND Titipan = 1", new { kode }) ?? 0;
+                if (stokTit > 0) return Bad($"Tanda titipan tidak bisa dicabut: masih ada barang titipan {stokTit:N0} kg di ruangan ini");
+                if (await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WHS_Plan WHERE KodeRuangan = @kode AND Titipan = 1 AND Status IN ('Terbit','Proses','Partial')", new { kode }) > 0)
+                    return Bad("Tanda titipan tidak bisa dicabut: masih ada SPBB/SPMB titipan aktif di ruangan ini");
+            }
             if (cur.Value.Aktif && !r.Aktif)
             {
                 var stok = await db.ExecuteScalarAsync<decimal?>(@"SELECT SUM(d.qty * d.flags) FROM KRN1 d JOIN OKRN h ON h.ObjType = d.ObjType AND h.DocEntry = d.DocEntry

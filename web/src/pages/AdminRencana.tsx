@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { get, post, put, type Row } from '../api';
 import { Link, match, navigate } from '../router';
+import { Lookup } from './Cms';
 import { ErrorBox, KV, Page, SearchSelect, Spinner, StatusPill, errText, fmt, fmtDate, useLoad, useToast, useWarehouses, whsOpts } from '../ui';
 
 export function PlanList() {
@@ -46,6 +47,8 @@ export function PlanNew() {
   const [pt, setPt] = useState('');
   const [noBL, setNoBL] = useState('');
   const [titipanCard, setTitipanCard] = useState('');
+  const [titipanName, setTitipanName] = useState('');
+  const [titipan, setTitipan] = useState(false); // sifat barang: titipan hanya di ruangan titipan; ruangan titipan boleh untuk non-titipan
   const [eta, setEta] = useState('');
   const [tgl, setTgl] = useState('');
   const [busy, setBusy] = useState(false);
@@ -77,8 +80,8 @@ export function PlanNew() {
   const upd = (di: number, li: number, patch: Partial<SrcLine>) => setDocs(docs.map((d, i) => (i !== di ? d : { ...d, lines: d.lines.map((l, j) => (j !== li ? l : { ...l, ...patch })) })));
   const room = ruangList.find((r) => r.kodeRuangan === ruang);
   const roomOpts = ruangList
-    .filter((r) => r.aktif && (!room || !!r.titipan === !!room.titipan))
-    .map((r) => ({ value: r.kodeRuangan, label: `${r.kodeRuangan} · ${r.namaRuangan}${r.titipan ? ' (titipan)' : ''}` }));
+    .filter((r) => r.aktif && (!titipan || r.titipan))
+    .map((r) => ({ value: r.kodeRuangan, label: `${r.kodeRuangan} · ${r.namaRuangan}${r.titipan ? ' (ruangan titipan)' : ''}` }));
   const paletOpts = paletList.filter((p) => p.aktif).map((p) => ({ value: p.paletCode, label: `${p.paletCode} · ${p.beratKg} kg` }));
 
   async function terbit() {
@@ -89,7 +92,7 @@ export function PlanNew() {
     setBusy(true);
     try {
       const r = await post<Row>('/api/cms/plan', { Jenis: jenis, WhsCode: whs, Src: src, Docs: docs.map((d) => d.head.docEntry), KodeRuangan: ruang,
-        CardCodeTitipan: room?.titipan ? titipanCard || null : null, PtCode: pt || null, NoBL: jenis === 'SPBB' && !room?.titipan ? noBL.trim() || null : null, EtaDatang: eta || null, TglJadwal: tgl || null, Kranis: kranis, Lines: lines });
+        Titipan: titipan, CardCodeTitipan: titipan ? titipanCard || null : null, PtCode: pt || null, NoBL: jenis === 'SPBB' && !titipan ? noBL.trim() || null : null, EtaDatang: eta || null, TglJadwal: tgl || null, Kranis: kranis, Lines: lines });
       toast(`Terbit ${r.planNo}`);
       navigate(`/admin/plan/${r.planId}`);
     } catch (e) { toast(errText(e), true); } finally { setBusy(false); }
@@ -121,7 +124,7 @@ export function PlanNew() {
                 <input className="input" type="number" value={l.qtyPlan ?? 0} onChange={(e) => upd(di, li, { qtyPlan: Number(e.target.value) })} aria-label="Qty rencana kg" />
                 <input className="input" placeholder="Container" value={l.kontainer ?? ''} onChange={(e) => upd(di, li, { kontainer: e.target.value.toUpperCase() })} />
               </div>
-              {jenis === 'SPBB' && src === 'DO' && !room?.titipan && (
+              {jenis === 'SPBB' && src === 'DO' && !titipan && (
                 (l.bls ?? []).length === 0
                   ? <div className="small muted">BL: tidak ada catatan stok keluar untuk DO ini · isi No. BL manual di bawah</div>
                   : (l.bls ?? []).length === 1
@@ -146,9 +149,13 @@ export function PlanNew() {
         </div>
       ))}
       <div className="card stack">
-        <label className="stack tight"><span className="small muted">Ruangan dokumen (default semua item; bisa diganti per item di atas, krani juga bisa mengubah saat input)</span><SearchSelect options={ruangList.filter((r) => r.aktif).map((r) => ({ value: r.kodeRuangan, label: `${r.kodeRuangan} · ${r.namaRuangan}${r.titipan ? ' (titipan)' : ''}` }))} value={ruang} onChange={setRuang} placeholder="Cari & pilih ruangan" /></label>
-        {room?.titipan && <label className="stack tight"><span className="small muted">Kode customer titipan (pemilik barang)</span><input className="input" value={titipanCard} onChange={(e) => setTitipanCard(e.target.value)} /></label>}
-        {jenis === 'SPBB' && !room?.titipan && (
+        <label className="row"><input type="checkbox" checked={titipan} onChange={(e) => { setTitipan(e.target.checked); if (e.target.checked && room && !room.titipan) setRuang(''); }} />
+          <span>Barang titipan (milik customer, tanpa No. BL) · hanya ke ruangan titipan. Ruangan titipan tetap boleh untuk barang biasa.</span></label>
+        <label className="stack tight"><span className="small muted">Ruangan dokumen (default semua item; bisa diganti per item di atas, krani juga bisa mengubah saat input)</span><SearchSelect options={roomOpts} value={ruang} onChange={setRuang} placeholder="Cari & pilih ruangan" /></label>
+        {titipan && <div className="stack tight"><span className="small muted">Customer titipan (pemilik barang) <span className="req">*</span></span>
+          <Lookup url="/api/cms/bp" query={{ cardType: 'C' }} label="Customer titipan" value={titipanCard} onChange={(code, name) => { setTitipanCard(code); setTitipanName(name); }} />
+          {titipanName && <span className="hint">{titipanName}</span>}</div>}
+        {jenis === 'SPBB' && !titipan && (
           <label className="stack tight"><span className="small muted">No. BL {src === 'BL' ? '(otomatis dari nomor BL dokumen; isi hanya bila dokumen BL tidak punya nomor)' : '(otomatis dari catatan stok keluar DO; isi hanya bila tidak ditemukan)'}</span>
             <input className="input" value={noBL} onChange={(e) => setNoBL(e.target.value.toUpperCase())} placeholder={src === 'BL' ? docs.map((d) => d.head.numAtCard).filter(Boolean).join(', ') || 'No. BL' : 'No. BL'} />
           </label>
