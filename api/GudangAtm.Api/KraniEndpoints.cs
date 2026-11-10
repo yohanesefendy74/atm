@@ -106,9 +106,9 @@ public static class KraniEndpoints
             // Aturan v2: alasan wajib (KR), selisih berat Repacking, ruangan tidak boleh titipan untuk KR/RP
             decimal? selisih = null;
             // Scrap: kode item khusus dari master WHS_ItemScrap; hasil Repacking tidak boleh memakai kode scrap
-            var kodeScrap = (await db.QueryAsync<string>("SELECT ItemCode FROM WHS_ItemScrap WHERE Aktif = 1")).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var kodeScrap = (await db.QueryAsync<string>("SELECT s.ItemCode FROM WHS_ItemScrap s JOIN OITM i ON i.ItemCode = s.ItemCode WHERE s.Aktif = 1")).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var bukanScrap = scrapLines.FirstOrDefault(l => !kodeScrap.Contains(l.ItemCode.Trim()));
-            if (bukanScrap is not null) return Bad($"{bukanScrap.ItemCode} bukan kode item scrap (Master Data · Item Scrap)");
+            if (bukanScrap is not null) return Bad($"{bukanScrap.ItemCode} bukan item scrap aktif di SAP (Master Data · Item Scrap)");
             var hasilScrap = inLines.FirstOrDefault(l => kodeScrap.Contains(l.ItemCode.Trim()));
             if (hasilScrap is not null) return Bad($"{hasilScrap.ItemCode} adalah kode scrap · masukkan di bagian Scrap, bukan Hasil");
             if (jenis == "KR" && string.IsNullOrWhiteSpace(req.AlasanKode)) return Bad("Alasan penyesuaian wajib dipilih");
@@ -266,7 +266,7 @@ public static class KraniEndpoints
         api.MapGet("/master/scrap", async () =>
         {
             await using var db = dbf();
-            return Results.Ok(await db.QueryAsync("SELECT ItemCode AS itemCode, ItemName AS itemName FROM WHS_ItemScrap WHERE Aktif = 1 ORDER BY ItemCode"));
+            return Results.Ok(await db.QueryAsync("SELECT s.ItemCode AS itemCode, i.ItemName AS itemName FROM WHS_ItemScrap s JOIN OITM i ON i.ItemCode = s.ItemCode WHERE s.Aktif = 1 ORDER BY s.ItemCode"));
         });
 
         // Daftar PT (krani memilih PT per baris pada SPMB)

@@ -17,7 +17,7 @@ public record PlanTutupReq(string Alasan);
 public static class PlanEndpoints
 {
     /// Retur (SPBB dari DO): No. BL diambil dari catatan stok KELUAR untuk DO tersebut.
-    /// DO dibuat dari Surat Jalan (SPMB): bila No. Surat Jalan tercatat di DO (NumAtCard / Comments), BL diambil dari baris Surat Jalan.
+    /// DO dibuat dari Surat Jalan (SPMB): bila No. Surat Jalan tercatat di DO (ODLN.NumAtCard), BL diambil dari baris Surat Jalan.
     /// Hubungan: KRN1/OKRN.NumAtCard = No. DO (diisi di CMS), atau baris SPMB (WHS_Plan1 sumber SO) = dasar baris DO (DLN1.BaseEntry/BaseLine).
     public static async Task<List<(string NoBL, decimal Kg)>> BlDariDo(SqlConnection db, SqlTransaction? tx, int doEntry, int lineNum)
     {
@@ -25,7 +25,7 @@ public static class PlanEndpoints
 SELECT x.NoBL, SUM(x.Kg) AS Kg FROM (
 SELECT sl.NoBL, sl.QtyMuat AS Kg
 FROM DLN1 dl JOIN ODLN dh ON dh.DocEntry = dl.DocEntry
-JOIN WHS_SuratJalan sj ON sj.Status <> 'Batal' AND (dh.NumAtCard = sj.SjNo OR CAST(dh.Comments AS NVARCHAR(4000)) LIKE '%' + sj.SjNo + '%')
+JOIN WHS_SuratJalan sj ON sj.Status <> 'Batal' AND LTRIM(RTRIM(dh.NumAtCard)) = sj.SjNo
 JOIN WHS_SuratJalan1 sl ON sl.SjId = sj.SjId AND sl.ItemCode = dl.ItemCode AND ISNULL(sl.NoBL, '') <> ''
 WHERE dl.DocEntry = @doEntry AND dl.LineNum = @lineNum
 UNION ALL
@@ -37,7 +37,7 @@ WHERE dl.DocEntry = @doEntry AND dl.LineNum = @lineNum
   AND (   d.NumAtCard = CAST(dh.DocNum AS NVARCHAR(30)) OR h.NumAtCard = CAST(dh.DocNum AS NVARCHAR(30))
        OR (dl.BaseType = 17 AND EXISTS (SELECT 1 FROM WHS_Plan1 p1 WHERE p1.PlanId = h.PlanId AND p1.PlanLine = d.PlanLine
                                          AND p1.BaseType = 'SO' AND p1.BaseDocEntry = dl.BaseEntry AND p1.BaseLineNum = dl.BaseLine)))
-  AND NOT EXISTS (SELECT 1 FROM WHS_SuratJalan sj2 WHERE sj2.Status <> 'Batal' AND (dh.NumAtCard = sj2.SjNo OR CAST(dh.Comments AS NVARCHAR(4000)) LIKE '%' + sj2.SjNo + '%'))
+  AND NOT EXISTS (SELECT 1 FROM WHS_SuratJalan sj2 WHERE sj2.Status <> 'Batal' AND LTRIM(RTRIM(dh.NumAtCard)) = sj2.SjNo)
 ) x GROUP BY x.NoBL ORDER BY SUM(x.Kg) DESC", new { doEntry, lineNum }, tx)).ToList();
     }
 

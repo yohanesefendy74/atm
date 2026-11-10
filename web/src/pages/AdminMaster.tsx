@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { get, post, put, type Row } from '../api';
-import { ErrorBox, Page, SearchSelect, Spinner, errText, useLoad, useToast, useWarehouses, whsOpts } from '../ui';
+import { ErrorBox, ItemSearch, Page, SearchSelect, Spinner, errText, useLoad, useToast, useWarehouses, whsOpts } from '../ui';
 
-type Field = { k: string; label: string; type?: 'text' | 'number' | 'bool' | 'whs' | 'gateway' | 'enum'; opts?: string[]; pk?: boolean; hint?: string };
+type Field = { k: string; label: string; type?: 'text' | 'number' | 'bool' | 'whs' | 'gateway' | 'enum' | 'item'; opts?: string[]; pk?: boolean; hint?: string };
 type Cfg = { key: string; title: string; path: string; fields: Field[]; pkPut?: boolean; whsFilter?: boolean; createable?: boolean };
 
 const CFG: Cfg[] = [
@@ -13,7 +13,7 @@ const CFG: Cfg[] = [
     { k: 'paletCode', label: 'Kode', pk: true }, { k: 'panjangCm', label: 'Panjang cm', type: 'number' }, { k: 'lebarCm', label: 'Lebar cm', type: 'number' },
     { k: 'tinggiCm', label: 'Tinggi cm', type: 'number' }, { k: 'beratKg', label: 'Berat kg', type: 'number' }, { k: 'aktif', label: 'Aktif', type: 'bool' }] },
   { key: 'scrap', title: 'Item Scrap', path: 'scrap', createable: true, fields: [
-    { k: 'itemCode', label: 'Kode item scrap', pk: true, hint: 'kode khusus, bukan item SAP · dipakai di Repacking' }, { k: 'itemName', label: 'Nama' }, { k: 'aktif', label: 'Aktif', type: 'bool' }] },
+    { k: 'itemCode', label: 'Item scrap (SAP)', pk: true, type: 'item', hint: 'item harus sudah ada di SAP (OITM)' }, { k: 'itemName', label: 'Nama (dari SAP)' }, { k: 'aktif', label: 'Aktif', type: 'bool' }] },
   { key: 'jenis', title: 'Jenis Container', path: 'jenis-container', fields: [
     { k: 'kode', label: 'Kode', pk: true }, { k: 'nama', label: 'Nama' }, { k: 'batasMuatanKg', label: 'Batas muatan kg', type: 'number' }, { k: 'aktif', label: 'Aktif', type: 'bool' }] },
   { key: 'dock', title: 'Jalur (Dock)', path: 'dock', whsFilter: true, createable: true, fields: [
@@ -87,6 +87,13 @@ function MasterTable({ cfg }: { cfg: Cfg }) {
               ) : f.type === 'gateway' ? (
                 <SearchSelect options={(gw.data ?? []).map((g) => ({ value: g.gatewayId, label: `${g.gatewayId} · ${g.whsCode}${g.keterangan ? ' · ' + g.keterangan : ''}` }))}
                   value={form[f.k] ?? ''} onChange={(v) => setForm({ ...form, [f.k]: v || null })} allowEmpty="(tanpa gateway)" placeholder="Cari & pilih gateway" />
+              ) : f.type === 'item' ? (
+                isNew ? (
+                  <>
+                    <ItemSearch placeholder="Cari item SAP (kode / nama)" onPick={(i) => setForm({ ...form, [f.k]: i.itemCode, itemName: i.itemName })} />
+                    {form[f.k] && <span className="small mono">{form[f.k]}</span>}
+                  </>
+                ) : <input className="input" value={form[f.k] ?? ''} disabled />
               ) : f.type === 'enum' ? (
                 <select className="input" value={form[f.k] ?? ''} onChange={(e) => setForm({ ...form, [f.k]: e.target.value })}>
                   <option value="">Pilih</option>{f.opts!.map((o) => <option key={o}>{o}</option>)}
