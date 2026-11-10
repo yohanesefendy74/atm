@@ -135,19 +135,21 @@ FROM    OKRN h OUTER APPLY (SELECT SUM(d.qty) q, SUM(d.Qty2) s, SUM(d.QtyPalet) 
 WHERE   h.ObjType = @objType AND h.DocEntry = @docEntry";
 
     public const string InsertLine = @"
-INSERT INTO KRN1 (ObjType, DocEntry, LineNum, ItemCode, brand_name, Origin, qty, Qty2, QtyPalet, flags, LineStatus, KodeRuangan, NoBL, Titipan, U_IDU_Kode_PT)
-VALUES (@objType, @docEntry, @lineNum, @itemCode, @brand, @origin, @qty, @qty2, @qtyPalet, @flag, 'O', @ruang, @bl, @tit, @pt)";
+INSERT INTO KRN1 (ObjType, DocEntry, LineNum, ItemCode, brand_name, Origin, qty, Qty2, QtyPalet, flags, LineStatus, KodeRuangan, NoBL, Titipan, U_IDU_Kode_PT, NoLot)
+VALUES (@objType, @docEntry, @lineNum, @itemCode, @brand, @origin, @qty, @qty2, @qtyPalet, @flag, 'O', @ruang, @bl, @tit, @pt,
+        CASE WHEN @flag = 1 THEN CONCAT(@objType, @docEntry) ELSE @lot END)";   -- masuk: lot = ObjType + DocEntry (tercetak di QR)
 
     /// Stok per ruangan untuk item + container di warehouse (dokumen yang sudah diposting).
     public const string StockPerRuangan = @"
 SELECT  NULLIF(s.KodeRuangan, '') AS kodeRuangan, r.NamaRuangan AS namaRuangan, s.Titipan AS titipan,
-        CAST(ISNULL(r.Titipan, 0) AS bit) AS ruanganTitipan, NULLIF(s.PtCode, '') AS ptCode, pc.PrcName AS ptName,
+        CAST(ISNULL(r.Titipan, 0) AS bit) AS ruanganTitipan, NULLIF(s.PtCode, '') AS ptCode, pc.PrcName AS ptName, NULLIF(s.NoLot, '') AS noLot,
         NULLIF(s.NoBL, '') AS noBL, s.Kg AS stockKg, s.Sak AS stockSak, s.Palet AS stockPalet
 FROM    WHS_Saldo s
 LEFT JOIN WHS_MasterRuangan r ON r.KodeRuangan = s.KodeRuangan
 LEFT JOIN OPRC pc ON pc.PrcCode = s.PtCode
 WHERE   s.WhsCode = @whsCode AND s.ItemCode = @itemCode AND s.ContainerNo = ISNULL(@containerNo, '') AND s.Kg > 0
-ORDER BY s.KodeRuangan, s.Titipan, s.NoBL, s.PtCode";
+  AND   (@lot IS NULL OR s.NoLot = @lot)
+ORDER BY s.KodeRuangan, s.Titipan, s.NoBL, s.PtCode, s.NoLot";
 
     /// Baris inbound asal untuk QR yymmdd-itemcode-container (sumber brand, origin, isi per sak / per palet).
     public const string PalletSource = @"
@@ -155,24 +157,26 @@ SELECT  TOP 1
         d.ItemCode AS itemCode, COALESCE(i.ItemName, sc.ItemName) AS itemName, d.brand_name AS brand, d.Origin AS origin,
         h.ContainerNo AS containerNo, h.DocDate AS inboundDate, h.WhsCode AS whsCode,
         d.qty AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet,
-        COALESCE(NULLIF(d.U_IDU_Kode_PT, ''), NULLIF(h.U_IDU_Kode_PT, '')) AS ptCode
+        COALESCE(NULLIF(d.U_IDU_Kode_PT, ''), NULLIF(h.U_IDU_Kode_PT, '')) AS ptCode, d.NoLot AS noLot
 FROM    OKRN h
 JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
 LEFT JOIN OITM i ON i.ItemCode = d.ItemCode
 LEFT JOIN WHS_ItemScrap sc ON sc.ItemCode = d.ItemCode
 WHERE   d.flags = 1 AND d.ItemCode = @itemCode AND ISNULL(h.ContainerNo, '') = @containerNo AND h.BPLId = @bplId
+  AND   (@lot IS NULL OR d.NoLot = @lot)
 ORDER BY CASE WHEN CONVERT(char(6), h.DocDate, 12) = @yymmdd THEN 0 ELSE 1 END, h.DocDate";
 
     /// Stok dari WHS_Saldo (diperbarui saat Admin posting di CMS; lihat database/saldo.sql).
     public const string StockForPallet = @"
 SELECT  ISNULL(SUM(s.Kg), 0) AS stockKg, ISNULL(SUM(s.Sak), 0) AS stockSak, ISNULL(SUM(s.Palet), 0) AS stockPalet
 FROM    WHS_Saldo s
-WHERE   s.WhsCode = @whsCode AND s.ItemCode = @itemCode AND s.ContainerNo = ISNULL(@containerNo, '')";
+WHERE   s.WhsCode = @whsCode AND s.ItemCode = @itemCode AND s.ContainerNo = ISNULL(@containerNo, '')
+  AND   (@lot IS NULL OR s.NoLot = @lot)";
 
     /// Data label: hanya baris masuk (Flag 1). PT dicetak dari OPRC.PrcName.
     public const string LabelLines = @"
 SELECT  d.ItemCode AS itemCode, COALESCE(i.ItemName, sc.ItemName) AS itemName, d.brand_name AS brand, d.KodeRuangan AS kodeRuangan,
-        d.qty AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet
+        d.qty AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet, d.NoLot AS noLot
 FROM    KRN1 d
 LEFT JOIN OITM i ON i.ItemCode = d.ItemCode
 LEFT JOIN WHS_ItemScrap sc ON sc.ItemCode = d.ItemCode
@@ -195,7 +199,7 @@ HAVING  SUM(s.Kg) <> 0
 ORDER BY s.ItemCode";
 
     public const string StockPerContainer = @"
-SELECT  NULLIF(s.ContainerNo, '') AS containerNo, NULLIF(s.KodeRuangan, '') AS kodeRuangan, NULLIF(s.NoBL, '') AS noBL, s.Titipan AS titipan, NULLIF(s.PtCode, '') AS ptCode,
+SELECT  NULLIF(s.ContainerNo, '') AS containerNo, NULLIF(s.KodeRuangan, '') AS kodeRuangan, NULLIF(s.NoBL, '') AS noBL, s.Titipan AS titipan, NULLIF(s.PtCode, '') AS ptCode, NULLIF(s.NoLot, '') AS noLot,
         s.ItemCode AS itemCode, COALESCE(i.ItemName, sc.ItemName) AS itemName, s.Brand AS brand,
         s.TglMasuk AS inboundDate, s.Kg AS kg, s.Sak AS sak, s.Palet AS palet, s.WhsCode AS whsCode
 FROM    WHS_Saldo s

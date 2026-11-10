@@ -233,7 +233,7 @@ class _TugasDetailState extends State<TugasDetail> {
               const Padding(padding: EdgeInsets.all(16), child: Text('Pilih sumber stok palet ini', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700))),
               for (final x in rows)
                 ListTile(
-                  title: Text('${x['kodeRuangan'] ?? '-'} · ${tit ? 'TITIPAN' : 'BL ${x['noBL'] ?? '-'}'} · PT ${x['ptCode']}'),
+                  title: Text('${x['kodeRuangan'] ?? '-'} · ${tit ? 'TITIPAN' : 'BL ${x['noBL'] ?? '-'}'} · PT ${x['ptCode']}${x['noLot'] != null ? ' · lot ${x['noLot']}' : ''}'),
                   subtitle: Text('Stok ${toD(x['stockKg']).toStringAsFixed(0)} kg'),
                   onTap: () => Navigator.of(c).pop(x),
                 ),
@@ -247,6 +247,7 @@ class _TugasDetailState extends State<TugasDetail> {
         e.room = p['kodeRuangan']?.toString();
         e.bl = p['noBL']?.toString();
         e.pt = p['ptCode']?.toString();
+        e.lot = p['noLot']?.toString();
       });
     } catch (err) {
       if (mounted) showError(context, err);
@@ -269,6 +270,7 @@ class _TugasDetailState extends State<TugasDetail> {
         'kodeRuangan': e.room,
         'ptCode': spbb ? null : e.pt,
         'noBL': spbb || _h?['titipan'] == true ? null : e.bl,
+        'noLot': spbb ? null : e.lot,
       });
     }
     if (spbb && _sesiId == null) return showError(context, 'Pilih kontainer yang sedang dibongkar');
@@ -483,6 +485,7 @@ class _TugasDetailState extends State<TugasDetail> {
                   e.room = v;
                   e.bl = null;
                   e.pt = null;
+                  e.lot = null;
                 }),
               ),
               if (!spbb) ...[
@@ -494,9 +497,11 @@ class _TugasDetailState extends State<TugasDetail> {
                   titipan: _h!['titipan'] == true,
                   bl: e.bl,
                   pt: e.pt,
-                  onChanged: (bl, pt) => setState(() {
+                  lot: e.lot,
+                  onChanged: (bl, pt, lot) => setState(() {
                     e.bl = bl;
                     e.pt = pt;
+                    e.lot = lot;
                   }),
                 ),
               ],
@@ -610,4 +615,5 @@ class _Entry {
   String? room;
   String? pt;
   String? bl;
+  String? lot; // lot = no. transaksi masuk di QR
 }

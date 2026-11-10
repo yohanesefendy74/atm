@@ -27,6 +27,7 @@ type Pallet = {
   noBL: string; // BL sumber (saldo per BL, wajib untuk non-titipan)
   titipan: boolean; // sifat stok sumber (ruangan titipan bisa berisi titipan & non-titipan)
   ptCode: string; // PT stok sumber (dari SPBB / label QR), tidak dipilih krani
+  noLot: string; // lot = no. transaksi masuk di QR (stok per QR)
 };
 const kgAuto = (p: Pallet) => p.sak * p.kgPerSak;
 const kgOf = (p: Pallet) => p.kgManual ?? kgAuto(p);
@@ -108,6 +109,7 @@ export default function OutboundNew() {
         noBL: ((r.rooms as Row[]) ?? []).length === 1 ? String((r.rooms as Row[])[0].noBL ?? '') : '',
         titipan: ((r.rooms as Row[]) ?? []).length === 1 ? !!(r.rooms as Row[])[0].titipan : false,
         ptCode: ((r.rooms as Row[]) ?? []).length === 1 ? String((r.rooms as Row[])[0].ptCode ?? '') : '',
+        noLot: ((r.rooms as Row[]) ?? []).length === 1 ? String((r.rooms as Row[])[0].noLot ?? '') : '',
       };
       const nth = pallets.filter((x) => x.itemCode === p.itemCode).length + 1;
       setContainer(r.containerNo);
@@ -134,7 +136,7 @@ export default function OutboundNew() {
   // palet digabung per item; tiap palet discan = 1 QtyPalet
   const outLines = Object.values(
     pallets.reduce<Record<string, Row>>((acc, p) => {
-      const l = (acc[`${p.itemCode}|${p.kodeRuangan}|${p.noBL}|${p.titipan}|${p.ptCode}`] ??= { itemCode: p.itemCode, itemName: p.itemName, brand: p.brand, origin: p.origin, kodeRuangan: p.kodeRuangan, noBL: p.noBL, titipan: p.titipan, ptCode: p.ptCode, uom: 'KG', qty: 0, qty2: 0, qtyPalet: 0, partial: 0 });
+      const l = (acc[`${p.itemCode}|${p.kodeRuangan}|${p.noBL}|${p.titipan}|${p.ptCode}|${p.noLot}`] ??= { itemCode: p.itemCode, itemName: p.itemName, brand: p.brand, origin: p.origin, kodeRuangan: p.kodeRuangan, noBL: p.noBL, titipan: p.titipan, ptCode: p.ptCode, noLot: p.noLot, uom: 'KG', qty: 0, qty2: 0, qtyPalet: 0, partial: 0 });
       l.qty += kgOf(p);
       l.qty2 += p.sak;
       l.qtyPalet += 1;
@@ -155,7 +157,7 @@ export default function OutboundNew() {
         noMobil: mobil.trim().toUpperCase(),
         containerNo: container,
         docDate: todayIso(),
-        outLines: outLines.map((l) => ({ itemCode: l.itemCode, uom: 'KG', brand: l.brand, origin: l.origin, qty: Math.round(l.qty * 100) / 100, qty2: l.qty2, qtyPalet: l.qtyPalet, kodeRuangan: l.kodeRuangan, noBL: l.noBL || null, titipan: !!l.titipan, ptCode: l.ptCode || null })),
+        outLines: outLines.map((l) => ({ itemCode: l.itemCode, uom: 'KG', brand: l.brand, origin: l.origin, qty: Math.round(l.qty * 100) / 100, qty2: l.qty2, qtyPalet: l.qtyPalet, kodeRuangan: l.kodeRuangan, noBL: l.noBL || null, titipan: !!l.titipan, ptCode: l.ptCode || null, noLot: l.noLot || null })),
         inLines: isAdj ? inLines.map((l) => ({ itemCode: l.itemCode, uom: l.uom, brand: l.brand || null, origin: l.origin || null, qty: l.qty, qty2: l.qty2, qtyPalet: l.qtyPalet, kodeRuangan: l.kodeRuangan, noBL: l.noBL })) : [],
         scrapLines: trx === 'RP' ? scrapLines.map((l) => ({ itemCode: l.itemCode, uom: 'KG', qty: l.qty, qty2: l.qty2, qtyPalet: 0, kodeRuangan: l.kodeRuangan, noBL: l.noBL })) : [],
       });
@@ -403,12 +405,12 @@ export default function OutboundNew() {
             ) : (
               <div className="field">
                 <label>Sumber stok: ruangan, BL &amp; PT <span className="req">*</span> <span className="hint">PT mengikuti label QR / SPBB</span></label>
-                <select className="input" value={p.kodeRuangan ? `${p.kodeRuangan}|${p.noBL}|${p.titipan ? 'T' : 'N'}|${p.ptCode}` : ''}
-                  onChange={(e) => { const [k, b, t, pt] = e.target.value.split('|'); update(p.id, { kodeRuangan: k ?? '', noBL: b ?? '', titipan: t === 'T', ptCode: pt ?? '' }); }}>
+                <select className="input" value={p.kodeRuangan ? `${p.kodeRuangan}|${p.noBL}|${p.titipan ? 'T' : 'N'}|${p.ptCode}|${p.noLot}` : ''}
+                  onChange={(e) => { const [k, b, t, pt, lot] = e.target.value.split('|'); update(p.id, { kodeRuangan: k ?? '', noBL: b ?? '', titipan: t === 'T', ptCode: pt ?? '', noLot: lot ?? '' }); }}>
                   <option value="">Pilih sumber stok</option>
                   {p.rooms.map((r) => (
-                    <option key={`${r.kodeRuangan}|${r.noBL}|${r.titipan}|${r.ptCode}`} value={`${r.kodeRuangan ?? ''}|${r.noBL ?? ''}|${r.titipan ? 'T' : 'N'}|${r.ptCode ?? ''}`}>
-                      {r.kodeRuangan ?? '-'} · {r.titipan ? 'TITIPAN' : `BL ${r.noBL ?? 'BELUM ADA'}`} · PT {r.ptCode ?? '-'} · {fmt(r.stockKg)} kg · {fmt(r.stockSak)} krg
+                    <option key={`${r.kodeRuangan}|${r.noBL}|${r.titipan}|${r.ptCode}|${r.noLot}`} value={`${r.kodeRuangan ?? ''}|${r.noBL ?? ''}|${r.titipan ? 'T' : 'N'}|${r.ptCode ?? ''}|${r.noLot ?? ''}`}>
+                      {r.kodeRuangan ?? '-'} · {r.titipan ? 'TITIPAN' : `BL ${r.noBL ?? 'BELUM ADA'}`} · PT {r.ptCode ?? '-'}{r.noLot ? ` · lot ${r.noLot}` : ''} · {fmt(r.stockKg)} kg · {fmt(r.stockSak)} krg
                     </option>
                   ))}
                 </select>

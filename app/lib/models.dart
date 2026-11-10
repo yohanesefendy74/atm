@@ -106,15 +106,17 @@ class ScannedPallet {
   String? noBL; // BL sumber stok (saldo per BL; barang titipan tanpa BL)
   bool titipan = false;
   String? ptCode; // PT stok sumber (dari SPBB / label QR), tidak dipilih krani
+  String? noLot; // lot = no. transaksi masuk di QR (stok per QR)
 
   /// Satu baris saldo = ruangan + BL. Kunci dipakai dropdown.
   /// Satu baris saldo = ruangan + BL + sifat barang (ruangan titipan bisa berisi titipan & non-titipan).
-  static String sumberKey(Map<String, dynamic> r) => '${r['kodeRuangan'] ?? ''}|${r['noBL'] ?? ''}|${r['titipan'] == true ? 'T' : 'N'}|${r['ptCode'] ?? ''}';
-  String? get sumber => kodeRuangan == null ? null : '$kodeRuangan|${noBL ?? ''}|${titipan ? 'T' : 'N'}|${ptCode ?? ''}';
+  static String sumberKey(Map<String, dynamic> r) => '${r['kodeRuangan'] ?? ''}|${r['noBL'] ?? ''}|${r['titipan'] == true ? 'T' : 'N'}|${r['ptCode'] ?? ''}|${r['noLot'] ?? ''}';
+  String? get sumber => kodeRuangan == null ? null : '$kodeRuangan|${noBL ?? ''}|${titipan ? 'T' : 'N'}|${ptCode ?? ''}|${noLot ?? ''}';
   void pilihSumber(Map<String, dynamic> r) {
     kodeRuangan = r['kodeRuangan']?.toString();
     noBL = r['noBL']?.toString();
     ptCode = r['ptCode']?.toString();
+    noLot = r['noLot']?.toString();
     titipan = r['titipan'] == true;
   }
 
@@ -166,10 +168,11 @@ class OutboundDraft {
   List<Map<String, dynamic>> outLines() {
     final map = <String, Map<String, dynamic>>{};
     for (final p in pallets) {
-      final m = map.putIfAbsent('${p.itemCode}|${p.kodeRuangan ?? ''}|${p.noBL ?? ''}|${p.titipan}|${p.ptCode ?? ''}', () => {
+      final m = map.putIfAbsent('${p.itemCode}|${p.kodeRuangan ?? ''}|${p.noBL ?? ''}|${p.titipan}|${p.ptCode ?? ''}|${p.noLot ?? ''}', () => {
             'itemCode': p.itemCode,
             'titipan': p.titipan,
             'ptCode': p.ptCode,
+            'noLot': p.noLot,
             'kodeRuangan': p.kodeRuangan,
             'noBL': p.noBL,
             'itemName': p.itemName,
@@ -208,6 +211,7 @@ class OutboundDraft {
                   'noBL': l['noBL'],
                   'titipan': l['titipan'],
                   'ptCode': l['ptCode'],
+                  'noLot': l['noLot'],
                 })
             .toList(),
         'inLines': isAdj ? inLines.map((l) => l.toJson()).toList() : <Map<String, dynamic>>[],

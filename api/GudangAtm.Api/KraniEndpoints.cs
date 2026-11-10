@@ -147,11 +147,21 @@ public static class KraniEndpoints
                 inLines = inLines.Select(l => l with { NoBL = null }).ToList();
             }
             else if (outLines.Any(l => string.IsNullOrWhiteSpace(l.NoBL))) return Bad("Pilih BL sumber untuk setiap palet keluar");
-            // PT keluar = PT stok sumber (dari SPBB / label QR). Aplikasi lama tanpa PT: dicek tanpa memisah PT.
-            foreach (var g in outLines.GroupBy(l => (l.ItemCode, Ruang: l.KodeRuangan!.Trim(), Bl: (l.NoBL ?? "").Trim(), Pt: Helpers.Empty(l.PtCode))))
+            // Lot (QR): aplikasi lama tanpa lot -> dipakai otomatis bila stok sumbernya hanya satu lot
+            for (var i = 0; i < outLines.Count; i++)
             {
-                var stokKg = await db.ExecuteScalarAsync<decimal?>("SELECT SUM(Kg) FROM WHS_Saldo WHERE WhsCode = @w AND ItemCode = @i AND KodeRuangan = @r AND ContainerNo = @c AND NoBL = @bl AND Titipan = @t AND (@pt IS NULL OR PtCode = @pt)",
-                    new { w = req.WhsCode, i = g.Key.ItemCode, r = g.Key.Ruang, c = cont, bl = g.Key.Bl, t = roomTitipan, pt = g.Key.Pt }) ?? 0;
+                var l = outLines[i];
+                if (!string.IsNullOrWhiteSpace(l.NoLot)) continue;
+                var lots = (await db.QueryAsync<string>(@"SELECT NoLot FROM WHS_Saldo WHERE WhsCode = @w AND ItemCode = @it AND KodeRuangan = @r AND ContainerNo = @c AND NoBL = @bl AND Titipan = @t
+                    AND (@pt IS NULL OR PtCode = @pt) AND Kg > 0", new { w = req.WhsCode, it = l.ItemCode, r = l.KodeRuangan!.Trim(), c = cont, bl = (l.NoBL ?? "").Trim(), t = roomTitipan, pt = Helpers.Empty(l.PtCode) })).Distinct().ToList();
+                if (lots.Count > 1) return Bad($"{l.ItemCode}: stok ada di beberapa QR / lot · scan QR palet (perbarui aplikasi)");
+                if (lots.Count == 1) outLines[i] = l with { NoLot = lots[0] };
+            }
+            // PT keluar = PT stok sumber (dari SPBB / label QR). Aplikasi lama tanpa PT: dicek tanpa memisah PT.
+            foreach (var g in outLines.GroupBy(l => (l.ItemCode, Ruang: l.KodeRuangan!.Trim(), Bl: (l.NoBL ?? "").Trim(), Pt: Helpers.Empty(l.PtCode), Lot: (l.NoLot ?? "").Trim())))
+            {
+                var stokKg = await db.ExecuteScalarAsync<decimal?>("SELECT SUM(Kg) FROM WHS_Saldo WHERE WhsCode = @w AND ItemCode = @i AND KodeRuangan = @r AND ContainerNo = @c AND NoBL = @bl AND Titipan = @t AND (@pt IS NULL OR PtCode = @pt) AND NoLot = @lot",
+                    new { w = req.WhsCode, i = g.Key.ItemCode, r = g.Key.Ruang, c = cont, bl = g.Key.Bl, t = roomTitipan, pt = g.Key.Pt, lot = g.Key.Lot }) ?? 0;
                 var keluar = g.Sum(l => l.Qty);
                 if (keluar > stokKg + 0.01m) return Bad($"{g.Key.ItemCode} ruangan {g.Key.Ruang}{(roomTitipan ? " (titipan)" : $" BL {g.Key.Bl}")}: keluar {keluar:N0} kg melebihi stok {stokKg:N0} kg");
             }
@@ -197,9 +207,16 @@ public static class KraniEndpoints
         api.MapGet("/pallet", async (string qr, string whsCode, ClaimsPrincipal u) =>
         {
             if (qr is null || qr.Length > 80) return Bad("QR tidak valid");
+            // QR: yymmdd-itemcode-container[-L<lot>]. Lot = ObjType + DocEntry transaksi masuk (label baru); label lama tanpa lot.
             var parts = qr.Trim().Split('-');
             if (parts.Length < 3 || parts[0].Length != 6 || !parts[0].All(char.IsDigit))
                 return Bad("Format QR tidak dikenal (harus yymmdd-itemcode-container)");
+            string? lot = null;
+            if (parts.Length >= 4 && parts[^1].Length > 1 && parts[^1][0] == 'L' && parts[^1][1..].All(char.IsDigit))
+            {
+                lot = parts[^1][1..];
+                parts = parts[..^1];
+            }
             var yymmdd = parts[0];
             var containerNo = parts[^1];
             var itemCode = string.Join('-', parts[1..^1]);
@@ -207,10 +224,10 @@ public static class KraniEndpoints
             await using var db = dbf();
             var access = await db.QueryFirstOrDefaultAsync<bool?>(Sql.WarehouseAccess, new { userId = u.UserId(), whsCode });
             if (access is null) return Bad($"Warehouse {whsCode} tidak ada di hak akses Anda");
-            var src = await db.QueryFirstOrDefaultAsync<PalletSourceRow>(Sql.PalletSource, new { itemCode, containerNo, yymmdd, bplId = u.BplId() });
+            var src = await db.QueryFirstOrDefaultAsync<PalletSourceRow>(Sql.PalletSource, new { itemCode, containerNo, yymmdd, bplId = u.BplId(), lot });
             if (src is null) return Results.NotFound(new { message = $"Palet {itemCode} container {containerNo} tidak ditemukan" });
-            var stock = await db.QueryFirstAsync<StockRow>(Sql.StockForPallet, new { whsCode, itemCode, containerNo });
-            var rooms = (await db.QueryAsync(Sql.StockPerRuangan, new { whsCode, itemCode, containerNo })).ToList();
+            var stock = await db.QueryFirstAsync<StockRow>(Sql.StockForPallet, new { whsCode, itemCode, containerNo, lot });
+            var rooms = (await db.QueryAsync(Sql.StockPerRuangan, new { whsCode, itemCode, containerNo, lot })).ToList();
             // PT mengikuti label QR (dokumen SPBB asal palet): bila ada stok ber-PT itu, sumber dibatasi ke PT tersebut
             if (src.PtCode is not null && rooms.Any(r => (string?)r.ptCode == src.PtCode))
                 rooms = rooms.Where(r => (string?)r.ptCode == src.PtCode).ToList();
@@ -232,6 +249,7 @@ public static class KraniEndpoints
                 stock.StockSak,
                 stock.StockPalet,
                 ptQr = src.PtCode,
+                noLot = lot,
                 rooms,   // stok per ruangan: krani memilih ruangan SUMBER (satu container bisa tersebar di beberapa ruangan)
             });
         });
@@ -257,7 +275,8 @@ public static class KraniEndpoints
                 packKg = r.Qty2 > 0 ? Math.Round(r.Qty / r.Qty2, 2) : 0,
                 sakPerPalet = r.QtyPalet > 0 ? Math.Ceiling(r.Qty2 / r.QtyPalet) : 0,
                 qtyPalet = (int)r.QtyPalet,
-                qr = $"{yymmdd}-{r.ItemCode}-{h.ContainerNo}",
+                r.NoLot,
+                qr = $"{yymmdd}-{r.ItemCode}-{h.ContainerNo}" + (string.IsNullOrEmpty(r.NoLot) ? "" : $"-L{r.NoLot}"),
             }).ToList();
             return Results.Ok(new
             {
@@ -278,11 +297,11 @@ public static class KraniEndpoints
             if (await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM USR9 WHERE UserId = @uid AND WhsCode = @whs", new { uid = u.UserId(), whs }) == 0) return Results.Forbid();
             // Sumber stok: ruangan + BL + PT (PT dari SPBB / label QR) + sifat barang
             return Results.Ok(await db.QueryAsync(@"SELECT NULLIF(s.NoBL, '') AS noBL, NULLIF(s.KodeRuangan, '') AS kodeRuangan, s.Titipan AS titipan,
-                    NULLIF(s.PtCode, '') AS ptCode, MAX(pc.PrcName) AS ptName, SUM(s.Kg) AS kg, SUM(s.Sak) AS sak, SUM(s.Palet) AS palet,
+                    NULLIF(s.PtCode, '') AS ptCode, MAX(pc.PrcName) AS ptName, NULLIF(s.NoLot, '') AS noLot, SUM(s.Kg) AS kg, SUM(s.Sak) AS sak, SUM(s.Palet) AS palet,
                     COUNT(DISTINCT NULLIF(s.ContainerNo, '')) AS containers, MIN(s.TglMasuk) AS tglMasuk
                 FROM WHS_Saldo s LEFT JOIN OPRC pc ON pc.PrcCode = s.PtCode
                 WHERE s.WhsCode = @whs AND s.ItemCode = @itemCode AND (@r IS NULL OR s.KodeRuangan = @r) AND (@t IS NULL OR s.Titipan = @t) AND s.Kg > 0
-                GROUP BY s.NoBL, s.KodeRuangan, s.Titipan, s.PtCode ORDER BY MIN(s.TglMasuk), s.NoBL", new { whs, itemCode, r = Empty(ruangan), t = titipan }));
+                GROUP BY s.NoBL, s.KodeRuangan, s.Titipan, s.PtCode, s.NoLot ORDER BY MIN(s.TglMasuk), s.NoBL, s.NoLot", new { whs, itemCode, r = Empty(ruangan), t = titipan }));
         });
 
         // Item scrap (kode khusus, Repacking)
@@ -445,6 +464,7 @@ public static class Helpers
                     bl = Helpers.Empty(l.NoBL),
                     tit = l.Titipan ?? false,
                     pt = Helpers.Empty(l.PtCode),
+                    lot = Helpers.Empty(l.NoLot),
                 }, tx);
             }
 

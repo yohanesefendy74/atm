@@ -23,7 +23,8 @@ public record DocLine(
     string? KodeRuangan = null,    // keluar: ruangan SUMBER stok; masuk: ruangan TUJUAN
     string? NoBL = null,           // No. BL: keluar = BL sumber stok (wajib); masuk = BL barang (KR/RP: dari BL palet keluar)
     bool? Titipan = null,          // sifat barang: keluar = sifat stok sumber; masuk = diisi server dari dokumen
-    string? PtCode = null);        // PT: keluar = PT stok sumber (dari SPBB / label QR), bukan dipilih krani
+    string? PtCode = null,         // PT: keluar = PT stok sumber (dari SPBB / label QR), bukan dipilih krani
+    string? NoLot = null);         // lot (no. transaksi masuk di QR): keluar = lot stok sumber; masuk = diisi server
 
 /// Inbound: header + baris detail (semua Flag 1). TrxCode IB/BT ditentukan server dari OWHS.External.
 public record InboundRequest(
@@ -69,6 +70,7 @@ public class PalletSourceRow
     public decimal Qty2 { get; set; }
     public decimal QtyPalet { get; set; }
     public string? PtCode { get; set; }   // PT dokumen SPBB asal palet (tercetak di label QR)
+    public string? NoLot { get; set; }    // lot transaksi masuk asal palet
 }
 
 public class StockRow
@@ -87,6 +89,7 @@ public class LabelLineRow
     public decimal Qty { get; set; }
     public decimal Qty2 { get; set; }
     public decimal QtyPalet { get; set; }
+    public string? NoLot { get; set; }
 }
 
 public class DocHeaderRow

@@ -5,7 +5,7 @@ using Microsoft.Data.SqlClient;
 
 namespace GudangAtm.Api;
 
-public record TerimaLine(int PlanLine, decimal Qty, decimal Qty2, decimal QtyPalet, string? Brand, string? KodeRuangan, string? PtCode = null, string? NoBL = null);
+public record TerimaLine(int PlanLine, decimal Qty, decimal Qty2, decimal QtyPalet, string? Brand, string? KodeRuangan, string? PtCode = null, string? NoBL = null, string? NoLot = null);
 public record TerimaReq(long? RegId, DateTime? DocDate, List<TerimaLine> Lines, long? SesiId = null, string? NoMobilAktual = null, string? Catatan = null);
 
 /// Krani menyimpan penerimaan (SPBB) / pengiriman (SPMB) terhadap dokumen rencana. Satu simpan = satu OKRN (penerimaan ke-N).
@@ -92,10 +92,11 @@ public static class PlanKraniSave
                 if (pl.Jenis == "SPBB" && string.IsNullOrWhiteSpace(pl.PtCode) == false) { /* PT terisi dari dokumen */ }
 
                 if (pl.Jenis == "SPMB")
-                    foreach (var g in r.Lines.GroupBy(l => (plan1[l.PlanLine].ItemCode, R: (l.KodeRuangan ?? plan1[l.PlanLine].KodeRuangan ?? pl.KodeRuangan ?? "").Trim(), Bl: pl.Titipan == true ? "" : l.NoBL!.Trim(), Pt: l.PtCode!.Trim())))
+                    foreach (var g in r.Lines.GroupBy(l => (plan1[l.PlanLine].ItemCode, R: (l.KodeRuangan ?? plan1[l.PlanLine].KodeRuangan ?? pl.KodeRuangan ?? "").Trim(), Bl: pl.Titipan == true ? "" : l.NoBL!.Trim(), Pt: l.PtCode!.Trim(), Lot: Helpers.Empty(l.NoLot))))
                     {
-                        var stok = await db.ExecuteScalarAsync<decimal?>("SELECT SUM(Kg) FROM WHS_Saldo WHERE WhsCode = @w AND ItemCode = @i AND KodeRuangan = @r AND NoBL = @bl AND Titipan = @t AND PtCode = @pt",
-                            new { w = pl.WhsCode, i = g.Key.ItemCode, r = g.Key.R, bl = g.Key.Bl, t = pl.Titipan == true, pt = g.Key.Pt }, tx) ?? 0;
+                        // Lot (QR) dari sumber stok; aplikasi lama tanpa lot: dicek tanpa memisah lot
+                        var stok = await db.ExecuteScalarAsync<decimal?>("SELECT SUM(Kg) FROM WHS_Saldo WHERE WhsCode = @w AND ItemCode = @i AND KodeRuangan = @r AND NoBL = @bl AND Titipan = @t AND PtCode = @pt AND (@lot IS NULL OR NoLot = @lot)",
+                            new { w = pl.WhsCode, i = g.Key.ItemCode, r = g.Key.R, bl = g.Key.Bl, t = pl.Titipan == true, pt = g.Key.Pt, lot = g.Key.Lot }, tx) ?? 0;
                         if (g.Sum(x => x.Qty) > stok + 0.01m) return Bad($"{g.Key.ItemCode} ruangan {g.Key.R} BL {g.Key.Bl} PT {g.Key.Pt}: muat {g.Sum(x => x.Qty):N0} kg melebihi stok {stok:N0} kg");
                     }
 
@@ -139,7 +140,7 @@ public static class PlanKraniSave
                         var pr = plan1[l.PlanLine];
                         var ruang = l.KodeRuangan ?? pr.KodeRuangan ?? pl.KodeRuangan;
                         var brand = Helpers.Empty(l.Brand) ?? pr.BrandName;
-                        await db.ExecuteAsync(Sql.InsertLine, new { objType, docEntry, lineNum, itemCode = pr.ItemCode, uom = "KG", brand, origin = (string?)null, qty = l.Qty, qty2 = l.Qty2, qtyPalet = l.QtyPalet, flag, ruang, bl = pl.Titipan == true ? null : pl.Jenis == "SPMB" ? l.NoBL!.Trim() : pr.NoBL, tit = pl.Titipan == true, pt = (string?)null }, tx);
+                        await db.ExecuteAsync(Sql.InsertLine, new { objType, docEntry, lineNum, itemCode = pr.ItemCode, uom = "KG", brand, origin = (string?)null, qty = l.Qty, qty2 = l.Qty2, qtyPalet = l.QtyPalet, flag, ruang, bl = pl.Titipan == true ? null : pl.Jenis == "SPMB" ? l.NoBL!.Trim() : pr.NoBL, tit = pl.Titipan == true, pt = (string?)null, lot = Helpers.Empty(l.NoLot) }, tx);
                         await db.ExecuteAsync(@"UPDATE KRN1 SET PlanLine = @pl, ContainerNo = @c, KodeRuangan = @ru, U_IDU_Kode_PT = @ptl, PaletCode = @pc, Size = @sz, [Type] = @ty, Crop = @cr,
                             brand_asli = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN @asli END,
                             brand_diubah_oleh = CASE WHEN @brand IS NOT NULL AND ISNULL(@asli, '') <> @brand THEN @uid END,

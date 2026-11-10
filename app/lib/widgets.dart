@@ -644,14 +644,15 @@ class _PtFieldState extends State<PtField> {
 /// Sumber stok SPMB: ruangan + BL + PT dari saldo. PT tidak dipilih krani, mengikuti stok (PT dari SPBB / label QR).
 /// [titipan]: barang titipan (tanpa BL). Nilai = kunci 'BL|PT'.
 class SumberStokField extends StatefulWidget {
-  const SumberStokField({super.key, required this.whs, required this.itemCode, required this.ruangan, required this.titipan, required this.bl, required this.pt, required this.onChanged});
+  const SumberStokField({super.key, required this.whs, required this.itemCode, required this.ruangan, required this.titipan, required this.bl, required this.pt, this.lot, required this.onChanged});
   final String whs;
   final String itemCode;
   final String? ruangan;
   final bool titipan;
   final String? bl;
   final String? pt;
-  final void Function(String? bl, String? pt) onChanged;
+  final String? lot; // lot = no. transaksi masuk di QR
+  final void Function(String? bl, String? pt, String? lot) onChanged;
   @override
   State<SumberStokField> createState() => _SumberStokFieldState();
 }
@@ -684,22 +685,22 @@ class _SumberStokFieldState extends State<SumberStokField> {
             .where((x) => (x['ptCode'] ?? '').toString().isNotEmpty && (widget.titipan || (x['noBL'] ?? '').toString().isNotEmpty))
             .toList();
       });
-      if (widget.pt == null && _rows.length == 1) widget.onChanged(_rows.first['noBL']?.toString(), _rows.first['ptCode'].toString());
+      if (widget.pt == null && _rows.length == 1) widget.onChanged(_rows.first['noBL']?.toString(), _rows.first['ptCode'].toString(), _rows.first['noLot']?.toString());
     } catch (e) {
       if (mounted) setState(() => _err = e.toString());
     }
   }
 
-  String _key(Map<String, dynamic> r) => '${r['noBL'] ?? ''}|${r['ptCode'] ?? ''}';
+  String _key(Map<String, dynamic> r) => '${r['noBL'] ?? ''}|${r['ptCode'] ?? ''}|${r['noLot'] ?? ''}';
   String _label(Map<String, dynamic> r) =>
-      '${widget.titipan ? 'TITIPAN' : 'BL ${r['noBL']}'} · PT ${r['ptCode']}${r['ptName'] != null ? ' ${r['ptName']}' : ''} · stok ${toD(r['kg']).toStringAsFixed(0)} kg';
+      '${widget.titipan ? 'TITIPAN' : 'BL ${r['noBL']}'} · PT ${r['ptCode']}${r['ptName'] != null ? ' ${r['ptName']}' : ''}${r['noLot'] != null ? ' · lot ${r['noLot']}' : ''} · stok ${toD(r['kg']).toStringAsFixed(0)} kg';
 
   @override
   Widget build(BuildContext context) {
     if (_err != null) return Hint('Gagal memuat stok: $_err', color: C.outbound);
     if (widget.ruangan == null) return const Hint('Pilih ruangan sumber dulu, atau scan QR palet', color: C.amberText);
     if (_rows.isEmpty) return const Hint('Tidak ada stok item ini di ruangan tersebut', color: C.outbound);
-    final cur = _rows.where((r) => _key(r) == '${widget.bl ?? ''}|${widget.pt ?? ''}').firstOrNull;
+    final cur = _rows.where((r) => _key(r) == '${widget.bl ?? ''}|${widget.pt ?? ''}|${widget.lot ?? ''}').firstOrNull;
     return Autocomplete<Map<String, dynamic>>(
       key: ValueKey('${widget.ruangan}|${widget.bl}|${widget.pt}|${_rows.length}'),
       initialValue: TextEditingValue(text: cur == null ? '' : _label(cur)),
@@ -709,7 +710,7 @@ class _SumberStokFieldState extends State<SumberStokField> {
         if (cur != null && v.text == _label(cur)) return _rows;
         return _rows.where((r) => q.isEmpty || _label(r).toUpperCase().contains(q));
       },
-      onSelected: (r) => widget.onChanged(r['noBL']?.toString(), r['ptCode'].toString()),
+      onSelected: (r) => widget.onChanged(r['noBL']?.toString(), r['ptCode'].toString(), r['noLot']?.toString()),
       fieldViewBuilder: (context, ctrl, focus, onSubmit) => TextField(
         controller: ctrl,
         focusNode: focus,
@@ -718,7 +719,7 @@ class _SumberStokFieldState extends State<SumberStokField> {
             helperText: 'PT mengikuti stok dari SPBB (label QR), tidak dipilih',
             suffixIcon: const Icon(Icons.arrow_drop_down)),
         onChanged: (_) {
-          if (widget.pt != null) widget.onChanged(null, null);
+          if (widget.pt != null) widget.onChanged(null, null, null);
         },
       ),
     );

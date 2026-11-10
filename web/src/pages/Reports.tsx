@@ -154,6 +154,7 @@ export function StockContainerReport() {
                 <td data-label="Container" className="mono">
                   <strong>{r.containerNo ?? 'tanpa kontainer'}</strong>
                   <div className="small">{r.kodeRuangan ? `Ruangan ${r.kodeRuangan}` : <span className="pill amber">Tanpa ruangan</span>}</div>
+                  {r.noLot && <div className="small">Lot {r.noLot}</div>}
                   <div className="small">{r.titipan ? <span className="pill amber">Titipan</span> : r.noBL ? `BL ${r.noBL}` : <span className="pill amber">Tanpa BL</span>}</div>
                 </td>
                 <td data-label="Item">

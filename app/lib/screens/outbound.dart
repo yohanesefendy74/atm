@@ -644,7 +644,7 @@ class _PalletEditorState extends State<_PalletEditor> {
               for (final r in p.rooms)
                 DropdownMenuItem(
                   value: ScannedPallet.sumberKey(r),
-                  child: Text('${r['kodeRuangan'] ?? '-'} · ${r['titipan'] == true ? 'TITIPAN' : 'BL ${r['noBL'] ?? 'BELUM ADA'}'} · PT ${r['ptCode'] ?? '-'} · ${fmt(toD(r['stockKg']))} kg', overflow: TextOverflow.ellipsis),
+                  child: Text('${r['kodeRuangan'] ?? '-'} · ${r['titipan'] == true ? 'TITIPAN' : 'BL ${r['noBL'] ?? 'BELUM ADA'}'} · PT ${r['ptCode'] ?? '-'}${r['noLot'] != null ? ' · lot ${r['noLot']}' : ''} · ${fmt(toD(r['stockKg']))} kg', overflow: TextOverflow.ellipsis),
                 ),
             ],
             onChanged: (v) {
@@ -878,7 +878,7 @@ Future<Map<String, dynamic>?> pilihRuanganSumber(BuildContext context, ScannedPa
           const Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('Barang dari container ini ada di beberapa ruangan / BL. Pilih asal palet yang discan.', style: TextStyle(color: C.muted))),
           for (final r in p.rooms)
             ListTile(
-              title: Text('${r['kodeRuangan'] ?? '-'}${r['namaRuangan'] != null ? ' · ${r['namaRuangan']}' : ''} · ${r['titipan'] == true ? 'TITIPAN' : 'BL ${r['noBL'] ?? '-'}'} · PT ${r['ptCode'] ?? '-'}'),
+              title: Text('${r['kodeRuangan'] ?? '-'}${r['namaRuangan'] != null ? ' · ${r['namaRuangan']}' : ''} · ${r['titipan'] == true ? 'TITIPAN' : 'BL ${r['noBL'] ?? '-'}'} · PT ${r['ptCode'] ?? '-'}${r['noLot'] != null ? ' · lot ${r['noLot']}' : ''}'),
               subtitle: Text('Stok ${fmt(toD(r['stockKg']))} kg · ${fmt(toD(r['stockSak']))} karung'),
               onTap: () => Navigator.of(c).pop(r),
             ),
