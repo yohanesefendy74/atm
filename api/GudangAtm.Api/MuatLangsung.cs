@@ -154,12 +154,12 @@ public static class MuatLangsung
 
     /// Timbang keluar truk SPMB yang memuat langsung: net dibagi ke baris (prorata estimasi), kg baris keluar
     /// dan pasangan baris masuk SPBB diganti dengan hasil timbang, QtyDone rencana disesuaikan.
-    public static async Task<List<object>?> TetapkanBerat(SqlConnection db, SqlTransaction tx, long regId, decimal net)
+    public static async Task<List<object>?> TetapkanBerat(SqlConnection db, SqlTransaction tx, long regId, decimal net, long? planId = null)
     {
         var rows = (await db.QueryAsync<(string ObjType, long DocEntry, int LineNum, string Key, decimal Qty, long PlanId, int PlanLine)>(
             @"SELECT d.ObjType, d.DocEntry, d.LineNum, d.CrossDockKey, d.qty, h.PlanId, d.PlanLine
               FROM KRN1 d JOIN OKRN h ON h.ObjType = d.ObjType AND h.DocEntry = d.DocEntry
-              WHERE d.CrossDockRegId = @regId AND d.flags = -1 AND ISNULL(d.CrossDockFinal, 0) = 0", new { regId }, tx)).ToList();
+              WHERE d.CrossDockRegId = @regId AND d.flags = -1 AND ISNULL(d.CrossDockFinal, 0) = 0 AND (@planId IS NULL OR h.PlanId = @planId)", new { regId, planId }, tx)).ToList();
         if (rows.Count == 0) return null;
         var total = rows.Sum(x => x.Qty);
         var alloc = rows.Select(x => Math.Round(net * x.Qty / total, 2)).ToList();

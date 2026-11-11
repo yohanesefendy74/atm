@@ -310,3 +310,34 @@ BEGIN
     ALTER TABLE dbo.WHS_Plan ADD CONSTRAINT CK_WHS_Plan_BaseType CHECK (BaseType IN ('BL','DO','SO','TT'));
 END
 GO
+
+/* Gudang timbangan mobil: truk memuat beberapa SPMB harus kembali ke timbangan setiap selesai memuat 1 SPMB.
+   Net SPMB = berat setelah memuat SPMB ini - berat timbang sebelumnya - berat palet SPMB ini. */
+IF OBJECT_ID('dbo.WHS_KendaraanMuat') IS NULL
+CREATE TABLE dbo.WHS_KendaraanMuat (
+    RegId        BIGINT NOT NULL,
+    Urut         INT NOT NULL,
+    PlanId       BIGINT NOT NULL,
+    JumlahPalet  INT NULL,
+    BeratPaletKg NUMERIC(12,2) NULL,
+    BeratAwalKg  NUMERIC(12,2) NOT NULL,     -- timbang sebelum memuat SPMB ini
+    BeratAkhirKg NUMERIC(12,2) NOT NULL,     -- timbang setelah memuat SPMB ini
+    NetKg        NUMERIC(12,2) NOT NULL,
+    InputKraniKg NUMERIC(12,2) NULL,
+    SelisihPersen NUMERIC(6,2) NULL,
+    TimbangId    BIGINT NULL,
+    UserId       INT NULL,
+    CreatedAt    DATETIME2(0) NOT NULL DEFAULT SYSDATETIME(),
+    CONSTRAINT PK_WHS_KendaraanMuat PRIMARY KEY (RegId, Urut)
+);
+GO
+-- WHS_Timbang.Jenis: tambah 'ANTARA' (timbang antara SPMB pada truk multi SPMB)
+DECLARE @ckT SYSNAME = (SELECT TOP 1 cc.name FROM sys.check_constraints cc
+                        JOIN sys.columns c ON c.object_id = cc.parent_object_id AND c.column_id = cc.parent_column_id
+                        WHERE cc.parent_object_id = OBJECT_ID('dbo.WHS_Timbang') AND c.name = 'Jenis');
+IF @ckT IS NOT NULL AND (SELECT definition FROM sys.check_constraints WHERE name = @ckT) NOT LIKE '%ANTARA%'
+BEGIN
+    EXEC('ALTER TABLE dbo.WHS_Timbang DROP CONSTRAINT ' + @ckT);
+    ALTER TABLE dbo.WHS_Timbang ADD CONSTRAINT CK_WHS_Timbang_Jenis CHECK (Jenis IN ('BRUTO','TARA','ANTARA'));
+END
+GO

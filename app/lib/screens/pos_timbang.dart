@@ -474,10 +474,27 @@ class _KeluarScreenState extends State<KeluarScreen> {
   bool _yardSimpan = false;
   final _yard = TextEditingController();
   bool _busy = false;
+  // Truk muat beberapa SPMB: kembali ke timbangan setiap selesai 1 SPMB, lalu lanjut SPMB berikutnya
+  bool _lanjut = false;
+  String? _lanjutPlan;
+  List<Map<String, dynamic>> _spmb = [];
+
+  Future<void> _muatSpmb() async {
+    try {
+      final r = (await Api.get('/api/kendaraan/cari-dokumen', {'whs': widget.whs, 'keperluan': 'Muat'}) as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .where((x) => x['planNo'] != widget.veh['planNo'])
+          .toList();
+      if (mounted) setState(() => _spmb = r);
+    } catch (e) {
+      if (mounted) showError(context, e);
+    }
+  }
 
   Future<void> _kirim() async {
     if (_berat == null) return showError(context, 'Baca berat dulu');
     if (_yardSimpan && !RegExp(r'^YARD-[A-C]\d{2}$').hasMatch(_yard.text.trim().toUpperCase())) return showError(context, 'Area yard format YARD-A01');
+    if (_lanjut && _lanjutPlan == null) return showError(context, 'Pilih SPMB berikutnya yang akan dimuat');
     setState(() => _busy = true);
     try {
       final r = await _kirimTimbang(
@@ -488,6 +505,7 @@ class _KeluarScreenState extends State<KeluarScreen> {
           'kontainerTinggal': _yardSimpan,
           'yardArea': _yardSimpan ? _yard.text.trim().toUpperCase() : null,
           'taraKontainer': null,
+          'lanjutPlanNo': _lanjut ? _lanjutPlan : null,
         },
         butuhKode: _berat!.sumber == 'MANUAL',
       );
@@ -508,7 +526,7 @@ class _KeluarScreenState extends State<KeluarScreen> {
     await showDialog<void>(
       context: context,
       builder: (c) => AlertDialog(
-        title: const Text('Timbang keluar tersimpan'),
+        title: Text(r['lanjutPlanNo'] != null ? 'Timbang antara tersimpan · lanjut ${r['lanjutPlanNo']}' : 'Timbang keluar tersimpan'),
         content: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
             if (kosong != null) Text('Berat kontainer kosong: ${toD(kosong).toStringAsFixed(0)} kg'),
@@ -540,16 +558,36 @@ class _KeluarScreenState extends State<KeluarScreen> {
             const SizedBox(height: 12),
             FieldLabel(tarik ? 'Timbang kepala + kontainer kosong (T4)' : 'Timbang kepala yang sama + muatan (B)'),
             if (tarik) const Hint('Berat kontainer kosong = T4 - T3 (kepala saat masuk). Net barang = berat kontainer isi - berat kontainer kosong.'),
-            if (!tarik) const Hint('Net muatan = B - A (timbang saat masuk) - berat palet. Kepala harus sama dengan saat masuk.'),
+            if (!tarik) const Hint('Net muatan = B − timbang sebelumnya (masuk, atau timbang antara SPMB sebelumnya) − berat palet SPMB ini. Kepala harus sama.'),
             const SizedBox(height: 8),
             BeratField(whs: widget.whs, onChanged: (b) => setState(() => _berat = b)),
+            if (!tarik && v['keperluan'] == 'Muat') ...[
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _lanjut,
+                onChanged: (x) {
+                  setState(() => _lanjut = x ?? false);
+                  if (_lanjut && _spmb.isEmpty) _muatSpmb();
+                },
+                title: const Text('Masih memuat SPMB lain (truk tidak keluar)'),
+                subtitle: Text('Net SPMB ${v['planNo'] ?? ''} dihitung sekarang; timbangan ini jadi acuan SPMB berikutnya'),
+              ),
+              if (_lanjut)
+                DropdownButtonFormField<String>(
+                  value: _lanjutPlan,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'SPMB berikutnya'),
+                  items: [for (final s in _spmb) DropdownMenuItem(value: '${s['planNo']}', child: Text('${s['planNo']} · ${s['party'] ?? ''}', overflow: TextOverflow.ellipsis))],
+                  onChanged: (x) => setState(() => _lanjutPlan = x),
+                ),
+            ],
             if (tarik) ...[
               CheckboxListTile(contentPadding: EdgeInsets.zero, value: _yardSimpan, onChanged: (x) => setState(() => _yardSimpan = x ?? false), title: const Text('Kontainer kosong disimpan di yard (tidak keluar)')),
               if (_yardSimpan) TextField(controller: _yard, textCapitalization: TextCapitalization.characters, decoration: const InputDecoration(labelText: 'Area yard (YARD-A01)')),
             ],
           ]),
         ),
-        Footer(children: [BigButton(label: 'Simpan timbang keluar', busy: _busy, onPressed: _kirim)]),
+        Footer(children: [BigButton(label: _lanjut ? 'Simpan timbang & lanjut muat' : 'Simpan timbang keluar', busy: _busy, onPressed: _kirim)]),
       ]),
     );
   }
