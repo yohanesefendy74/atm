@@ -374,9 +374,22 @@ ORDER BY p.PlanId DESC", new { whs, jenis, cont }));
                     bandingkan = await db.ExecuteScalarAsync<decimal?>("SELECT SUM(d.qty) FROM OKRN h JOIN KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry WHERE h.RegId = @regId AND d.flags = -1", new { regId }, tx) ?? 0;
                     net = berat - masuk.Value.BeratKg - paletKg.Value;
                     if (net <= 0) return Bad("Net muatan ≤ 0 · cek berat");
-                    // Muat langsung dari kontainer SPBB: net timbang menjadi berat final (tidak dibandingkan dengan estimasi)
-                    muatLangsung = await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM KRN1 WHERE CrossDockRegId = @regId AND flags = -1", new { regId }, tx) > 0;
-                    if (!muatLangsung) await Banding();
+                    // Muat langsung dari kontainer SPBB: berat final = net truk - kg muatan lain (stok gudang, beratnya sudah diketahui).
+                    // Dibandingkan dengan estimasi sampling untuk menangkap salah timbang / salah input.
+                    var estMl = await db.ExecuteScalarAsync<decimal?>("SELECT SUM(qty) FROM KRN1 WHERE CrossDockRegId = @regId AND flags = -1 AND ISNULL(CrossDockFinal, 0) = 0", new { regId }, tx) ?? 0;
+                    muatLangsung = estMl > 0;
+                    if (muatLangsung)
+                    {
+                        var kgLain = await db.ExecuteScalarAsync<decimal?>(@"SELECT SUM(d.qty) FROM OKRN h JOIN KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
+                            WHERE h.RegId = @regId AND d.flags = -1 AND d.CrossDockKey IS NULL", new { regId }, tx) ?? 0;
+                        kgMuatLangsung = net - kgLain;
+                        if (kgMuatLangsung <= 0) return Bad($"Net truk {net:N0} kg tidak lebih besar dari muatan stok gudang {kgLain:N0} kg · cek timbangan");
+                        var netTruk = net;
+                        net = kgMuatLangsung; bandingkan = estMl;
+                        await Banding();
+                        net = netTruk;
+                    }
+                    else await Banding();
                 }
                 else
                 {
@@ -420,7 +433,7 @@ ORDER BY p.PlanId DESC", new { whs, jenis, cont }));
                     OUTPUT INSERTED.TimbangId VALUES (@reg, NULL, 'KENDARAAN', @kode, 'BRUTO', @berat, @sumber, @ind, @tk, @net, @inp, @sel, @adm, @raw, @per, @uid)",
                     new { reg = regId, kode = Clean(r.Timbang.KodeTimbangan), berat, sumber = r.Timbang.Sumber, ind = Clean(r.Timbang.IndikatorStatus), tk = kosongKg, net = net > 0 ? net : (decimal?)null, inp = bandingkan > 0 ? bandingkan : (decimal?)null, sel = selisih, adm = adminId, raw = r.Timbang.TeksMentah is { Length: > 200 } t ? t[..200] : r.Timbang.TeksMentah, per = peringatan, uid = u.UserId() }, tx);
 
-                var hasilMuatLangsung = muatLangsung ? await MuatLangsung.TetapkanBerat(db, tx, regId, net) : null;
+                var hasilMuatLangsung = muatLangsung ? await MuatLangsung.TetapkanBerat(db, tx, regId, kgMuatLangsung) : null;
                 if (kk.Keperluan == "AmbilKontainer" && kk.ContainerNo is not null)
                 {
                     await db.ExecuteAsync(@"INSERT WHS_RiwayatBeratKontainer (ContainerNo, WhsCode, TaraKg, Peristiwa, NoPolisi, Sumber, KodeTimbangan, TimbangId, RegId, UserId)

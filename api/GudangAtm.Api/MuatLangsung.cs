@@ -10,7 +10,8 @@ public record MuatLangsungReq(long RegId, long SesiId, List<MuatLangsungLine> Li
 
 /// Muat langsung (cross-dock) di gudang timbangan mobil: sebagian barang SPBB dari kontainer yang sedang dibongkar
 /// langsung dimuat ke truk SPMB. Satu simpan = satu dokumen masuk (SPBB) + satu dokumen keluar (SPMB), baris berpasangan
-/// dengan ruangan/BL/PT/lot yang sama sehingga saldo bersih nol. Kg sementara = estimasi; kg final = net timbang keluar truk.
+/// dengan ruangan/BL/PT/lot yang sama sehingga saldo bersih nol. Kg sementara = estimasi; kg final = net timbang keluar truk
+/// dikurangi kg muatan lain (stok gudang, beratnya sudah diketahui).
 public static class MuatLangsung
 {
     static IResult Bad(string m) => Results.BadRequest(new { message = m });
@@ -55,17 +56,12 @@ public static class MuatLangsung
                 if (spmb.Jenis != "SPMB") return Bad("Muat langsung hanya dari dokumen SPMB");
                 if (spmb.Status is not ("Terbit" or "Proses" or "Partial")) return Bad($"SPMB berstatus {spmb.Status}");
 
-                // Truk SPMB: di dalam, keperluan muat, belum selesai, hanya membawa barang dari satu kontainer SPBB
+                // Truk SPMB: di dalam, keperluan muat, belum selesai. Boleh dicampur muatan lain (stok gudang / kontainer lain).
                 var k = await db.QueryFirstOrDefaultAsync<(long? PlanId, string NoPolisi, string? ContainerNo, string Status, string Keperluan, bool SelesaiKrani, string WhsCode)?>(
                     "SELECT PlanId, NoPolisi, ContainerNo, Status, Keperluan, SelesaiKrani, WhsCode FROM WHS_Kendaraan WITH (UPDLOCK) WHERE RegId = @r", new { r = r.RegId }, tx);
                 if (k is null || k.Value.Status != "Di dalam") return Bad("Truk tidak di dalam gudang");
                 if (k.Value.PlanId != id || k.Value.Keperluan != "Muat") return Bad("Truk ini tidak terdaftar untuk memuat SPMB ini");
                 if (k.Value.SelesaiKrani) return Bad("Muat truk ini sudah diselesaikan");
-                var muatBiasa = await db.ExecuteScalarAsync<int>(@"SELECT COUNT(*) FROM OKRN h JOIN KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
-                    WHERE h.RegId = @r AND d.flags = -1 AND d.CrossDockKey IS NULL", new { r = r.RegId }, tx);
-                if (muatBiasa > 0) return Bad("Truk ini sudah memuat stok gudang · muat langsung harus truk yang hanya membawa barang SPBB tersebut");
-                var sesiLain = await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM KRN1 WHERE CrossDockRegId = @r AND CrossDockSesiId <> @s", new { r = r.RegId, s = r.SesiId }, tx);
-                if (sesiLain > 0) return Bad("Truk ini sudah memuat langsung dari kontainer lain · satu truk hanya dari satu SPBB");
 
                 // Kontainer SPBB yang sedang dibongkar
                 var ks = await db.QueryFirstOrDefaultAsync<(long? PlanId, string Status, string ContainerNo, string? Plat1, long? RegId1, string WhsCode)?>(

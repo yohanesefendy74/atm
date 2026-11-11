@@ -386,7 +386,7 @@ class _TugasDetailState extends State<TugasDetail> {
                       icon: const Icon(Icons.swap_horiz),
                       label: const Text('Muat langsung dari kontainer SPBB'),
                     ),
-                    const Hint('Gudang timbangan mobil: barang dari kontainer yang sedang dibongkar langsung ke truk ini. Berat final dari timbang keluar truk.'),
+                    const Hint('Gudang timbangan mobil: barang dari kontainer yang sedang dibongkar langsung ke truk ini. Boleh dicampur muatan stok gudang. Berat final = net timbang keluar − kg muatan stok.'),
                   ],
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
@@ -752,7 +752,7 @@ class _MuatLangsungScreenState extends State<MuatLangsungScreen> {
             ? ErrorView(_error!, onRetry: _load)
             : ListView(padding: const EdgeInsets.all(20), children: [
                 const Hint('Barang dari kontainer SPBB yang sedang dibongkar langsung dimuat ke truk ini (tidak masuk ruangan). '
-                    'Truk hanya boleh membawa barang SPBB tersebut. Berat final = net timbang keluar truk; sisa SPBB = net kontainer − berat ini.'),
+                    'Truk boleh membawa muatan lain (stok gudang / kontainer lain). Berat final = net timbang keluar truk − kg muatan stok gudang; sisa SPBB = net kontainer − berat ini.'),
                 const SizedBox(height: 12),
                 const FieldLabel('Kontainer SPBB yang sedang dibongkar', required: true),
                 if (_kont.isEmpty) const Hint('Tidak ada kontainer yang sedang dibongkar di gudang ini', color: C.outbound),
