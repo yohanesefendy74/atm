@@ -7,7 +7,8 @@ using Microsoft.Data.SqlClient;
 
 namespace GudangAtm.Api;
 
-public record PlanLineReq(int BaseDocEntry, int BaseLineNum, decimal QtyPlan, string? ContainerNo, string? KodeRuangan, string? PaletCode, int? PaletPlan, string? FreeTxt, string? NoBL = null);
+public record PlanLineReq(int BaseDocEntry, int BaseLineNum, decimal QtyPlan, string? ContainerNo, string? KodeRuangan, string? PaletCode, int? PaletPlan, string? FreeTxt, string? NoBL = null,
+    string? ItemCode = null, decimal? Karung = null);   // SPBB titipan tanpa dokumen ERP: item & karung diisi Admin
 public record PlanCreateReq(string Jenis, string WhsCode, string Src, List<int> Docs, string KodeRuangan, string? CardCodeTitipan,
     string? PtCode, string? JenisContainer, string? EtaDatang, DateTime? TglJadwal, List<int>? Kranis, List<PlanLineReq> Lines, string? NoBL = null,
     bool? Titipan = null);   // barang titipan; null = aplikasi lama (ikut ruangan)
@@ -43,6 +44,90 @@ WHERE dl.DocEntry = @doEntry AND dl.LineNum = @lineNum
     }
 
     static IResult Bad(string m) => Results.BadRequest(new { message = m });
+    /// SPBB barang titipan: tanpa dokumen ERP (BL/DO). Item, qty, karung, container, palet dan ruangan diisi Admin; tanpa No. BL.
+    static async Task<IResult> TerbitTitipan(Func<SqlConnection> dbf, PlanCreateReq r, ClaimsPrincipal u, HttpContext ctx)
+    {
+        if (r.Lines is null || r.Lines.Count == 0 || r.Lines.Count > 300) return Bad("Isi minimal satu item (maks 300)");
+        if (r.Titipan == false) return Bad("SPBB tanpa dokumen ERP hanya untuk barang titipan");
+        if (!TryEta(r.EtaDatang, out var eta)) return Bad("ETA format JJ:MM, contoh 08:30");
+        if (r.TglJadwal is { } tg && tg.Date < DateTime.Today) return Bad("Tanggal jadwal tidak boleh sebelum hari ini");
+        await using var db = dbf();
+        await db.OpenAsync();
+        await using var tx = (SqlTransaction)await db.BeginTransactionAsync(IsolationLevel.Serializable);
+        try
+        {
+            if (!await PunyaAkses(db, tx, u.UserId(), r.WhsCode)) return Results.Forbid();
+            var room = await db.QueryFirstOrDefaultAsync<(string WhsCode, bool Titipan, bool Aktif)?>("SELECT WhsCode, Titipan, Aktif FROM WHS_MasterRuangan WHERE KodeRuangan = @k", new { k = r.KodeRuangan }, tx);
+            if (room is null || room.Value.WhsCode != r.WhsCode || !room.Value.Aktif) return Bad("Ruangan tidak valid untuk warehouse ini");
+            if (!room.Value.Titipan) return Bad("Barang titipan hanya boleh di ruangan titipan");
+            var titCode = Clean(r.CardCodeTitipan);
+            if (titCode is null) return Bad("Barang titipan: customer pemilik wajib dipilih");
+            var titName = await db.ExecuteScalarAsync<string?>("SELECT CardName FROM OCRD WHERE CardCode = @c AND CardType = 'C'", new { c = titCode }, tx);
+            if (titName is null) return Bad("Customer titipan tidak ada di master customer");
+            var pt = Clean(r.PtCode);
+            if (pt is null) return Bad("Pilih PT");
+            if (await db.ExecuteScalarAsync<int>(Sql.PtExists, new { ptCode = pt }, tx) == 0) return Bad("PT tidak ada di OPRC");
+
+            var rows = new List<(PlanLineReq q, string Item, string? Desc, string Room, string? Cont)>();
+            foreach (var l in r.Lines)
+            {
+                var item = Clean(l.ItemCode);
+                if (item is null) return Bad("Pilih item");
+                var desc = await db.ExecuteScalarAsync<string?>("SELECT ItemName FROM OITM WHERE ItemCode = @i", new { i = item }, tx);
+                if (desc is null) return Bad($"Item {item} tidak ada di master item");
+                if (l.QtyPlan <= 0 || l.QtyPlan > 10_000_000) return Bad($"{item}: qty kg harus lebih dari 0");
+                if (l.Karung is < 0) return Bad($"{item}: jumlah karung tidak valid");
+                var lineRoom = Clean(l.KodeRuangan) ?? r.KodeRuangan;
+                var lr = await db.QueryFirstOrDefaultAsync<(string WhsCode, bool Titipan, bool Aktif)?>("SELECT WhsCode, Titipan, Aktif FROM WHS_MasterRuangan WHERE KodeRuangan = @k", new { k = lineRoom }, tx);
+                if (lr is null || lr.Value.WhsCode != r.WhsCode || !lr.Value.Aktif) return Bad($"{item}: ruangan tidak valid");
+                if (!lr.Value.Titipan) return Bad($"{item}: ruangan {lineRoom} bukan ruangan titipan");
+                if (string.IsNullOrWhiteSpace(l.PaletCode) || await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WHS_MasterPalet WHERE PaletCode = @p AND Aktif = 1", new { p = l.PaletCode }, tx) == 0)
+                    return Bad($"{item}: jenis palet wajib dipilih dari master");
+                var cont = Clean(l.ContainerNo) is { } c0 ? NormCont(c0) : null;
+                if (cont is not null && !Iso6346(cont)) return Bad($"{item}: nomor container tidak valid (ISO 6346)");
+                rows.Add((l, item, desc, lineRoom, cont));
+            }
+            var total = rows.Sum(x => x.q.QtyPlan);
+            var prefix = $"SPBB/{DateTime.Today:yyMM}/";
+            var last = await db.ExecuteScalarAsync<string?>("SELECT TOP 1 PlanNo FROM WHS_Plan WITH (UPDLOCK, HOLDLOCK) WHERE PlanNo LIKE @p ORDER BY PlanNo DESC", new { p = prefix + "%" }, tx);
+            var no = prefix + ((last is null ? 0 : int.Parse(last[prefix.Length..])) + 1).ToString("0000");
+            var planId = await db.ExecuteScalarAsync<long>(@"
+INSERT WHS_Plan (PlanNo, Jenis, WhsCode, BplId, BaseType, TotalPlanKg, CardCode, CardName, U_IDU_Kode_PT, Status, CreatedBy,
+                 TglJadwal, EtaDatang, KodeRuangan, CardCodeTitipan, CardNameTitipan, Titipan)
+OUTPUT INSERTED.PlanId
+VALUES (@no, 'SPBB', @whs, @bpl, 'TT', @total, @tc, @tn, @pt, 'Terbit', @uid, @tgl, @eta, @room, @tc, @tn, 1)",
+                new { no, whs = r.WhsCode, bpl = u.BplId(), total, tc = titCode, tn = titName, pt, uid = u.UserId(), tgl = r.TglJadwal?.Date, eta, room = r.KodeRuangan }, tx);
+            var lot = no["SPBB/".Length..].Replace("/", "");
+            var line = 0;
+            foreach (var (q, item, desc, lineRoom, cont) in rows)
+            {
+                line++;
+                await db.ExecuteAsync(@"
+INSERT WHS_Plan1 (PlanId, PlanLine, BaseType, BaseDocEntry, BaseLineNum, ContainerNo, ItemCode, Dscription, FreeTxt, QtyBase, OpenQtyBase, QtyPlan, Qty2Plan, PaletCode, PaletPlan, KodeRuangan, NoBL, NoLot)
+VALUES (@planId, @line, 'TT', 0, @line, @cont, @item, @desc, @free, @qp, @qp, @qp, @q2, @pal, @palN, @room, NULL, @lot)",
+                    new { planId, line, cont, item, desc, free = Clean(q.FreeTxt), qp = q.QtyPlan, q2 = q.Karung, pal = q.PaletCode, palN = q.PaletPlan, room = lineRoom, lot }, tx);
+            }
+            foreach (var k in (r.Kranis ?? new()).Distinct())
+            {
+                if (!await PunyaAkses(db, tx, k, r.WhsCode)) return Bad("Krani tidak punya akses ke warehouse ini");
+                await db.ExecuteAsync("INSERT WHS_PlanKrani (PlanId, UserId) VALUES (@planId, @k)", new { planId, k }, tx);
+            }
+            await Audit.Write(db, tx, u, ctx, "PLAN_TERBIT", "SPBB", planId, $"{no} TITIPAN {titCode} {total:N0} kg ruangan={r.KodeRuangan}");
+            await tx.CommitAsync();
+            return Results.Ok(new { planId, planNo = no, warnings = new List<string>() });
+        }
+        catch (SqlException e) when (e.Number == 50000 || e.Class == 16)
+        {
+            try { await tx.RollbackAsync(); } catch { }
+            return Bad(e.Message);
+        }
+        catch
+        {
+            try { await tx.RollbackAsync(); } catch { }
+            throw;
+        }
+    }
+
     static string? Clean(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
     // Tabel SAP sumber (kolom ASUMSI, cek ke skema asli): header, baris, kolom jumlah-per-kemasan
@@ -193,7 +278,9 @@ ORDER BY CASE WHEN p.Status IN ('Terbit','Proses','Partial') THEN 0 ELSE 1 END, 
             var jenis = (r.Jenis ?? "").ToUpperInvariant();
             var src = (r.Src ?? "").ToUpperInvariant();
             if (jenis is not ("SPBB" or "SPMB")) return Bad("Jenis harus SPBB atau SPMB");
-            if (jenis == "SPBB" ? src is not ("BL" or "DO") : src != "SO") return Bad(jenis == "SPBB" ? "SPBB dari BL atau DO" : "SPMB dari Sales Order");
+            // Barang titipan tidak punya BL/DO di ERP: SPBB titipan diisi manual oleh Admin (sumber TT)
+            if (jenis == "SPBB" && src == "TT") return await TerbitTitipan(dbf, r, u, ctx);
+            if (jenis == "SPBB" ? src is not ("BL" or "DO") : src != "SO") return Bad(jenis == "SPBB" ? "SPBB dari BL atau DO (barang titipan: tanpa dokumen ERP)" : "SPMB dari Sales Order");
             var t = Tbl(src)!.Value;
             var docs = (r.Docs ?? new()).Distinct().ToList();
             if (docs.Count == 0) return Bad("Pilih dokumen dasar");

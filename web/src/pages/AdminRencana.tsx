@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { get, post, put, type Row } from '../api';
 import { Link, match, navigate } from '../router';
 import { Lookup } from './Cms';
-import { ErrorBox, KV, Page, SearchSelect, Spinner, StatusPill, errText, fmt, fmtDate, useLoad, useToast, useWarehouses, whsOpts } from '../ui';
+import { ErrorBox, ItemSearch, KV, Page, PtSelect, SearchSelect, Spinner, StatusPill, errText, fmt, fmtDate, useLoad, useToast, useWarehouses, whsOpts } from '../ui';
 
 export function PlanList() {
   const [jenis, setJenis] = useState('');
@@ -27,6 +27,7 @@ export function PlanList() {
   );
 }
 
+type ManualLine = { itemCode: string; itemName: string; qty: number; sak: number; kontainer: string; palet: string; paletPlan?: number; ruang: string };
 type Src = Row; type SrcLine = Row & { pick?: boolean; qtyPlan?: number; kontainer?: string; palet?: string; paletPlan?: number; ruang?: string; bls?: Row[]; bl?: string };
 
 export function PlanNew() {
@@ -52,6 +53,9 @@ export function PlanNew() {
   const [eta, setEta] = useState('');
   const [tgl, setTgl] = useState('');
   const [busy, setBusy] = useState(false);
+  const [manual, setManual] = useState<ManualLine[]>([]); // SPBB titipan tanpa dokumen ERP
+  const tt = jenis === 'SPBB' && titipan; // barang titipan: tidak ada BL/DO di ERP
+  const updM = (i: number, patch: Partial<ManualLine>) => setManual(manual.map((m, j) => (j === i ? { ...m, ...patch } : m)));
 
   const srcOpts = jenis === 'SPBB' ? ['BL', 'DO'] : ['SO'];
   async function cari() {
@@ -85,6 +89,21 @@ export function PlanNew() {
   const paletOpts = paletList.filter((p) => p.aktif).map((p) => ({ value: p.paletCode, label: `${p.paletCode} · ${p.beratKg} kg` }));
 
   async function terbit() {
+    if (tt) {
+      if (!manual.length) return toast('Tambah minimal satu item titipan', true);
+      if (!titipanCard) return toast('Pilih customer pemilik barang titipan', true);
+      if (!pt) return toast('Pilih PT', true);
+      setBusy(true);
+      try {
+        const r = await post<Row>('/api/cms/plan', { Jenis: 'SPBB', WhsCode: whs, Src: 'TT', Docs: [], KodeRuangan: ruang, Titipan: true, CardCodeTitipan: titipanCard, PtCode: pt,
+          EtaDatang: eta || null, TglJadwal: tgl || null, Kranis: kranis,
+          Lines: manual.map((m, i) => ({ BaseDocEntry: 0, BaseLineNum: i, ItemCode: m.itemCode, QtyPlan: m.qty, Karung: m.sak || null, ContainerNo: m.kontainer || null,
+            KodeRuangan: m.ruang || ruang, PaletCode: m.palet || null, PaletPlan: m.paletPlan ?? null, FreeTxt: null })) });
+        toast(`Terbit ${r.planNo}`);
+        navigate(`/admin/plan/${r.planId}`);
+      } catch (e) { toast(errText(e), true); } finally { setBusy(false); }
+      return;
+    }
     const lines = docs.flatMap((d) => d.lines.filter((l) => l.pick && (l.qtyPlan ?? 0) > 0).map((l) => ({
       BaseDocEntry: d.head.docEntry, BaseLineNum: l.lineNum, QtyPlan: l.qtyPlan, ContainerNo: l.kontainer || null, KodeRuangan: l.ruang || ruang,
       PaletCode: l.palet || null, PaletPlan: l.paletPlan ?? null, FreeTxt: l.freeTxt ?? null, NoBL: l.bl || null })));
@@ -99,20 +118,48 @@ export function PlanNew() {
   }
 
   return (
-    <Page eyebrow="Admin" title="Terbitkan SPBB / SPMB" accent="ink" backTo="/admin/plan" footer={<button className="btn" disabled={busy || !docs.length || !ruang} onClick={terbit}>Terbitkan</button>}>
+    <Page eyebrow="Admin" title="Terbitkan SPBB / SPMB" accent="ink" backTo="/admin/plan" footer={<button className="btn" disabled={busy || (tt ? !manual.length : !docs.length) || !ruang} onClick={terbit}>Terbitkan</button>}>
       <div className="card stack">
         <div className="chips">{(['SPBB', 'SPMB'] as const).map((j) => <button key={j} className="chip" aria-pressed={jenis === j} onClick={() => { setJenis(j); setSrc(j === 'SPBB' ? 'BL' : 'SO'); setDocs([]); setFound([]); }}>{j}</button>)}</div>
         <SearchSelect options={whsOpts(wh.data)} value={whs} onChange={pilihWhs} placeholder="Cari & pilih gudang" />
-        <div className="formrow">
+        {/* Titipan dipilih lebih dulu: barang titipan tidak punya BL/DO di ERP */}
+        <label className="row"><input type="checkbox" checked={titipan} onChange={(e) => { setTitipan(e.target.checked); setDocs([]); setFound([]); setManual([]); if (e.target.checked && room && !room.titipan) setRuang(''); }} />
+          <span>Barang titipan (milik customer){jenis === 'SPBB' ? ' · tanpa BL/DO, item diisi manual' : ''} · hanya ke ruangan titipan.</span></label>
+        {titipan && <div className="stack tight"><span className="small muted">Customer titipan (pemilik barang) <span className="req">*</span></span>
+          <Lookup url="/api/cms/bp" query={{ cardType: 'C' }} label="Customer titipan" value={titipanCard} onChange={(code, name) => { setTitipanCard(code); setTitipanName(name); }} />
+          {titipanName && <span className="hint">{titipanName}</span>}</div>}
+        {!tt && <div className="formrow">
           {srcOpts.length > 1 && <select className="input narrow" value={src} onChange={(e) => { setSrc(e.target.value); setFound([]); setDocs([]); }}>{srcOpts.map((s) => <option key={s}>{s}</option>)}</select>}
           <input className="input" placeholder={src === 'BL' ? 'Supplier' : 'Customer'} aria-label={src === 'BL' ? 'Cari supplier' : 'Cari customer'} value={nama} onChange={(e) => setNama(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && cari()} />
           <input className="input" placeholder={src === 'BL' ? 'Nomor BL' : `Nomor ${src}`} aria-label={src === 'BL' ? 'Cari nomor BL' : `Cari nomor ${src}`} value={nomor} onChange={(e) => setNomor(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && cari()} />
           <button className="btn" onClick={cari}>Cari</button>
-        </div>
-        {found.map((d) => (
+        </div>}
+        {!tt && found.map((d) => (
           <button key={d.docEntry} className="card pad-s click" onClick={() => tambah(d)}><span className="mono">{src === 'BL' ? `BL ${d.numAtCard ?? '-'}` : `${src} ${d.docNum}`}</span> · {d.cardName} · {fmtDate(d.docDate)}{src !== 'BL' && d.numAtCard ? ` · PO ${d.numAtCard}` : ''}</button>
         ))}
       </div>
+      {tt && (
+        <div className="card stack">
+          <strong>Item titipan</strong>
+          <span className="small muted">Barang titipan tidak punya dokumen BL/DO di ERP. Isi item, qty, karung, container dan palet.</span>
+          <ItemSearch placeholder="Cari item (kode / nama) untuk ditambahkan" onPick={(i) => setManual([...manual, { itemCode: i.itemCode, itemName: i.itemName, qty: 0, sak: 0, kontainer: '', palet: '', ruang: '' }])} />
+          {manual.map((m, i) => (
+            <div key={i} className="card pad-s stack tight">
+              <div className="row"><span className="grow"><strong className="mono">{m.itemCode}</strong> · {m.itemName}</span><button className="btn small ghost" onClick={() => setManual(manual.filter((_, j) => j !== i))}>Hapus</button></div>
+              <div className="formrow">
+                <label className="stack tight"><span className="small muted">Qty kg <span className="req">*</span></span><input className="input" type="number" value={m.qty || ''} onChange={(e) => updM(i, { qty: Number(e.target.value) })} /></label>
+                <label className="stack tight"><span className="small muted">Karung</span><input className="input" type="number" value={m.sak || ''} onChange={(e) => updM(i, { sak: Number(e.target.value) })} /></label>
+                <label className="stack tight"><span className="small muted">Container</span><input className="input" value={m.kontainer} onChange={(e) => updM(i, { kontainer: e.target.value.toUpperCase() })} /></label>
+              </div>
+              <div className="formrow">
+                <SearchSelect options={paletOpts} value={m.palet} onChange={(v) => updM(i, { palet: v })} placeholder="Jenis palet *" />
+                <input className="input" type="number" placeholder="Jml palet" value={m.paletPlan ?? ''} onChange={(e) => updM(i, { paletPlan: Number(e.target.value) })} />
+              </div>
+              <SearchSelect options={roomOpts} value={m.ruang} onChange={(v) => updM(i, { ruang: v })} allowEmpty={ruang ? `Ikut ruangan dokumen (${ruang})` : '(pilih ruangan dokumen dulu)'} placeholder="Ruangan" />
+            </div>
+          ))}
+        </div>
+      )}
       {docs.map((d, di) => (
         <div key={d.head.docEntry} className="card stack">
           <div className="row"><strong className="grow">{src === 'BL' ? `BL ${d.head.numAtCard ?? d.head.docNum}` : `${src} ${d.head.docNum}`} · {d.head.cardName}</strong><button className="btn small ghost" onClick={() => setDocs(docs.filter((_, i) => i !== di))}>Hapus</button></div>
@@ -149,18 +196,14 @@ export function PlanNew() {
         </div>
       ))}
       <div className="card stack">
-        <label className="row"><input type="checkbox" checked={titipan} onChange={(e) => { setTitipan(e.target.checked); if (e.target.checked && room && !room.titipan) setRuang(''); }} />
-          <span>Barang titipan (milik customer, tanpa No. BL) · hanya ke ruangan titipan. Ruangan titipan tetap boleh untuk barang biasa.</span></label>
         <label className="stack tight"><span className="small muted">Ruangan dokumen (default semua item; bisa diganti per item di atas, krani juga bisa mengubah saat input)</span><SearchSelect options={roomOpts} value={ruang} onChange={setRuang} placeholder="Cari & pilih ruangan" /></label>
-        {titipan && <div className="stack tight"><span className="small muted">Customer titipan (pemilik barang) <span className="req">*</span></span>
-          <Lookup url="/api/cms/bp" query={{ cardType: 'C' }} label="Customer titipan" value={titipanCard} onChange={(code, name) => { setTitipanCard(code); setTitipanName(name); }} />
-          {titipanName && <span className="hint">{titipanName}</span>}</div>}
         {jenis === 'SPBB' && !titipan && (
           <label className="stack tight"><span className="small muted">No. BL {src === 'BL' ? '(otomatis dari nomor BL dokumen; isi hanya bila dokumen BL tidak punya nomor)' : '(otomatis dari catatan stok keluar DO; isi hanya bila tidak ditemukan)'}</span>
             <input className="input" value={noBL} onChange={(e) => setNoBL(e.target.value.toUpperCase())} placeholder={src === 'BL' ? docs.map((d) => d.head.numAtCard).filter(Boolean).join(', ') || 'No. BL' : 'No. BL'} />
           </label>
         )}
-        {jenis === 'SPBB' && <label className="stack tight"><span className="small muted">Kode PT (opsional)</span><input className="input" value={pt} onChange={(e) => setPt(e.target.value)} /></label>}
+        {tt && <label className="stack tight"><span className="small muted">PT <span className="req">*</span></span><PtSelect value={pt} onChange={setPt} /></label>}
+        {jenis === 'SPBB' && !tt && <label className="stack tight"><span className="small muted">Kode PT (opsional)</span><input className="input" value={pt} onChange={(e) => setPt(e.target.value)} /></label>}
         <div className="formrow"><label className="stack tight"><span className="small muted">Tanggal jadwal</span><input className="input" type="date" value={tgl} onChange={(e) => setTgl(e.target.value)} /></label>
           <label className="stack tight"><span className="small muted">ETA (HH:MM, opsional)</span><input className="input" type="time" value={eta} onChange={(e) => setEta(e.target.value)} /></label></div>
         <div className="stack tight"><span className="small muted">Krani</span>

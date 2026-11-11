@@ -299,3 +299,14 @@ GO
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_KRN1_CrossDock' AND object_id = OBJECT_ID('dbo.KRN1'))
     CREATE INDEX IX_KRN1_CrossDock ON dbo.KRN1 (CrossDockRegId, CrossDockSesiId) INCLUDE (CrossDockKey, flags, qty) WHERE CrossDockKey IS NOT NULL;
 GO
+
+/* SPBB barang titipan tanpa dokumen ERP (tidak ada BL/DO): sumber 'TT', item diisi Admin */
+DECLARE @ck SYSNAME = (SELECT TOP 1 cc.name FROM sys.check_constraints cc
+                       JOIN sys.columns c ON c.object_id = cc.parent_object_id AND c.column_id = cc.parent_column_id
+                       WHERE cc.parent_object_id = OBJECT_ID('dbo.WHS_Plan') AND c.name = 'BaseType');
+IF @ck IS NOT NULL AND (SELECT definition FROM sys.check_constraints WHERE name = @ck) NOT LIKE '%TT%'
+BEGIN
+    EXEC('ALTER TABLE dbo.WHS_Plan DROP CONSTRAINT ' + @ck);
+    ALTER TABLE dbo.WHS_Plan ADD CONSTRAINT CK_WHS_Plan_BaseType CHECK (BaseType IN ('BL','DO','SO','TT'));
+END
+GO
