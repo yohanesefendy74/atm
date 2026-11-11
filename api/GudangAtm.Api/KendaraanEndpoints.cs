@@ -104,6 +104,10 @@ public static partial class KendaraanEndpoints
         });
     }
 
+    /// Gudang dengan timbangan mobil = punya timbangan aktif jenis KENDARAAN. Di gudang ini palet tidak ditimbang.
+    public static async Task<bool> TimbanganMobil(SqlConnection db, SqlTransaction? tx, string whs) =>
+        await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WHS_MasterTimbangan WHERE WhsCode = @whs AND Alat = 'KENDARAAN' AND Aktif = 1", new { whs }, tx) > 0;
+
     public static void MapKendaraan(this RouteGroupBuilder api, Func<SqlConnection> dbf)
     {
         // Kendaraan yang sedang di dalam gudang
@@ -113,7 +117,8 @@ public static partial class KendaraanEndpoints
             if (await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM USR9 WHERE UserId = @uid AND WhsCode = @whs", new { uid = u.UserId(), whs }) == 0) return Results.Forbid();
             return Results.Ok(await db.QueryAsync(@"
 SELECT k.RegId AS regId, k.Tiket AS tiket, k.Keperluan AS keperluan, k.JumlahPalet AS jumlahPalet, k.BeratPaletKg AS beratPaletKg, k.NoPolisi AS noPolisi, k.Sopir AS sopir, k.ContainerNo AS containerNo, k.JamMasuk AS jamMasuk, k.JamKeluar AS jamKeluar,
-       k.SelesaiKrani AS selesaiKrani, k.Status AS status, p.PlanNo AS planNo, p.Jenis AS jenis, k.Peringatan AS peringatan
+       k.SelesaiKrani AS selesaiKrani, k.Status AS status, p.PlanNo AS planNo, p.Jenis AS jenis, k.Peringatan AS peringatan,
+       CAST(CASE WHEN EXISTS (SELECT 1 FROM WHS_MasterTimbangan t WHERE t.WhsCode = k.WhsCode AND t.Alat = 'KENDARAAN' AND t.Aktif = 1) THEN 1 ELSE 0 END AS bit) AS timbanganMobil
 FROM WHS_Kendaraan k LEFT JOIN WHS_Plan p ON p.PlanId = k.PlanId
 WHERE k.WhsCode = @whs AND (@status IS NULL AND k.Status = 'Di dalam' OR k.Status = @status) ORDER BY k.RegId DESC", new { whs, status = Clean(status) }));
         });
@@ -295,7 +300,10 @@ ORDER BY p.PlanId DESC", new { whs, jenis, cont }));
             if (k.Value.Status != "Di dalam") return Bad("Kendaraan tidak di dalam gudang");
             if (k.Value.PlanId is not null && await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM OKRN WHERE RegId = @regId AND PlanId = @p", new { regId, p = k.Value.PlanId }) == 0) return Bad("Belum ada input krani untuk dokumen yang sedang dimuat");
             long? tid = null;
-            if (k.Value.Keperluan == "Muat")
+            // Gudang timbangan mobil: palet tidak ditimbang (net muatan = timbang setelah muat - timbang sebelumnya)
+            var skala = k.Value.Keperluan == "Muat" && await TimbanganMobil(db, null, k.Value.WhsCode);
+            if (skala) r = new SelesaiMuatReq(Math.Max(0, r?.JumlahPalet ?? 0), 0, null);
+            else if (k.Value.Keperluan == "Muat")
             {
                 if (r is null || r.JumlahPalet < 0 || r.JumlahPalet > 200) return Bad("Isi jumlah palet yang dimuat (0 bila tanpa palet)");
                 if (r.JumlahPalet == 0 && r.BeratPaletKg != 0) return Bad("Jumlah palet 0 · berat palet harus 0");
@@ -384,6 +392,7 @@ ORDER BY p.PlanId DESC", new { whs, jenis, cont }));
                 {
                     // A = kepala (+ kontainer kosong) saat masuk, B = kepala yang sama + muatan + palet. Net = B - A - berat semua palet (ditimbang krani).
                     var paletKg = await db.ExecuteScalarAsync<decimal?>("SELECT BeratPaletKg FROM WHS_Kendaraan WHERE RegId = @regId", new { regId }, tx);
+                    if (await TimbanganMobil(db, tx, kk.WhsCode)) paletKg = 0;   // palet tidak ditimbang di gudang timbangan mobil
                     if (paletKg is null) return Bad("Berat palet belum ditimbang krani");
                     // hanya SPMB yang sedang dimuat (SPMB sebelumnya sudah dihitung di timbang antara)
                     bandingkan = await db.ExecuteScalarAsync<decimal?>("SELECT SUM(d.qty) FROM OKRN h JOIN KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry WHERE h.RegId = @regId AND d.flags = -1 AND (@pid IS NULL OR h.PlanId = @pid)", new { regId, pid = kk.PlanId }, tx) ?? 0;

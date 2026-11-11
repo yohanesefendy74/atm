@@ -558,7 +558,7 @@ class _KeluarScreenState extends State<KeluarScreen> {
             const SizedBox(height: 12),
             FieldLabel(tarik ? 'Timbang kepala + kontainer kosong (T4)' : 'Timbang kepala yang sama + muatan (B)'),
             if (tarik) const Hint('Berat kontainer kosong = T4 - T3 (kepala saat masuk). Net barang = berat kontainer isi - berat kontainer kosong.'),
-            if (!tarik) const Hint('Net muatan = B − timbang sebelumnya (masuk, atau timbang antara SPMB sebelumnya) − berat palet SPMB ini. Kepala harus sama.'),
+            if (!tarik) const Hint('Net muatan = B − timbang sebelumnya (masuk, atau timbang antara SPMB sebelumnya). Palet tidak ditimbang. Kepala harus sama.'),
             const SizedBox(height: 8),
             BeratField(whs: widget.whs, onChanged: (b) => setState(() => _berat = b)),
             if (!tarik && v['keperluan'] == 'Muat') ...[

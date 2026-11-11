@@ -56,12 +56,19 @@ public static class MuatLangsung
                 if (spmb.Jenis != "SPMB") return Bad("Muat langsung hanya dari dokumen SPMB");
                 if (spmb.Status is not ("Terbit" or "Proses" or "Partial")) return Bad($"SPMB berstatus {spmb.Status}");
 
-                // Truk SPMB: di dalam, keperluan muat, belum selesai. Boleh dicampur muatan lain (stok gudang / kontainer lain).
+                // Truk SPMB: di dalam, keperluan muat, belum selesai. Satu SPMB yang sedang dimuat hanya berisi barang dari satu partial SPBB;
+                // muatan lain baru boleh setelah truk ditimbang (timbang antara) dan lanjut ke SPMB berikutnya.
                 var k = await db.QueryFirstOrDefaultAsync<(long? PlanId, string NoPolisi, string? ContainerNo, string Status, string Keperluan, bool SelesaiKrani, string WhsCode)?>(
                     "SELECT PlanId, NoPolisi, ContainerNo, Status, Keperluan, SelesaiKrani, WhsCode FROM WHS_Kendaraan WITH (UPDLOCK) WHERE RegId = @r", new { r = r.RegId }, tx);
                 if (k is null || k.Value.Status != "Di dalam") return Bad("Truk tidak di dalam gudang");
                 if (k.Value.PlanId != id || k.Value.Keperluan != "Muat") return Bad("Truk ini tidak terdaftar untuk memuat SPMB ini");
                 if (k.Value.SelesaiKrani) return Bad("Muat truk ini sudah diselesaikan");
+                var stokSpmbIni = await db.ExecuteScalarAsync<int>(@"SELECT COUNT(*) FROM OKRN h JOIN KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
+                    WHERE h.RegId = @r AND h.PlanId = @id AND d.flags = -1 AND d.CrossDockKey IS NULL", new { r = r.RegId, id }, tx);
+                if (stokSpmbIni > 0) return Bad("SPMB ini sudah dimuat dari stok gudang · muat langsung harus di SPMB lain setelah truk ditimbang");
+                var sesiLain = await db.ExecuteScalarAsync<int>(@"SELECT COUNT(*) FROM KRN1 d JOIN OKRN h ON h.ObjType = d.ObjType AND h.DocEntry = d.DocEntry
+                    WHERE d.CrossDockRegId = @r AND h.PlanId = @id AND d.CrossDockSesiId <> @s", new { r = r.RegId, id, s = r.SesiId }, tx);
+                if (sesiLain > 0) return Bad("SPMB ini sudah memuat langsung dari kontainer lain · selesaikan & timbang truk dulu");
 
                 // Kontainer SPBB yang sedang dibongkar
                 var ks = await db.QueryFirstOrDefaultAsync<(long? PlanId, string Status, string ContainerNo, string? Plat1, long? RegId1, string WhsCode)?>(

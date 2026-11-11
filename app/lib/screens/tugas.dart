@@ -316,8 +316,14 @@ class _TugasDetailState extends State<TugasDetail> {
       if (spbb) {
         await Api.post('/api/kontainer/$_sesiId/selesai-bongkar', {});
       } else {
-        final ok = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => PaletScreen(whs: _h!['whsCode'].toString(), regId: _regId!)));
-        if (ok != true) return;
+        final v = _veh.where((x) => toI(x['regId']) == _regId).firstOrNull;
+        if (v?['timbanganMobil'] == true) {
+          // gudang timbangan mobil: palet tidak ditimbang, net = timbang truk
+          await Api.post('/api/kendaraan/$_regId/selesai-krani', {'jumlahPalet': 0, 'beratPaletKg': 0});
+        } else {
+          final ok = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => PaletScreen(whs: _h!['whsCode'].toString(), regId: _regId!)));
+          if (ok != true) return;
+        }
       }
       if (mounted) {
         showInfo(context, spbb ? 'Kontainer kosong · siap ditarik (timbang kepala lalu kepala + kontainer)' : 'Kendaraan boleh timbang keluar');
@@ -386,7 +392,7 @@ class _TugasDetailState extends State<TugasDetail> {
                       icon: const Icon(Icons.swap_horiz),
                       label: const Text('Muat langsung dari kontainer SPBB'),
                     ),
-                    const Hint('Gudang timbangan mobil: barang dari kontainer yang sedang dibongkar langsung ke truk ini. Boleh dicampur muatan stok gudang. Berat final = net timbang keluar − kg muatan stok.'),
+                    const Hint('Gudang timbangan mobil: partial SPBB dari kontainer langsung ke truk ini. Selesaikan SPMB ini & timbang truk dulu sebelum memuat SPMB lain.'),
                   ],
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
@@ -752,7 +758,7 @@ class _MuatLangsungScreenState extends State<MuatLangsungScreen> {
             ? ErrorView(_error!, onRetry: _load)
             : ListView(padding: const EdgeInsets.all(20), children: [
                 const Hint('Barang dari kontainer SPBB yang sedang dibongkar langsung dimuat ke truk ini (tidak masuk ruangan). '
-                    'Truk boleh membawa muatan lain (stok gudang / kontainer lain). Berat final = net timbang keluar truk − kg muatan stok gudang; sisa SPBB = net kontainer − berat ini.'),
+                    'SPMB ini hanya berisi barang dari partial SPBB ini. Muatan lain dimuat di SPMB berikutnya setelah truk ditimbang. Berat final = net timbang truk; sisa SPBB = net kontainer − berat ini.'),
                 const SizedBox(height: 12),
                 const FieldLabel('Kontainer SPBB yang sedang dibongkar', required: true),
                 if (_kont.isEmpty) const Hint('Tidak ada kontainer yang sedang dibongkar di gudang ini', color: C.outbound),
