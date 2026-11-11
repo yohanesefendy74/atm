@@ -286,3 +286,16 @@ UPDATE l SET NoLot = REPLACE(SUBSTRING(p.PlanNo, 6, 20), '/', '')
 FROM dbo.WHS_Plan1 l JOIN dbo.WHS_Plan p ON p.PlanId = l.PlanId
 WHERE p.Jenis = 'SPBB' AND ISNULL(l.NoLot, '') <> REPLACE(SUBSTRING(p.PlanNo, 6, 20), '/', '');
 GO
+
+/* Muat langsung (cross-dock) di gudang timbangan mobil: sebagian barang SPBB dari kontainer yang sedang dibongkar
+   langsung dimuat ke truk SPMB (tidak masuk ruangan). Dicatat berpasangan: baris masuk SPBB + baris keluar SPMB.
+   Berat final = net timbang keluar truk SPMB (truk hanya membawa barang SPBB tsb).
+   Sisa SPBB saat kontainer ditimbang kosong = net kontainer - berat muat langsung. */
+IF COL_LENGTH('dbo.KRN1','CrossDockSesiId') IS NULL ALTER TABLE dbo.KRN1 ADD CrossDockSesiId BIGINT NULL;   -- kontainer SPBB asal
+IF COL_LENGTH('dbo.KRN1','CrossDockRegId') IS NULL ALTER TABLE dbo.KRN1 ADD CrossDockRegId BIGINT NULL;     -- truk SPMB
+IF COL_LENGTH('dbo.KRN1','CrossDockKey') IS NULL ALTER TABLE dbo.KRN1 ADD CrossDockKey NVARCHAR(40) NULL;   -- pasangan baris masuk & keluar
+IF COL_LENGTH('dbo.KRN1','CrossDockFinal') IS NULL ALTER TABLE dbo.KRN1 ADD CrossDockFinal BIT NULL;        -- 1 = kg sudah dari timbang keluar
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_KRN1_CrossDock' AND object_id = OBJECT_ID('dbo.KRN1'))
+    CREATE INDEX IX_KRN1_CrossDock ON dbo.KRN1 (CrossDockRegId, CrossDockSesiId) INCLUDE (CrossDockKey, flags, qty) WHERE CrossDockKey IS NOT NULL;
+GO

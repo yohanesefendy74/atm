@@ -260,6 +260,10 @@ ORDER BY LogTime DESC", new { objType, docEntry, bplId = u.BplId() }));
                     }
                 }
 
+                // Muat langsung: kg final menunggu timbang keluar truk SPMB
+                if (await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM KRN1 WHERE ObjType = @objType AND DocEntry = @docEntry AND CrossDockKey IS NOT NULL AND ISNULL(CrossDockFinal, 0) = 0", new { objType, docEntry }, tx) > 0)
+                    errors.Add("Muat langsung: berat final menunggu timbang keluar truk SPMB");
+
                 // Flag harus konsisten dengan ObjType/TrxCode
                 foreach (var l in lines)
                 {

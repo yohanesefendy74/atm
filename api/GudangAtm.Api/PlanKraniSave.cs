@@ -54,6 +54,8 @@ public static class PlanKraniSave
                     if (k is null || k.Value.Status != "Di dalam") return Bad("Kendaraan tidak di dalam gudang");
                     if (k.Value.PlanId != id) return Bad("Kendaraan ini terdaftar untuk dokumen lain");
                     noMobil = k.Value.NoPolisi; cont = k.Value.ContainerNo ?? "";
+                    if (await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM KRN1 WHERE CrossDockRegId = @r", new { r = r.RegId }, tx) > 0)
+                        return Bad("Truk ini muat langsung dari kontainer SPBB · tidak boleh dicampur stok gudang");
                 }
                 else return Bad("Pilih kendaraan yang sedang memuat");
 

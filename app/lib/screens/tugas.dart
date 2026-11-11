@@ -374,6 +374,19 @@ class _TugasDetailState extends State<TugasDetail> {
                       items: [for (final v in _veh) DropdownMenuItem(value: toI(v['regId']), child: Text('${v['noPolisi']} · ${v['sopir']}'))],
                       onChanged: (v) => setState(() => _regId = v),
                     ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: _regId == null
+                          ? null
+                          : () async {
+                              final ok = await Navigator.of(context).push<bool>(MaterialPageRoute(
+                                  builder: (_) => MuatLangsungScreen(whs: _h!['whsCode'].toString(), spmbId: widget.planId, regId: _regId!, spmbLines: _lines)));
+                              if (ok == true) _load();
+                            },
+                      icon: const Icon(Icons.swap_horiz),
+                      label: const Text('Muat langsung dari kontainer SPBB'),
+                    ),
+                    const Hint('Gudang timbangan mobil: barang dari kontainer yang sedang dibongkar langsung ke truk ini. Berat final dari timbang keluar truk.'),
                   ],
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
@@ -616,4 +629,182 @@ class _Entry {
   String? pt;
   String? bl;
   String? lot; // lot = no. transaksi masuk di QR
+}
+
+
+/// Muat langsung (cross-dock): sebagian barang SPBB dari kontainer yang sedang dibongkar langsung dimuat ke truk SPMB.
+/// Krani mengisi sak & palet; kg sementara dari sampling, kg final dari timbang keluar truk SPMB.
+class MuatLangsungScreen extends StatefulWidget {
+  const MuatLangsungScreen({super.key, required this.whs, required this.spmbId, required this.regId, required this.spmbLines});
+  final String whs;
+  final int spmbId;
+  final int regId;
+  final List<Map<String, dynamic>> spmbLines;
+  @override
+  State<MuatLangsungScreen> createState() => _MuatLangsungScreenState();
+}
+
+class _MlRow {
+  _MlRow(this.spmbLine, this.itemCode, this.nama);
+  final int spmbLine;
+  final String itemCode;
+  final String nama;
+  int? spbbLine;
+  final sak = TextEditingController();
+  final palet = TextEditingController();
+  final kg = TextEditingController();
+}
+
+class _MuatLangsungScreenState extends State<MuatLangsungScreen> {
+  List<Map<String, dynamic>> _kont = [];
+  int? _sesiId;
+  List<Map<String, dynamic>> _spbbLines = [];
+  Map<int, double> _avg = {};
+  List<_MlRow> _rows = [];
+  String? _error;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final k = (await Api.get('/api/kontainer/dock', {'whs': widget.whs}) as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .where((x) => x['status'] == 'ISI_MASUK' || x['status'] == 'DI_DOCK')
+          .toList();
+      if (!mounted) return;
+      setState(() {
+        _kont = k;
+        if (k.length == 1) _sesiId = toI(k.first['sesiId']);
+      });
+      if (_sesiId != null) await _loadKont();
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    }
+  }
+
+  Future<void> _loadKont() async {
+    final r = Map<String, dynamic>.from(await Api.get('/api/kontainer/$_sesiId') as Map);
+    final lines = ((r['planLines'] as List?) ?? const []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    final sampel = ((r['sampel'] as List?) ?? const []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    final avg = <int, double>{};
+    for (final pl in lines.map((l) => toI(l['planLine']))) {
+      final s = sampel.where((x) => toI(x['planLine']) == pl).map((x) => toD(x['kgSak'])).toList();
+      if (s.isNotEmpty) avg[pl] = s.reduce((a, b) => a + b) / s.length;
+    }
+    if (!mounted) return;
+    setState(() {
+      _spbbLines = lines;
+      _avg = avg;
+      _rows = [
+        for (final m in widget.spmbLines)
+          if (lines.any((b) => b['itemCode'] == m['itemCode']))
+            _MlRow(toI(m['planLine']), '${m['itemCode']}', '${m['dscription'] ?? ''}')
+              ..spbbLine = toI(lines.firstWhere((b) => b['itemCode'] == m['itemCode'])['planLine'])
+      ];
+    });
+  }
+
+  Future<void> _simpan() async {
+    final isi = _rows.where((r) => (double.tryParse(r.sak.text.replaceAll(',', '.')) ?? 0) > 0).toList();
+    if (_sesiId == null) return showError(context, 'Pilih kontainer SPBB');
+    if (isi.isEmpty) return showError(context, 'Isi jumlah sak barang yang dimuat langsung');
+    for (final r in isi) {
+      if (r.spbbLine == null) return showError(context, '${r.itemCode}: pilih baris SPBB');
+      if (!_avg.containsKey(r.spbbLine) && (double.tryParse(r.kg.text.replaceAll(',', '.')) ?? 0) <= 0) {
+        return showError(context, '${r.itemCode}: belum ada sampel berat sak · isi estimasi kg');
+      }
+    }
+    setState(() => _busy = true);
+    try {
+      final res = await Api.post('/api/plan/${widget.spmbId}/muat-langsung', {
+        'regId': widget.regId,
+        'sesiId': _sesiId,
+        'lines': [
+          for (final r in isi)
+            {
+              'spmbLine': r.spmbLine,
+              'spbbLine': r.spbbLine,
+              'sak': double.parse(r.sak.text.replaceAll(',', '.')),
+              'palet': double.tryParse(r.palet.text.replaceAll(',', '.')) ?? 0,
+              'kgEstimasi': double.tryParse(r.kg.text.replaceAll(',', '.')) ?? 0,
+            }
+        ],
+      }) as Map;
+      if (!mounted) return;
+      showInfo(context, 'Muat langsung tersimpan · estimasi ${toD(res['estimasiKg']).toStringAsFixed(0)} kg. Kg final dari timbang keluar truk.');
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Muat langsung dari kontainer')),
+        body: _error != null
+            ? ErrorView(_error!, onRetry: _load)
+            : ListView(padding: const EdgeInsets.all(20), children: [
+                const Hint('Barang dari kontainer SPBB yang sedang dibongkar langsung dimuat ke truk ini (tidak masuk ruangan). '
+                    'Truk hanya boleh membawa barang SPBB tersebut. Berat final = net timbang keluar truk; sisa SPBB = net kontainer − berat ini.'),
+                const SizedBox(height: 12),
+                const FieldLabel('Kontainer SPBB yang sedang dibongkar', required: true),
+                if (_kont.isEmpty) const Hint('Tidak ada kontainer yang sedang dibongkar di gudang ini', color: C.outbound),
+                DropdownButtonFormField<int>(
+                  value: _sesiId,
+                  isExpanded: true,
+                  items: [for (final k in _kont) DropdownMenuItem(value: toI(k['sesiId']), child: Text('${k['containerNo']} · ${k['planNo'] ?? ''} · ${k['cardName'] ?? ''}', overflow: TextOverflow.ellipsis))],
+                  onChanged: (v) async {
+                    setState(() => _sesiId = v);
+                    await _loadKont();
+                  },
+                ),
+                const SizedBox(height: 12),
+                if (_sesiId != null && _rows.isEmpty) const Hint('Tidak ada item SPMB yang sama dengan isi kontainer ini', color: C.outbound),
+                for (final r in _rows) ...[
+                  Box(
+                    padding: const EdgeInsets.all(14),
+                    radius: 14,
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('${r.itemCode} · ${r.nama}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                      if (_spbbLines.where((b) => b['itemCode'] == r.itemCode).length > 1)
+                        DropdownButtonFormField<int>(
+                          value: r.spbbLine,
+                          decoration: const InputDecoration(labelText: 'Baris SPBB'),
+                          items: [
+                            for (final b in _spbbLines.where((b) => b['itemCode'] == r.itemCode))
+                              DropdownMenuItem(value: toI(b['planLine']), child: Text('Baris ${b['planLine']} · ${b['dscription'] ?? ''}'))
+                          ],
+                          onChanged: (v) => setState(() => r.spbbLine = v),
+                        ),
+                      Text(
+                          _avg.containsKey(r.spbbLine)
+                              ? 'Rata-rata sampel ${_avg[r.spbbLine]!.toStringAsFixed(2)} kg/sak'
+                              : 'Belum ada sampel berat sak · isi estimasi kg',
+                          style: TextStyle(fontSize: 12, color: _avg.containsKey(r.spbbLine) ? C.muted : C.amberText)),
+                      const SizedBox(height: 8),
+                      Row(children: [
+                        Expanded(child: TextField(controller: r.sak, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Sak'))),
+                        const SizedBox(width: 8),
+                        Expanded(child: TextField(controller: r.palet, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Palet'))),
+                        if (!_avg.containsKey(r.spbbLine)) ...[
+                          const SizedBox(width: 8),
+                          Expanded(child: TextField(controller: r.kg, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Estimasi kg'))),
+                        ],
+                      ]),
+                    ]),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ]),
+        bottomNavigationBar: Footer(children: [
+          BigButton(label: 'Simpan muat langsung', color: C.outbound, busy: _busy, onPressed: _simpan),
+        ]),
+      );
 }

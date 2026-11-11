@@ -35,7 +35,7 @@ FROM OKRN h JOIN KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
 JOIN WHS_KontainerSesi k ON k.SesiId = h.SesiId
 LEFT JOIN WHS_Plan1 p1 ON p1.PlanId = k.PlanId AND p1.PlanLine = d.PlanLine
 OUTER APPLY (SELECT COUNT(*) AS Jml, SUM(KgSak) AS Kg FROM WHS_SamplingSak x WHERE x.SesiId = h.SesiId AND x.PlanLine = d.PlanLine) s
-WHERE h.SesiId = @sesiId AND d.flags = 1
+WHERE h.SesiId = @sesiId AND d.flags = 1 AND d.CrossDockKey IS NULL   -- muat langsung: berat dari timbang keluar truk SPMB
 GROUP BY d.PlanLine ORDER BY d.PlanLine", new { sesiId }, tx)).ToList();
 
     /// Net timbangan dibagi ke tiap barang. Sampel (1 karung per timbang, boleh berkali-kali) hanya untuk rata-rata kg/karung
@@ -148,7 +148,8 @@ WHERE k.WhsCode = @whs AND k.Status IN ('ISI_MASUK','DI_DOCK','KOSONG') ORDER BY
             if (k.Value.Status == "ISI_MASUK") return Bad("Kepala truk belum ditimbang (lepas kontainer) di pos timbang");
             if (k.Value.Status != "DI_DOCK") return Bad("Kontainer tidak dalam proses bongkar");
             var items = await Items(db, null, id);
-            if (items.Count == 0) return Bad("Belum ada input krani untuk kontainer ini");
+            var adaMuatLangsung = await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM KRN1 WHERE CrossDockSesiId = @id AND flags = 1", new { id }) > 0;
+            if (items.Count == 0 && !adaMuatLangsung) return Bad("Belum ada input krani untuk kontainer ini");
             var tanpa = items.Where(i => i.SakSampel <= 0).Select(i => i.ItemCode).ToList();
             if (tanpa.Count > 0) return Bad("Sampel berat karung belum ada untuk: " + string.Join(", ", tanpa));
             await db.ExecuteAsync("UPDATE WHS_KontainerSesi SET Status = 'KOSONG' WHERE SesiId = @id", new { id });
