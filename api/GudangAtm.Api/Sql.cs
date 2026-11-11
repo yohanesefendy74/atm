@@ -176,10 +176,12 @@ WHERE   s.WhsCode = @whsCode AND s.ItemCode = @itemCode AND s.ContainerNo = ISNU
     /// Data label: hanya baris masuk (Flag 1). PT dicetak dari OPRC.PrcName.
     public const string LabelLines = @"
 SELECT  d.ItemCode AS itemCode, COALESCE(i.ItemName, sc.ItemName) AS itemName, d.brand_name AS brand, d.KodeRuangan AS kodeRuangan,
-        d.qty AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet, d.NoLot AS noLot
+        d.qty AS qty, d.Qty2 AS qty2, d.QtyPalet AS qtyPalet, d.NoLot AS noLot,
+        NULLIF(d.U_IDU_Kode_PT, '') AS ptCode, pc.PrcName AS ptName
 FROM    KRN1 d
 LEFT JOIN OITM i ON i.ItemCode = d.ItemCode
 LEFT JOIN WHS_ItemScrap sc ON sc.ItemCode = d.ItemCode
+LEFT JOIN OPRC pc ON pc.PrcCode = d.U_IDU_Kode_PT
 WHERE   d.ObjType = @objType AND d.DocEntry = @docEntry AND d.flags = 1
 ORDER BY d.LineNum";
 

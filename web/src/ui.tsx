@@ -297,7 +297,7 @@ export function ItemSearch({ onPick, placeholder }: { onPick: (i: Item) => void;
 export const useBrands = () => useLoad(() => get<string[]>('/api/brands'), []);
 
 /** Baris barang (inbound / Item Inbound KR-RP). */
-export type Line = { itemCode: string; itemName: string; groupName: string; uom: string; brand: string; origin: string; qty: number; qty2: number; qtyPalet: number; kodeRuangan?: string; noBL?: string };
+export type Line = { itemCode: string; itemName: string; groupName: string; uom: string; brand: string; origin: string; qty: number; qty2: number; qtyPalet: number; kodeRuangan?: string; noBL?: string; ptCode?: string };
 
 export function LineForm({ onAdd, sakLabel = 'Karung', accent = 'in' }: { onAdd: (l: Line) => void; sakLabel?: string; accent?: 'in' | 'green' }) {
   const brands = useBrands();
@@ -393,7 +393,7 @@ export function LineRow({ l, onDelete, badge, sak = 'krg' }: { l: Line | Row; on
       <div className="grow">
         <div className="mono">{l.itemCode}</div>
         <div className="small muted">{[l.itemName, l.brand, l.origin].filter(Boolean).join(' · ')}</div>
-        {l.kodeRuangan && <div className="small"><strong>Ruangan {l.kodeRuangan}</strong>{l.noBL ? ` · BL ${l.noBL}` : ''}</div>}
+        {l.kodeRuangan && <div className="small"><strong>Ruangan {l.kodeRuangan}</strong>{l.noBL ? ` · BL ${l.noBL}` : ''}{l.ptCode ? ` · PT ${l.ptCode}` : ''}</div>}
       </div>
       <div className="num">
         {fmt(l.qty)} {l.uom ?? 'KG'}

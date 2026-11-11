@@ -62,7 +62,7 @@ class _LabelPrintScreenState extends State<LabelPrintScreen> {
               itemName: (i['itemName'] ?? '').toString(),
               brand: (i['brand'] ?? '').toString(),
               packKg: toD(i['packKg']),
-              ptName: (d['ptName'] ?? '').toString(),
+              ptName: (i['ptName'] ?? d['ptName'] ?? '').toString(),
               qr: (i['qr'] ?? '').toString(),
               sakPerPalet: toD(i['sakPerPalet']),
               copies: toI(i['qtyPalet']),

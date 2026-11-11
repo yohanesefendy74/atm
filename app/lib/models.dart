@@ -29,7 +29,9 @@ class LineDraft {
     required this.qtyPalet,
     this.kodeRuangan,
     this.noBL,
+    this.ptCode,
   });
+  final String? ptCode; // RP: PT hasil/scrap = PT palet sumber; KR koreksi plus: diisi Admin
   final String? kodeRuangan; // ruangan TUJUAN (Item Inbound KR/RP)
   final String? noBL; // No. BL barang (Item Inbound KR/RP: BL palet asal)
   final String itemCode;
@@ -52,10 +54,11 @@ class LineDraft {
         'qtyPalet': qtyPalet,
         'kodeRuangan': kodeRuangan,
         'noBL': noBL,
+        'ptCode': ptCode,
       };
 
-  LineDraft withRuangan(String? r, {String? bl}) => LineDraft(
-      itemCode: itemCode, itemName: itemName, groupName: groupName, uom: uom, brand: brand, origin: origin, qty: qty, qty2: qty2, qtyPalet: qtyPalet, kodeRuangan: r, noBL: bl ?? noBL);
+  LineDraft withRuangan(String? r, {String? bl, String? pt}) => LineDraft(
+      itemCode: itemCode, itemName: itemName, groupName: groupName, uom: uom, brand: brand, origin: origin, qty: qty, qty2: qty2, qtyPalet: qtyPalet, kodeRuangan: r, noBL: bl ?? noBL, ptCode: pt ?? ptCode);
 }
 
 class InboundDraft {

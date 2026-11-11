@@ -158,8 +158,8 @@ export default function OutboundNew() {
         containerNo: container,
         docDate: todayIso(),
         outLines: outLines.map((l) => ({ itemCode: l.itemCode, uom: 'KG', brand: l.brand, origin: l.origin, qty: Math.round(l.qty * 100) / 100, qty2: l.qty2, qtyPalet: l.qtyPalet, kodeRuangan: l.kodeRuangan, noBL: l.noBL || null, titipan: !!l.titipan, ptCode: l.ptCode || null, noLot: l.noLot || null })),
-        inLines: isAdj ? inLines.map((l) => ({ itemCode: l.itemCode, uom: l.uom, brand: l.brand || null, origin: l.origin || null, qty: l.qty, qty2: l.qty2, qtyPalet: l.qtyPalet, kodeRuangan: l.kodeRuangan, noBL: l.noBL })) : [],
-        scrapLines: trx === 'RP' ? scrapLines.map((l) => ({ itemCode: l.itemCode, uom: 'KG', qty: l.qty, qty2: l.qty2, qtyPalet: 0, kodeRuangan: l.kodeRuangan, noBL: l.noBL })) : [],
+        inLines: isAdj ? inLines.map((l) => ({ itemCode: l.itemCode, uom: l.uom, brand: l.brand || null, origin: l.origin || null, qty: l.qty, qty2: l.qty2, qtyPalet: l.qtyPalet, kodeRuangan: l.kodeRuangan, noBL: l.noBL, ptCode: l.ptCode || null })) : [],
+        scrapLines: trx === 'RP' ? scrapLines.map((l) => ({ itemCode: l.itemCode, uom: 'KG', qty: l.qty, qty2: l.qty2, qtyPalet: 0, kodeRuangan: l.kodeRuangan, noBL: l.noBL, ptCode: l.ptCode || null })) : [],
       });
       toast(`Outbound ${r.docEntry} (${r.trxCode}) tersimpan`);
       navigate('/outbound', true);
@@ -264,19 +264,21 @@ export default function OutboundNew() {
           <RuanganSelect whs={wh?.whsCode ?? ''} value={ruangIn} onChange={setRuangIn} titipan={false} />
         </div>
         {(() => {
-          const bls = [...new Set(pallets.map((p) => p.noBL).filter(Boolean))];
-          const bl = bls.length === 1 ? bls[0] : blIn;
+          // RP: hasil & scrap ikut BL & PT palet sumber. KR: item masuk = koreksi plus (BL dari palet keluar, PT diisi Admin).
+          const srcs = [...new Set(pallets.filter((p) => p.noBL).map((p) => (trx === 'RP' ? `${p.noBL}|${p.ptCode ?? ''}` : `${p.noBL}|`)))];
+          const pick = srcs.length === 1 ? srcs[0] : blIn;
+          const [bl, ptIn] = (pick || '|').split('|');
           return (
             <>
               <div className="field">
-                <label>No. BL item masuk <span className="req">*</span></label>
-                {bls.length === 0 ? <p className="hint">BL item masuk mengikuti BL palet keluar. Scan palet sumber dulu.</p> : (
-                  <select className="input" value={bl} onChange={(e) => setBlIn(e.target.value)} disabled={bls.length === 1}>
-                    <option value="">Pilih BL</option>{bls.map((b) => <option key={b}>{b}</option>)}
+                <label>{trx === 'RP' ? 'Sumber BL & PT hasil' : 'No. BL item masuk'} <span className="req">*</span></label>
+                {srcs.length === 0 ? <p className="hint">BL item masuk mengikuti BL palet keluar. Scan palet sumber dulu.</p> : (
+                  <select className="input" value={pick} onChange={(e) => setBlIn(e.target.value)} disabled={srcs.length === 1}>
+                    <option value="">Pilih</option>{srcs.map((s) => <option key={s} value={s}>{trx === 'RP' ? `BL ${s.split('|')[0]} · PT ${s.split('|')[1] || '-'}` : s.split('|')[0]}</option>)}
                   </select>
                 )}
               </div>
-              <LineForm accent="green" sakLabel="Sak" onAdd={(l) => (!ruangIn ? toast('Pilih ruangan tujuan dulu', true) : !bl ? toast('Pilih No. BL item masuk', true) : setInLines([...inLines, { ...l, kodeRuangan: ruangIn, noBL: bl }]))} />
+              <LineForm accent="green" sakLabel="Sak" onAdd={(l) => (!ruangIn ? toast('Pilih ruangan tujuan dulu', true) : !bl ? toast('Pilih sumber BL', true) : setInLines([...inLines, { ...l, kodeRuangan: ruangIn, noBL: bl, ptCode: ptIn || undefined }]))} />
             </>
           );
         })()}
@@ -284,17 +286,17 @@ export default function OutboundNew() {
         {inLines.map((l, i) => (
           <LineRow key={i} l={l} sak="sak" badge={<span className="pill green">MASUK</span>} onDelete={() => setInLines(inLines.filter((_, j) => j !== i))} />
         ))}
-        <p className="hint">Label QR Item Inbound bisa dicetak setelah Admin mengisi PT di CMS.</p>
+        <p className="hint">{trx === 'RP' ? 'Label QR hasil langsung bisa dicetak (PT ikut palet sumber).' : 'Label QR koreksi plus bisa dicetak setelah Admin mengisi PT di CMS.'}</p>
         {trx === 'RP' && (() => {
-          const bls = [...new Set(pallets.map((p) => p.noBL).filter(Boolean))];
-          const bl = bls.length === 1 ? bls[0] : blIn;
+          const srcs = [...new Set(pallets.filter((p) => p.noBL).map((p) => `${p.noBL}|${p.ptCode ?? ''}`))];
+          const [bl, ptS] = ((srcs.length === 1 ? srcs[0] : blIn) || '|').split('|');
           const addScrap = () => {
             const it = scrapItems.find((x) => x.itemCode === scrapCode);
             if (!it) return toast('Pilih item scrap', true);
             if (num(scrapKg) <= 0) return toast('Isi berat scrap (kg)', true);
             if (!ruangIn) return toast('Pilih ruangan tujuan dulu', true);
             if (!bl) return toast('Pilih No. BL (dari palet keluar)', true);
-            setScrapLines([...scrapLines, { itemCode: String(it.itemCode), itemName: String(it.itemName ?? ''), groupName: 'SCRAP', uom: 'KG', brand: '', origin: '', qty: num(scrapKg), qty2: num(scrapSak), qtyPalet: 0, kodeRuangan: ruangIn, noBL: bl as string }]);
+            setScrapLines([...scrapLines, { itemCode: String(it.itemCode), itemName: String(it.itemName ?? ''), groupName: 'SCRAP', uom: 'KG', brand: '', origin: '', qty: num(scrapKg), qty2: num(scrapSak), qtyPalet: 0, kodeRuangan: ruangIn, noBL: bl, ptCode: ptS || undefined }]);
             setScrapCode(''); setScrapKg(''); setScrapSak('');
           };
           return (

@@ -90,6 +90,8 @@ public class LabelLineRow
     public decimal Qty2 { get; set; }
     public decimal QtyPalet { get; set; }
     public string? NoLot { get; set; }
+    public string? PtCode { get; set; }   // PT baris (hasil RP ikut PT sumber)
+    public string? PtName { get; set; }
 }
 
 public class DocHeaderRow

@@ -174,10 +174,24 @@ public static class KraniEndpoints
                 if (bls.Count > 0 && inLines.Any(l => !bls.Contains(l.NoBL!.Trim())))
                     return Bad(jenis == "RP" ? "Hasil Repacking wajib membawa BL sumber (BL palet yang di-repack)" : "BL item masuk harus salah satu BL palet keluar");
             }
-            // Item masuk KR/RP (hasil & scrap) membawa PT stok sumber bila sumbernya satu PT; bila campur, Admin mengisi PT di CMS
-            var ptSumber = outLines.Select(l => Helpers.Empty(l.PtCode)).Distinct().ToList();
-            if (ptSumber.Count == 1 && ptSumber[0] is not null)
-                inLines = inLines.Select(l => string.IsNullOrWhiteSpace(l.PtCode) ? l with { PtCode = ptSumber[0] } : l).ToList();
+            // PT: baris keluar (sumber / koreksi minus) = PT stok sumber. RP: hasil & scrap = PT sumber (dipilih krani bila sumber campur PT).
+            // KR: item masuk = koreksi plus -> PT diisi Admin di CMS (satu-satunya PT yang diisi Admin).
+            var ptSumber = outLines.Select(l => Helpers.Empty(l.PtCode)).Where(p => p is not null).Distinct().ToList();
+            if (jenis == "RP")
+            {
+                for (var i = 0; i < inLines.Count; i++)
+                {
+                    var l = inLines[i];
+                    var p = Helpers.Empty(l.PtCode);
+                    if (p is null)
+                    {
+                        if (ptSumber.Count > 1) return Bad($"{l.ItemCode}: palet sumber dari beberapa PT · pilih sumber BL & PT untuk hasil/scrap");
+                        inLines[i] = l with { PtCode = ptSumber.FirstOrDefault() };
+                    }
+                    else if (ptSumber.Count > 0 && !ptSumber.Contains(p)) return Bad($"{l.ItemCode}: PT {p} bukan PT palet sumber");
+                }
+            }
+            else inLines = inLines.Select(l => l with { PtCode = null }).ToList();
             if (jenis == "RP")
             {
                 // Neraca berat: SUMBER = HASIL + SCRAP (selisih dibatasi REPACK_WARN_PCT)
@@ -255,16 +269,15 @@ public static class KraniEndpoints
         });
 
         // ---------------------------------------------------------------- Label QR
-        // Terkunci sampai Admin mengisi PT (OKRN.U_IDU_Kode_PT). Baris PT di label = OPRC.PrcName.
+        // Terkunci sampai PT diketahui: PT baris (hasil RP ikut PT sumber) atau PT header diisi Admin (inbound, koreksi plus KR).
         api.MapGet("/labels/{objType}/{docEntry:long}", async (string objType, long docEntry, ClaimsPrincipal u) =>
         {
             await using var db = dbf();
             var h = await db.QueryFirstOrDefaultAsync<DocHeaderRow>(Sql.DocHeader, new { objType, docEntry, bplId = u.BplId(), userId = u.UserId() });
             if (h is null) return Results.NotFound(new { message = "Dokumen tidak ditemukan" });
-            if (string.IsNullOrWhiteSpace(h.PtCode))
+            var rows = (await db.QueryAsync<LabelLineRow>(Sql.LabelLines, new { objType, docEntry })).ToList();
+            if (string.IsNullOrWhiteSpace(h.PtCode) && rows.Any(x => string.IsNullOrWhiteSpace(x.PtCode)))
                 return Results.Json(new { message = "Label belum bisa dicetak: PT belum diisi Admin di CMS" }, statusCode: 409);
-
-            var rows = await db.QueryAsync<LabelLineRow>(Sql.LabelLines, new { objType, docEntry });
             var yymmdd = h.DocDate.ToString("yyMMdd");
             var items = rows.Select(r => new
             {
@@ -276,6 +289,7 @@ public static class KraniEndpoints
                 sakPerPalet = r.QtyPalet > 0 ? Math.Ceiling(r.Qty2 / r.QtyPalet) : 0,
                 qtyPalet = (int)r.QtyPalet,
                 r.NoLot,
+                ptName = r.PtName ?? r.PtCode ?? h.PtName ?? h.PtCode,
                 qr = $"{yymmdd}-{r.ItemCode}-{h.ContainerNo}" + (string.IsNullOrEmpty(r.NoLot) ? "" : $"-L{r.NoLot}"),
             }).ToList();
             return Results.Ok(new
@@ -284,7 +298,7 @@ public static class KraniEndpoints
                 h.DocEntry,
                 h.DocDate,
                 h.ContainerNo,
-                ptName = h.PtName ?? h.PtCode,
+                ptName = h.PtName ?? h.PtCode ?? items.Select(i => i.ptName).FirstOrDefault(),
                 items,
             });
         });

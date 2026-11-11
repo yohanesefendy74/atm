@@ -206,6 +206,7 @@ class OutboundAddItemScreen extends StatefulWidget {
 class _OutboundAddItemScreenState extends State<OutboundAddItemScreen> {
   String? _ruang;
   String? _bl;
+  String? _pt; // RP: PT hasil/scrap = PT palet sumber (dipilih bersama BL bila sumber campur)
   Map<String, dynamic>? _scrap;
   final _scrapKg = TextEditingController();
   final _scrapSak = TextEditingController();
@@ -233,7 +234,8 @@ class _OutboundAddItemScreenState extends State<OutboundAddItemScreen> {
           qty2: sak,
           qtyPalet: 0,
           kodeRuangan: _ruang,
-          noBL: _bl));
+          noBL: _bl,
+          ptCode: _pt));
       _scrap = null;
       _scrapKg.clear();
       _scrapSak.clear();
@@ -259,15 +261,36 @@ class _OutboundAddItemScreenState extends State<OutboundAddItemScreen> {
             RuanganField(whs: d.warehouse!.code, value: _ruang, titipan: false, label: 'Ruangan tujuan (item masuk)', onChanged: (v) => setState(() => _ruang = v)),
             const SizedBox(height: 12),
             Builder(builder: (_) {
-              final bls = d.pallets.map((p) => p.noBL).whereType<String>().where((b) => b.isNotEmpty).toSet().toList();
-              if (bls.length == 1) _bl = bls.first;
-              if (bls.isEmpty) return const Hint('BL item masuk mengikuti BL palet keluar. Scan palet sumber dulu.', color: C.amberText);
-              return DropdownButtonFormField<String>(
-                value: bls.contains(_bl) ? _bl : null,
-                decoration: const InputDecoration(labelText: 'No. BL item masuk'),
-                items: [for (final b in bls) DropdownMenuItem(value: b, child: Text(b))],
-                onChanged: (v) => setState(() => _bl = v),
-              );
+              // RP: hasil/scrap ikut BL & PT palet sumber. KR: item masuk = koreksi plus, BL dari palet keluar, PT diisi Admin.
+              final rp = d.trxCode == 'RP';
+              final src = d.pallets
+                  .where((p) => (p.noBL ?? '').isNotEmpty)
+                  .map((p) => rp ? '${p.noBL}|${p.ptCode ?? ''}' : '${p.noBL}|')
+                  .toSet()
+                  .toList();
+              final cur = _bl == null ? null : '$_bl|${rp ? (_pt ?? '') : ''}';
+              if (src.length == 1 && cur != src.first) {
+                final x = src.first.split('|');
+                _bl = x[0];
+                _pt = rp && x[1].isNotEmpty ? x[1] : null;
+              }
+              if (src.isEmpty) return const Hint('BL item masuk mengikuti BL palet keluar. Scan palet sumber dulu.', color: C.amberText);
+              return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                DropdownButtonFormField<String>(
+                  value: src.contains(cur) ? cur : null,
+                  decoration: InputDecoration(labelText: rp ? 'Sumber BL & PT hasil' : 'No. BL item masuk'),
+                  items: [
+                    for (final s in src)
+                      DropdownMenuItem(value: s, child: Text(rp ? 'BL ${s.split('|')[0]} · PT ${s.split('|')[1].isEmpty ? '-' : s.split('|')[1]}' : s.split('|')[0]))
+                  ],
+                  onChanged: (v) => setState(() {
+                    final x = (v ?? '|').split('|');
+                    _bl = x[0].isEmpty ? null : x[0];
+                    _pt = rp && x[1].isNotEmpty ? x[1] : null;
+                  }),
+                ),
+                Hint(rp ? 'PT hasil & scrap mengikuti PT palet sumber.' : 'Koreksi plus: PT diisi Admin di CMS.'),
+              ]);
             }),
             const SizedBox(height: 12),
             LineForm(
@@ -276,7 +299,7 @@ class _OutboundAddItemScreenState extends State<OutboundAddItemScreen> {
               onAdd: (l) {
                 if (_ruang == null) return showError(context, 'Pilih ruangan tujuan dulu');
                 if (_bl == null) return showError(context, 'Pilih No. BL item masuk (dari palet keluar)');
-                setState(() => d.inLines.add(l.withRuangan(_ruang, bl: _bl)));
+                setState(() => d.inLines.add(l.withRuangan(_ruang, bl: _bl, pt: _pt)));
               },
             ),
             const SizedBox(height: 16),
@@ -289,7 +312,7 @@ class _OutboundAddItemScreenState extends State<OutboundAddItemScreen> {
                   onDelete: () => setState(() => d.inLines.removeAt(i))),
               const SizedBox(height: 8),
             ],
-            const Hint('Label QR Item Inbound bisa dicetak setelah Admin mengisi PT di CMS.'),
+            Hint(d.trxCode == 'RP' ? 'Label QR hasil langsung bisa dicetak setelah dokumen dikirim (PT ikut palet sumber).' : 'Label QR koreksi plus bisa dicetak setelah Admin mengisi PT di CMS.'),
             if (d.trxCode == 'RP') ...[
               const SizedBox(height: 20),
               const Text('Scrap', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
