@@ -1,7 +1,9 @@
 import 'theme.dart';
 
 class Warehouse {
-  Warehouse(this.code, this.name, this.isTitipan, this.isDefault);
+  Warehouse(this.code, this.name, this.isTitipan, this.isDefault, {this.state, this.stateName});
+  final String? state; // OWHS.State
+  final String? stateName; // OCST.Name
   final String code;
   final String name;
   final bool isTitipan;
@@ -12,6 +14,8 @@ class Warehouse {
         (j['whsName'] ?? '').toString(),
         j['isTitipan'] == true || j['isTitipan'] == 1,
         j['isDefault'] == true || j['isDefault'] == 1,
+        state: j['state']?.toString(),
+        stateName: j['stateName']?.toString(),
       );
 }
 

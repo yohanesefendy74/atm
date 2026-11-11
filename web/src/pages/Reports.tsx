@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { get, type Row } from '../api';
 import { Link } from '../router';
-import { ErrorBox, Icon, ItemSearch, KV, Page, Spinner, Totals, WarehouseSelect, fmt, fmtDate, useLoad, useWarehouses, type Item } from '../ui';
+import { ErrorBox, Icon, ItemSearch, KV, Page, Spinner, SearchSelect, Totals, fmt, fmtDate, useLoad, useWarehouses, type Item } from '../ui';
 
 export function ReportsMenu() {
   const items: [string, string, string, string][] = [
@@ -30,9 +30,17 @@ export function ReportsMenu() {
   );
 }
 
+/** Filter laporan: semua gudang, per provinsi (OWHS.State → OCST.Name, nilai "STATE:<kode>") atau per gudang. Bisa dicari. */
 function WhsFilter({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const whs = useWarehouses();
-  return <WarehouseSelect list={whs.data ?? []} value={value} allowAll onChange={(w) => onChange(w.whsCode)} />;
+  const list = whs.data ?? [];
+  const states = new Map<string, string>();
+  list.forEach((w) => { if (w.state) states.set(w.state, w.stateName || w.state); });
+  const opts = [
+    ...[...states.entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([k, n]) => ({ value: `STATE:${k}`, label: `Provinsi · ${n}` })),
+    ...list.map((w) => ({ value: w.whsCode, label: `${w.whsCode} · ${w.whsName}${w.stateName ? ` · ${w.stateName}` : ''}` })),
+  ];
+  return <SearchSelect options={opts} value={value} onChange={onChange} allowEmpty="Semua gudang" placeholder="Cari gudang / provinsi" />;
 }
 
 export function StockItemReport() {

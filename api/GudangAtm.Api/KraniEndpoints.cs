@@ -11,6 +11,8 @@ public static class KraniEndpoints
 {
     static IResult Bad(string message) => Results.BadRequest(new { message });
     static string? Empty(string? s) => Helpers.Empty(s);
+    static string? Whs(string? s) => Helpers.Whs(s);
+    static string? State(string? s) => Helpers.State(s);
     static string? ValidateLines(List<DocLine> lines) => Helpers.ValidateLines(lines);
 
     static Task<SavedDoc> SaveDoc(SqlConnection db, ClaimsPrincipal u, string objType, string trxCode, string whsCode, string noMobil,
@@ -335,27 +337,27 @@ public static class KraniEndpoints
         api.MapGet("/reports/stock-item", async (string? whsCode, string? ruangan, ClaimsPrincipal u) =>
         {
             await using var db = dbf();
-            return Results.Ok(await db.QueryAsync(Sql.StockPerItem, new { bplId = u.BplId(), userId = u.UserId(), whsCode = Empty(whsCode), ruangan = Empty(ruangan) }));
+            return Results.Ok(await db.QueryAsync(Sql.StockPerItem, new { bplId = u.BplId(), userId = u.UserId(), whsCode = Whs(whsCode), state = State(whsCode), ruangan = Empty(ruangan) }));
         });
 
         // Isi ruangan: titipan vs non-titipan
         api.MapGet("/reports/stock-ruangan", async (string? whsCode, string? ruangan, ClaimsPrincipal u) =>
         {
             await using var db = dbf();
-            return Results.Ok(await db.QueryAsync(Sql.StockPerRuanganReport, new { bplId = u.BplId(), userId = u.UserId(), whsCode = Empty(whsCode), ruangan = Empty(ruangan) }));
+            return Results.Ok(await db.QueryAsync(Sql.StockPerRuanganReport, new { bplId = u.BplId(), userId = u.UserId(), whsCode = Whs(whsCode), state = State(whsCode), ruangan = Empty(ruangan) }));
         });
 
         api.MapGet("/reports/stock-container", async (string? whsCode, string? ruangan, string? bl, ClaimsPrincipal u) =>
         {
             await using var db = dbf();
-            return Results.Ok(await db.QueryAsync(Sql.StockPerContainer, new { bplId = u.BplId(), userId = u.UserId(), whsCode = Empty(whsCode), ruangan = Empty(ruangan), bl = Empty(bl) }));
+            return Results.Ok(await db.QueryAsync(Sql.StockPerContainer, new { bplId = u.BplId(), userId = u.UserId(), whsCode = Whs(whsCode), state = State(whsCode), ruangan = Empty(ruangan), bl = Empty(bl) }));
         });
 
         api.MapGet("/reports/stock-card", async (string itemCode, string? whsCode, string? containerNo, string? ruangan, string? bl, ClaimsPrincipal u) =>
         {
             await using var db = dbf();
             var rows = (await db.QueryAsync<StockCardRow>(Sql.StockCard,
-                new { bplId = u.BplId(), userId = u.UserId(), itemCode, whsCode = Empty(whsCode), containerNo = Empty(containerNo), ruangan = Empty(ruangan), bl = Empty(bl) })).ToList();
+                new { bplId = u.BplId(), userId = u.UserId(), itemCode, whsCode = Whs(whsCode), state = State(whsCode), containerNo = Empty(containerNo), ruangan = Empty(ruangan), bl = Empty(bl) })).ToList();
             decimal kg = 0, sak = 0, pal = 0;
             foreach (var r in rows)
             {
@@ -370,7 +372,7 @@ public static class KraniEndpoints
             var t = (to ?? DateTime.Today).Date;
             var f = (from ?? t.AddDays(-6)).Date;
             await using var db = dbf();
-            object row = await db.QueryFirstAsync(Sql.Kpi,new { bplId = u.BplId(), userId = u.UserId(), from = f, to = t, whsCode = Empty(whsCode) });
+            object row = await db.QueryFirstAsync(Sql.Kpi,new { bplId = u.BplId(), userId = u.UserId(), from = f, to = t, whsCode = Whs(whsCode), state = State(whsCode) });
             return Results.Ok(row);
         });
     }
@@ -378,6 +380,10 @@ public static class KraniEndpoints
 
 public static class Helpers
 {
+    /// Filter laporan: kode gudang, atau "STATE:<kode>" untuk semua gudang di provinsi itu (OWHS.State, nama dari OCST.Name)
+    public static string? Whs(string? v) => string.IsNullOrWhiteSpace(v) || v.StartsWith("STATE:") ? null : v.Trim();
+    public static string? State(string? v) => v is not null && v.StartsWith("STATE:") && v.Length > 6 ? v[6..].Trim() : null;
+
     /// Semua stok dan transaksi wajib punya ruangan. Cek: terisi, ada & aktif, milik gudang ini.
     /// Mengembalikan (pesan salah, apakah SEMUA ruangan adalah ruangan titipan). Ruangan titipan boleh berisi barang non-titipan;
     /// barang titipan hanya boleh di ruangan titipan (dicek pemanggil).

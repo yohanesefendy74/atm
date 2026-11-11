@@ -202,7 +202,7 @@ export function useLoad<T>(fn: () => Promise<T>, deps: unknown[]) {
 }
 
 // ---------------------------------------------------------------- warehouse
-export type Warehouse = { whsCode: string; whsName: string; isTitipan: boolean; isDefault: boolean };
+export type Warehouse = { whsCode: string; whsName: string; isTitipan: boolean; isDefault: boolean; state?: string | null; stateName?: string | null };
 export const useWarehouses = () => useLoad(() => get<Warehouse[]>('/api/warehouses'), []);
 
 export function WarehouseSelect(props: { list: Warehouse[]; value: string; onChange: (w: Warehouse) => void; id?: string; allowAll?: boolean }) {

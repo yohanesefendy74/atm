@@ -70,20 +70,64 @@ class _WhsFilterState extends State<_WhsFilter> {
     }, onError: (Object _) {});
   }
 
+  /// Pilihan: semua gudang, per provinsi (OWHS.State -> OCST.Name), atau per gudang. Bisa dicari.
+  List<(String?, String)> get _opts {
+    final states = <String, String>{};
+    for (final w in _whs) {
+      if ((w.state ?? '').isNotEmpty) states[w.state!] = w.stateName ?? w.state!;
+    }
+    final st = states.entries.toList()..sort((a, b) => a.value.compareTo(b.value));
+    return [
+      (null, 'Semua gudang'),
+      for (final e in st) ('STATE:${e.key}', 'Provinsi · ${e.value}'),
+      for (final w in _whs) (w.code, '${w.code} · ${w.name}${(w.stateName ?? '').isNotEmpty ? ' · ${w.stateName}' : ''}'),
+    ];
+  }
+
+  Future<void> _pick() async {
+    final q = TextEditingController();
+    final v = await showModalBottomSheet<(String?, String)>(
+      context: context,
+      isScrollControlled: true,
+      builder: (c) => StatefulBuilder(builder: (c, ss) {
+        final f = _opts.where((o) => o.$2.toUpperCase().contains(q.text.trim().toUpperCase())).toList();
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(c).viewInsets.bottom),
+            child: SizedBox(
+              height: MediaQuery.of(c).size.height * 0.7,
+              child: Column(children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: TextField(controller: q, autofocus: true, decoration: const InputDecoration(labelText: 'Cari gudang / provinsi', prefixIcon: Icon(Icons.search)), onChanged: (_) => ss(() {})),
+                ),
+                Expanded(
+                  child: ListView(children: [
+                    for (final o in f) ListTile(title: Text(o.$2), selected: o.$1 == _value, onTap: () => Navigator.of(c).pop(o)),
+                  ]),
+                ),
+              ]),
+            ),
+          ),
+        );
+      }),
+    );
+    if (v == null || !mounted) return;
+    setState(() => _value = v.$1);
+    widget.onChanged(v.$1);
+  }
+
   @override
-  Widget build(BuildContext context) => DropdownButtonFormField<String?>(
-        value: _value,
-        isExpanded: true,
-        decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
-        items: [
-          const DropdownMenuItem<String?>(value: null, child: Text('Semua warehouse')),
-          for (final w in _whs) DropdownMenuItem<String?>(value: w.code, child: Text('${w.code} · ${w.name}', overflow: TextOverflow.ellipsis)),
-        ],
-        onChanged: (v) {
-          setState(() => _value = v);
-          widget.onChanged(v);
-        },
-      );
+  Widget build(BuildContext context) {
+    final label = _opts.where((o) => o.$1 == _value).map((o) => o.$2).firstOrNull ?? 'Semua gudang';
+    return InkWell(
+      onTap: _pick,
+      child: InputDecorator(
+        decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12), suffixIcon: Icon(Icons.arrow_drop_down)),
+        child: Text(label, overflow: TextOverflow.ellipsis),
+      ),
+    );
+  }
 }
 
 /// Kerangka layar laporan: header + filter + isi yang dimuat ulang saat filter berubah.

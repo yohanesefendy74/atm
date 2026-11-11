@@ -36,6 +36,8 @@ WHERE   u.USER_CODE = @userCode AND u.[password] COLLATE Latin1_General_BIN2 = @
     public const string Warehouses = @"
 SELECT  w.WhsCode  AS whsCode,
         w.WhsName  AS whsName,
+        NULLIF(w.State, '') AS state,
+        (SELECT TOP 1 st.Name FROM OCST st WHERE st.Code = w.State AND (st.Country = w.Country OR w.Country IS NULL)) AS stateName,
         CAST(CASE WHEN w.[External] = 'Y' THEN 1 ELSE 0 END AS bit) AS isTitipan,
         CAST(CASE WHEN w.WhsCode = u.Fax THEN 1 ELSE 0 END AS bit) AS isDefault
 FROM    USR9 a
@@ -194,7 +196,7 @@ FROM    WHS_Saldo s
 JOIN    OWHS w ON w.WhsCode = s.WhsCode
 LEFT JOIN OITM i ON i.ItemCode = s.ItemCode
 LEFT JOIN WHS_ItemScrap sc ON sc.ItemCode = s.ItemCode
-WHERE   w.BPLid = @bplId AND (@whsCode IS NULL OR s.WhsCode = @whsCode) AND (@ruangan IS NULL OR s.KodeRuangan = @ruangan)
+WHERE   w.BPLid = @bplId AND (@whsCode IS NULL OR s.WhsCode = @whsCode) AND (@state IS NULL OR s.WhsCode IN (SELECT ws.WhsCode FROM OWHS ws WHERE ws.State = @state)) AND (@ruangan IS NULL OR s.KodeRuangan = @ruangan)
   AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = s.WhsCode)
 GROUP BY s.ItemCode, COALESCE(i.ItemName, sc.ItemName)
 HAVING  SUM(s.Kg) <> 0
@@ -208,7 +210,7 @@ FROM    WHS_Saldo s
 JOIN    OWHS w ON w.WhsCode = s.WhsCode
 LEFT JOIN OITM i ON i.ItemCode = s.ItemCode
 LEFT JOIN WHS_ItemScrap sc ON sc.ItemCode = s.ItemCode
-WHERE   w.BPLid = @bplId AND (@whsCode IS NULL OR s.WhsCode = @whsCode) AND (@ruangan IS NULL OR s.KodeRuangan = @ruangan)
+WHERE   w.BPLid = @bplId AND (@whsCode IS NULL OR s.WhsCode = @whsCode) AND (@state IS NULL OR s.WhsCode IN (SELECT ws.WhsCode FROM OWHS ws WHERE ws.State = @state)) AND (@ruangan IS NULL OR s.KodeRuangan = @ruangan)
   AND   (@bl IS NULL OR s.NoBL LIKE '%' + @bl + '%')
   AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = s.WhsCode)
   AND   s.Kg <> 0
@@ -226,7 +228,7 @@ SELECT  s.WhsCode AS whsCode, NULLIF(s.KodeRuangan, '') AS kodeRuangan, r.NamaRu
 FROM    WHS_Saldo s
 JOIN    OWHS w ON w.WhsCode = s.WhsCode
 LEFT JOIN WHS_MasterRuangan r ON r.KodeRuangan = s.KodeRuangan
-WHERE   w.BPLid = @bplId AND (@whsCode IS NULL OR s.WhsCode = @whsCode) AND (@ruangan IS NULL OR s.KodeRuangan = @ruangan)
+WHERE   w.BPLid = @bplId AND (@whsCode IS NULL OR s.WhsCode = @whsCode) AND (@state IS NULL OR s.WhsCode IN (SELECT ws.WhsCode FROM OWHS ws WHERE ws.State = @state)) AND (@ruangan IS NULL OR s.KodeRuangan = @ruangan)
   AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = s.WhsCode)
 GROUP BY s.WhsCode, s.KodeRuangan, r.NamaRuangan, r.Titipan, r.KapasitasTon
 HAVING  SUM(s.Kg) <> 0
@@ -240,7 +242,7 @@ SELECT  h.DocDate AS docDate, h.ObjType AS objType, h.DocEntry AS docEntry, h.Tr
 FROM    OKRN h
 JOIN    KRN1 d ON d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
 WHERE   h.DocStatus = 'C' AND h.BPLId = @bplId AND d.ItemCode = @itemCode
-  AND   (@whsCode IS NULL OR h.WhsCode = @whsCode)
+  AND   (@whsCode IS NULL OR h.WhsCode = @whsCode) AND (@state IS NULL OR h.WhsCode IN (SELECT ws.WhsCode FROM OWHS ws WHERE ws.State = @state))
   AND   (@containerNo IS NULL OR h.ContainerNo = @containerNo)
   AND   (@ruangan IS NULL OR d.KodeRuangan = @ruangan)
   AND   (@bl IS NULL OR COALESCE(NULLIF(d.NoBL, ''), CASE WHEN d.flags = 1 THEN NULLIF(h.U_NoBL, '') END) = @bl)
@@ -266,7 +268,7 @@ OUTER APPLY (
     FROM KRN1 d WHERE d.ObjType = h.ObjType AND d.DocEntry = h.DocEntry
 ) x
 WHERE   h.BPLId = @bplId AND h.DocDate BETWEEN @from AND @to
-  AND   (@whsCode IS NULL OR h.WhsCode = @whsCode)
+  AND   (@whsCode IS NULL OR h.WhsCode = @whsCode) AND (@state IS NULL OR h.WhsCode IN (SELECT ws.WhsCode FROM OWHS ws WHERE ws.State = @state))
   AND   EXISTS (SELECT 1 FROM USR9 a WHERE a.UserId = @userId AND a.WhsCode = h.WhsCode)";
 
     // ================================================================ CMS (Admin)
