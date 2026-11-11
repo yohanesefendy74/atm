@@ -42,12 +42,26 @@ GROUP BY d.PlanLine ORDER BY d.PlanLine", new { sesiId }, tx)).ToList();
     /// dan TIDAK ikut dihitung sebagai berat:
     ///   rata2 = total kg sampel / jumlah sampel;  estimasi = karung input krani x rata2  (tanpa karung: KG krani)
     ///   KgTimbang = Net x estimasi / total estimasi
+    /// Prorata hanya bila dokumen berisi lebih dari 1 item. Satu item: seluruh net = berat item itu (sampling tidak wajib).
+    public static bool PerluSampling(List<AlokasiItem> items) => items.Select(i => i.ItemCode).Distinct().Count() > 1;
+
     public static List<AlokasiItem> Hitung(List<AlokasiItem> items, decimal net)
     {
+        if (items.Count == 1)
+        {
+            var i = items[0];
+            var avg1 = i.SakSampel > 0 ? i.KgSampel / i.SakSampel : 0;
+            i.EstimasiSisaKg = i.SakTotal > 0 && avg1 > 0 ? i.SakTotal * avg1 : i.KgKrani;
+            i.AlokasiSisaKg = net; i.KgTimbang = net;
+            return items;
+        }
+        // satu item di beberapa baris tanpa sampel: dibagi menurut karung (atau kg krani bila tanpa karung)
+        var satuItem = !PerluSampling(items);
+        var pakaiSak = satuItem && items.All(i => i.SakTotal > 0);
         foreach (var i in items)
         {
             var avg = i.SakSampel > 0 ? i.KgSampel / i.SakSampel : 0;
-            i.EstimasiSisaKg = i.SakTotal > 0 && avg > 0 ? i.SakTotal * avg : i.KgKrani;
+            i.EstimasiSisaKg = i.SakTotal > 0 && avg > 0 ? i.SakTotal * avg : pakaiSak ? i.SakTotal : i.KgKrani;
         }
         var totalEst = items.Sum(i => i.EstimasiSisaKg);
         foreach (var i in items)
@@ -150,8 +164,9 @@ WHERE k.WhsCode = @whs AND k.Status IN ('ISI_MASUK','DI_DOCK','KOSONG') ORDER BY
             var items = await Items(db, null, id);
             var adaMuatLangsung = await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM KRN1 WHERE CrossDockSesiId = @id AND flags = 1", new { id }) > 0;
             if (items.Count == 0 && !adaMuatLangsung) return Bad("Belum ada input krani untuk kontainer ini");
-            var tanpa = items.Where(i => i.SakSampel <= 0).Select(i => i.ItemCode).ToList();
-            if (tanpa.Count > 0) return Bad("Sampel berat karung belum ada untuk: " + string.Join(", ", tanpa));
+            // sampling hanya wajib bila kontainer berisi lebih dari 1 item (berat dibagi prorata)
+            var tanpa = KontainerEndpoints.PerluSampling(items) ? items.Where(i => i.SakSampel <= 0).Select(i => i.ItemCode).Distinct().ToList() : new List<string>();
+            if (tanpa.Count > 0) return Bad("Lebih dari 1 item · sampel berat karung belum ada untuk: " + string.Join(", ", tanpa));
             await db.ExecuteAsync("UPDATE WHS_KontainerSesi SET Status = 'KOSONG' WHERE SesiId = @id", new { id });
             await db.ExecuteAsync("UPDATE WHS_Kontainer SET Kondisi = 'Kosong' WHERE ContainerNo = @c AND WhsCode = @w AND SesiId = @id", new { c = k.Value.ContainerNo, w = k.Value.WhsCode, id });
             await Audit.Safe(db, u, ctx, "BONGKAR_SELESAI", "KONTAINER", id, k.Value.ContainerNo);

@@ -435,7 +435,7 @@ class _TugasDetailState extends State<TugasDetail> {
     return Box(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('Sampel berat per karung', style: TextStyle(fontWeight: FontWeight.w700)),
-        const Hint('Timbang 1 karung per kali, boleh berkali-kali. Sampel hanya untuk rata-rata kg/karung; berat bersih kontainer dibagi ke tiap barang sesuai karung x rata-rata.'),
+        const Hint('Wajib bila kontainer berisi lebih dari 1 item: berat bersih dibagi prorata (karung × rata-rata). Satu item: tidak perlu sampel, seluruh berat bersih untuk item itu. Timbang 1 karung per kali, boleh berkali-kali.'),
         const SizedBox(height: 8),
         if (_kItems.isEmpty) const Text('Simpan input barang dulu, lalu timbang sampel.', style: TextStyle(color: C.muted)),
         for (final i in _kItems) ...[
@@ -719,10 +719,12 @@ class _MuatLangsungScreenState extends State<MuatLangsungScreen> {
     final isi = _rows.where((r) => (double.tryParse(r.sak.text.replaceAll(',', '.')) ?? 0) > 0).toList();
     if (_sesiId == null) return showError(context, 'Pilih kontainer SPBB');
     if (isi.isEmpty) return showError(context, 'Isi jumlah sak barang yang dimuat langsung');
+    // prorata (perlu sampel / estimasi) hanya bila lebih dari 1 item
+    final banyakItem = isi.map((r) => r.itemCode).toSet().length > 1;
     for (final r in isi) {
       if (r.spbbLine == null) return showError(context, '${r.itemCode}: pilih baris SPBB');
-      if (!_avg.containsKey(r.spbbLine) && (double.tryParse(r.kg.text.replaceAll(',', '.')) ?? 0) <= 0) {
-        return showError(context, '${r.itemCode}: belum ada sampel berat sak · isi estimasi kg');
+      if (banyakItem && !_avg.containsKey(r.spbbLine) && (double.tryParse(r.kg.text.replaceAll(',', '.')) ?? 0) <= 0) {
+        return showError(context, '${r.itemCode}: lebih dari 1 item · timbang sampel berat sak atau isi estimasi kg');
       }
     }
     setState(() => _busy = true);
@@ -792,7 +794,7 @@ class _MuatLangsungScreenState extends State<MuatLangsungScreen> {
                       Text(
                           _avg.containsKey(r.spbbLine)
                               ? 'Rata-rata sampel ${_avg[r.spbbLine]!.toStringAsFixed(2)} kg/sak'
-                              : 'Belum ada sampel berat sak · isi estimasi kg',
+                              : 'Belum ada sampel berat sak · estimasi kg wajib bila lebih dari 1 item',
                           style: TextStyle(fontSize: 12, color: _avg.containsKey(r.spbbLine) ? C.muted : C.amberText)),
                       const SizedBox(height: 8),
                       Row(children: [

@@ -84,6 +84,8 @@ public static class MuatLangsung
                 var l1 = await Lines(db, tx, spbb.PlanId);
                 var l2 = await Lines(db, tx, spmb.PlanId);
                 var est = new List<(MuatLangsungLine L, PlanL B, PlanL M, decimal Kg, string Ruang)>();
+                // prorata hanya bila lebih dari 1 item: satu item tidak perlu sampel (estimasi dari isi per karung SPBB)
+                var banyakItem = r.Lines.Select(l => l1.TryGetValue(l.SpbbLine, out var bx) ? bx.ItemCode : "").Distinct().Count() > 1;
                 foreach (var l in r.Lines)
                 {
                     if (!l1.TryGetValue(l.SpbbLine, out var b)) return Bad($"Baris SPBB {l.SpbbLine} tidak ada");
@@ -93,8 +95,9 @@ public static class MuatLangsung
                     if (ruang is null) return Bad($"{b.ItemCode}: ruangan SPBB belum diisi");
                     // kg sementara: sak x rata-rata sampling, atau isian krani, atau isi per sak dari SPBB
                     var avg = await AvgSampel(db, tx, r.SesiId, b.PlanLine);
-                    var kg = avg is > 0 ? Math.Round(l.Sak * avg.Value, 2) : l.KgEstimasi > 0 ? l.KgEstimasi : 0;
-                    if (kg <= 0) return Bad($"{b.ItemCode}: belum ada sampel berat sak · timbang sampel dulu atau isi estimasi kg");
+                    var pack = await db.ExecuteScalarAsync<decimal?>("SELECT CASE WHEN Qty2Plan > 0 THEN QtyPlan / Qty2Plan END FROM WHS_Plan1 WHERE PlanId = @p AND PlanLine = @l", new { p = spbb.PlanId, l = b.PlanLine }, tx);
+                    var kg = avg is > 0 ? Math.Round(l.Sak * avg.Value, 2) : l.KgEstimasi > 0 ? l.KgEstimasi : !banyakItem && pack is > 0 ? Math.Round(l.Sak * pack.Value, 2) : 0;
+                    if (kg <= 0) return Bad(banyakItem ? $"{b.ItemCode}: lebih dari 1 item · timbang sampel berat sak dulu atau isi estimasi kg" : $"{b.ItemCode}: isi estimasi kg");
                     est.Add((l, b, m, kg, ruang));
                 }
                 foreach (var g in est.GroupBy(e => e.B.PlanLine))

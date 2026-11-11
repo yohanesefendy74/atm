@@ -435,7 +435,7 @@ ORDER BY p.PlanId DESC", new { whs, jenis, cont }));
                         if (items.Count > 0)
                         {
                             if (net <= 0) return Bad($"Sisa barang ≤ 0 (isi {sesi.Value.T1 - sesi.Value.T2:N0} - kosong {kosongKg:N0} - muat langsung {kgMuatLangsung:N0}) · cek timbangan");
-                            if (items.Any(i => i.SakSampel <= 0)) return Bad("Ada barang tanpa sampling berat");
+                            if (KontainerEndpoints.PerluSampling(items) && items.Any(i => i.SakSampel <= 0)) return Bad("Lebih dari 1 item · ada barang tanpa sampling berat");
                             bandingkan = items.Sum(i => i.KgKrani);
                             alokasi = KontainerEndpoints.Hitung(items, net);
                             await Banding();
