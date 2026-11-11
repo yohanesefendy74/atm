@@ -178,21 +178,29 @@ class StockItemScreen extends StatefulWidget {
 
 class _StockItemScreenState extends State<StockItemScreen> {
   String? _whs;
+  String _q = ''; // cari kode / nama barang
   late Future<List<Map<String, dynamic>>> _f = Api.stockItem(null);
 
   @override
   Widget build(BuildContext context) => _ReportPage(
         title: 'Stock per Barang',
-        filter: _WhsFilter(onChanged: (v) => setState(() {
-              _whs = v;
-              _f = Api.stockItem(_whs);
-            })),
+        filter: Column(mainAxisSize: MainAxisSize.min, children: [
+          _WhsFilter(onChanged: (v) => setState(() {
+                _whs = v;
+                _f = Api.stockItem(_whs);
+              })),
+          const SizedBox(height: 8),
+          TextField(
+            decoration: const InputDecoration(hintText: 'Cari kode / nama barang', prefixIcon: Icon(Icons.search), isDense: true),
+            onChanged: (v) => setState(() => _q = v.trim().toUpperCase()),
+          ),
+        ]),
         body: FutureBuilder<List<Map<String, dynamic>>>(
           future: _f,
           builder: (c, s) {
             if (s.hasError) return ErrorView(s.error.toString(), onRetry: () => setState(() => _f = Api.stockItem(_whs)));
             if (!s.hasData) return const Loading();
-            final rows = s.data!;
+            final rows = s.data!.where((r) => _q.isEmpty || '${r['itemCode']} ${r['itemName'] ?? ''}'.toUpperCase().contains(_q)).toList();
             final tk = rows.fold<double>(0, (a, r) => a + toD(r['kg']));
             final ts = rows.fold<double>(0, (a, r) => a + toD(r['sak']));
             final tp = rows.fold<double>(0, (a, r) => a + toD(r['palet']));
@@ -204,6 +212,7 @@ class _StockItemScreenState extends State<StockItemScreen> {
                 [for (final r in rows) ['${r['itemCode']}\n${r['itemName'] ?? ''}${toD(r['titipanKg']) != 0 ? '\ntitipan ${fmt(toD(r['titipanKg']))} · non ${fmt(toD(r['nonTitipanKg']))}' : ''}', fmt(toD(r['kg'])), fmt(toD(r['sak'])), fmt(toD(r['palet']))]],
                 flex: [3, 2, 1, 1],
               ),
+              if (rows.isEmpty) Padding(padding: const EdgeInsets.all(16), child: Text(_q.isEmpty ? 'Tidak ada stok' : 'Tidak ada barang yang cocok dengan "$_q"', textAlign: TextAlign.center)),
             ]);
           },
         ),

@@ -45,10 +45,15 @@ function WhsFilter({ value, onChange }: { value: string; onChange: (v: string) =
 
 export function StockItemReport() {
   const [whs, setWhs] = useState('');
-  const { data, error, reload } = useLoad(() => get<Row[]>('/api/reports/stock-item', { whsCode: whs }), [whs]);
+  const [q, setQ] = useState(''); // cari kode / nama barang
+  const res = useLoad(() => get<Row[]>('/api/reports/stock-item', { whsCode: whs }), [whs]);
+  const { error, reload } = res;
+  const qq = q.trim().toUpperCase();
+  const data = res.data?.filter((r) => !qq || `${r.itemCode} ${r.itemName ?? ''}`.toUpperCase().includes(qq));
   const sum = (k: string) => (data ?? []).reduce((s, r) => s + Number(r[k] ?? 0), 0);
   return (
-    <Page eyebrow="Laporan" title="Stock per Barang" backTo="/reports" extra={<WhsFilter value={whs} onChange={setWhs} />}>
+    <Page eyebrow="Laporan" title="Stock per Barang" backTo="/reports" extra={<div className="stack tight"><WhsFilter value={whs} onChange={setWhs} />
+      <input id="cari-barang" className="input" type="search" placeholder="Cari kode / nama barang" value={q} onChange={(e) => setQ(e.target.value)} /></div>}>
       {error !== null && <ErrorBox error={error} onRetry={reload} />}
       {!data && error === null && <Spinner />}
       {data && (
@@ -82,7 +87,7 @@ export function StockItemReport() {
               ))}
             </tbody>
           </table>
-          {data.length === 0 && <div className="empty">Tidak ada stok</div>}
+          {data.length === 0 && <div className="empty">{qq ? `Tidak ada barang yang cocok dengan "${q.trim()}"` : 'Tidak ada stok'}</div>}
         </>
       )}
     </Page>
