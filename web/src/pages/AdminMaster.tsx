@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { get, post, put, type Row } from '../api';
+import { useQuery } from '../router';
+import { RakMaster } from './Opname';
 import { ErrorBox, ItemSearch, Page, SearchSelect, Spinner, errText, useLoad, useToast, useWarehouses, whsOpts } from '../ui';
 
 type Field = { ro?: boolean; k: string; label: string; type?: 'text' | 'number' | 'bool' | 'whs' | 'gateway' | 'enum' | 'item'; opts?: string[]; pk?: boolean; hint?: string };
@@ -147,14 +149,15 @@ function Gateways() {
 }
 
 export function AdminMaster() {
-  const [tab, setTab] = useState('ruangan');
+  const q = useQuery();
+  const [tab, setTab] = useState(q.get('tab') ?? 'ruangan');
   const cfg = CFG.find((c) => c.key === tab);
   return (
     <Page eyebrow="Admin" title="Master Data" accent="ink" extra={
       <div className="chips" role="tablist">
-        {[...CFG.map((c) => [c.key, c.title]), ['gateway', 'Gateway']].map(([k, t]) => <button key={k} className="chip" aria-pressed={tab === k} onClick={() => setTab(k)}>{t}</button>)}
+        {[...CFG.map((c) => [c.key, c.title]), ['rak', 'Rak (opname)'], ['gateway', 'Gateway']].map(([k, t]) => <button key={k} className="chip" aria-pressed={tab === k} onClick={() => setTab(k)}>{t}</button>)}
       </div>}>
-      {cfg ? <MasterTable key={cfg.key} cfg={cfg} /> : <Gateways />}
+      {cfg ? <MasterTable key={cfg.key} cfg={cfg} /> : tab === 'rak' ? <RakMaster /> : <Gateways />}
     </Page>
   );
 }

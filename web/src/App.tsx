@@ -13,6 +13,7 @@ import OutboundNew from './pages/Outbound';
 import LabelPrint, { PlanLabelPrint } from './pages/Labels';
 import { KpiReport, ReportsMenu, StockCardReport, StockContainerReport, StockItemReport, StockRuanganReport } from './pages/Reports';
 import { CmsDetail, CmsList } from './pages/Cms';
+import { OpnameDetail, OpnameList, OpnameRakLabels } from './pages/Opname';
 
 function Forbidden() {
   return (
@@ -44,6 +45,11 @@ function route(path: string, isAdmin: boolean): ReactNode {
   if (pl) return isAdmin ? <PlanLabelPrint planId={pl.id} /> : <Forbidden />;
   const pp = match('/admin/plan/:id', path);
   if (pp) return isAdmin ? <PlanDetail id={pp.id} /> : <Forbidden />;
+  if (path === '/admin/opname') return isAdmin ? <OpnameList /> : <Forbidden />;
+  const ob = match('/admin/opname/:id/barcode', path);
+  if (ob) return isAdmin ? <OpnameRakLabels id={ob.id} /> : <Forbidden />;
+  const od = match('/admin/opname/:id', path);
+  if (od) return isAdmin ? <OpnameDetail id={od.id} /> : <Forbidden />;
   if (path === '/admin/jadwal') return isAdmin ? <AdminJadwal /> : <Forbidden />;
   if (path === '/admin/surat-jalan') return isAdmin ? <AdminSuratJalan /> : <Forbidden />;
   if (path === '/admin/kendaraan') return isAdmin ? <AdminKendaraan /> : <Forbidden />;
@@ -93,6 +99,7 @@ export default function App() {
               <Icon name="cms" /> CMS · Cek input krani
             </Link>
             <Link to="/admin/plan" current={on('/admin/plan')}>Rencana SPBB / SPMB</Link>
+            <Link to="/admin/opname" current={on('/admin/opname')}>Stock Opname</Link>
             <Link to="/admin/jadwal" current={on('/admin/jadwal')}>Jadwal</Link>
             <Link to="/admin/surat-jalan" current={on('/admin/surat-jalan')}>Surat Jalan</Link>
             <Link to="/admin/kendaraan" current={on('/admin/kendaraan')}>Kendaraan & Berat</Link>

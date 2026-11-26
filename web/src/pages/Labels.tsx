@@ -10,7 +10,7 @@ const contDisplay = (c: string | null) => {
   return s.length === 11 ? `${s.slice(0, 4)} ${s.slice(4)}` : s;
 };
 
-function QrSvg({ text }: { text: string }) {
+export function QrSvg({ text }: { text: string }) {
   const { size, d } = useMemo(() => qrSvgPath(text, 1), [text]);
   return (
     <svg viewBox={`0 0 ${size} ${size}`} shapeRendering="crispEdges" role="img" aria-label={`QR ${text}`}>
