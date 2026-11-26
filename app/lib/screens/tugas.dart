@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'opname.dart';
 import 'pos_timbang.dart';
 
 /// Tugas krani: dokumen SPBB/SPMB yang ditugaskan Admin.
@@ -15,6 +16,7 @@ class TugasScreen extends StatefulWidget {
 
 class _TugasScreenState extends State<TugasScreen> {
   List<Map<String, dynamic>> _rows = [];
+  List<Map<String, dynamic>> _opname = [];
   String? _error;
   bool _loading = true;
 
@@ -31,7 +33,17 @@ class _TugasScreenState extends State<TugasScreen> {
     });
     try {
       final r = await Api.get('/api/plan/saya') as List;
-      if (mounted) setState(() => _rows = r.map((e) => Map<String, dynamic>.from(e as Map)).toList());
+      // Tugas stock opname (tidak menggagalkan daftar SPBB/SPMB bila server lama belum punya endpoint opname)
+      List op = [];
+      try {
+        op = await Api.get('/api/opname/tugas') as List;
+      } catch (_) {}
+      if (mounted) {
+        setState(() {
+          _rows = r.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          _opname = op.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
@@ -43,14 +55,15 @@ class _TugasScreenState extends State<TugasScreen> {
   Widget build(BuildContext context) {
     return Material(color: C.ground, child: 
 Column(children: [
-        Header(title: 'Tugas Saya', eyebrow: 'Bongkar · Muat', back: !widget.embedded),
+        Header(title: 'Tugas Saya', eyebrow: 'Bongkar · Muat · Opname', back: !widget.embedded),
         Expanded(
           child: RefreshIndicator(
             onRefresh: _load,
             child: ListView(padding: const EdgeInsets.all(16), children: [
               if (_loading) const LinearProgressIndicator(minHeight: 2),
               if (_error != null) ErrorView(_error!, onRetry: _load),
-              if (!_loading && _error == null && _rows.isEmpty) const Padding(padding: EdgeInsets.all(32), child: Center(child: Text('Belum ada tugas', style: TextStyle(color: C.muted)))),
+              if (_opname.isNotEmpty) OpnameTugasList(rows: _opname, onChanged: _load),
+              if (!_loading && _error == null && _rows.isEmpty && _opname.isEmpty) const Padding(padding: EdgeInsets.all(32), child: Center(child: Text('Belum ada tugas', style: TextStyle(color: C.muted)))),
               for (final p in _rows)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),

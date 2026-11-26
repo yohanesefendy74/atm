@@ -220,7 +220,7 @@ export function OpnameDetail({ id }: { id: string }) {
       {aktif && data?.stale > 0 && (
         <div className="card amber stack tight">
           <strong>Saldo berubah setelah freeze</strong>
-          <span className="small">{data.stale} baris saldo berbeda dengan snapshot (ada dokumen bertanggal sebelum {fmtDate(h.tglOpname)} yang diposting sesudah freeze). Freeze ulang supaya selisih dihitung dari saldo terbaru.</span>
+          <span className="small">{data?.stale} baris saldo berbeda dengan snapshot (ada dokumen bertanggal sebelum {fmtDate(h.tglOpname)} yang diposting sesudah freeze). Freeze ulang supaya selisih dihitung dari saldo terbaru.</span>
           <div><button className="btn small" disabled={busy} onClick={() => act(() => post(`/api/cms/opname/${id}/freeze`), 'Freeze ulang selesai')}>Freeze ulang sekarang</button></div>
         </div>
       )}
