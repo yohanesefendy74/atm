@@ -341,3 +341,158 @@ BEGIN
     ALTER TABLE dbo.WHS_Timbang ADD CONSTRAINT CK_WHS_Timbang_Jenis CHECK (Jenis IN ('BRUTO','TARA','ANTARA'));
 END
 GO
+
+/* Perbaikan: SPBB titipan tanpa dokumen ERP (sumber 'TT') juga harus lolos constraint tabel CK_WHS_Plan_Jenis */
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_WHS_Plan_Jenis' AND definition NOT LIKE '%TT%')
+BEGIN
+    ALTER TABLE dbo.WHS_Plan DROP CONSTRAINT CK_WHS_Plan_Jenis;
+    ALTER TABLE dbo.WHS_Plan ADD CONSTRAINT CK_WHS_Plan_Jenis CHECK ((Jenis = 'SPBB' AND BaseType IN ('BL','DO','TT')) OR (Jenis = 'SPMB' AND BaseType = 'SO'));
+END
+GO
+
+/* ===================================================================================================
+   STOCK OPNAME
+   - Admin memilih gudang, tanggal, ruangan; tiap ruangan dibagi per rak, tiap rak dihitung krani ke-1 dan ke-2 (berbeda).
+   - Freeze = snapshot saldo dari dokumen terposting bertanggal < tanggal opname (per ruangan, item, container, BL, titipan, PT, lot).
+     Freeze ulang boleh sebelum posting (hitungan krani tetap).
+   - Transaksi bertanggal >= tanggal opname di ruangan yang di-opname ditahan sampai opname diposting / dibatalkan.
+   - Hitungan semua rak dijumlah per kunci saldo; Admin memilih nilai final (H1 / H2 / saldo) atau minta hitung ulang rak.
+   - Posting: dokumen OP (ObjType 6720, TrxCode 'OP') berisi selisih final - saldo freeze, lalu saldo diperbarui.
+   Saldo TIDAK dicatat per rak; rak hanya pembagian kerja opname. Barcode rak = 'RAK-' + KodeRuangan + '-' + KodeRak.
+   Ruangan tanpa master rak dihitung sebagai satu rak 'ALL'.
+   =================================================================================================== */
+IF OBJECT_ID('dbo.WHS_MasterRak') IS NULL
+CREATE TABLE dbo.WHS_MasterRak (
+    KodeRuangan NVARCHAR(30) NOT NULL,
+    KodeRak     NVARCHAR(30) NOT NULL,
+    NamaRak     NVARCHAR(100) NULL,
+    Aktif       BIT NOT NULL DEFAULT 1,
+    CreatedAt   DATETIME2(0) NOT NULL DEFAULT SYSDATETIME(),
+    CONSTRAINT PK_WHS_MasterRak PRIMARY KEY (KodeRuangan, KodeRak)
+);
+GO
+IF OBJECT_ID('dbo.WHS_Opname') IS NULL
+CREATE TABLE dbo.WHS_Opname (
+    OpnameId    BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    OpnameNo    NVARCHAR(20) NOT NULL UNIQUE,
+    WhsCode     NVARCHAR(8) NOT NULL,
+    BplId       INT NOT NULL,
+    TglOpname   DATE NOT NULL,
+    Status      NVARCHAR(10) NOT NULL DEFAULT 'Hitung' CHECK (Status IN ('Hitung','Posted','Batal')),
+    FreezeKe    INT NOT NULL DEFAULT 0,
+    FreezeAt    DATETIME2(0) NULL,
+    FreezeBy    INT NULL,
+    PostObjType NVARCHAR(20) NULL,
+    PostDocEntry BIGINT NULL,
+    PostedAt    DATETIME2(0) NULL,
+    CreatedBy   INT NOT NULL,
+    CreatedAt   DATETIME2(0) NOT NULL DEFAULT SYSDATETIME(),
+    Catatan     NVARCHAR(250) NULL
+);
+GO
+IF OBJECT_ID('dbo.WHS_OpnameRak') IS NULL
+CREATE TABLE dbo.WHS_OpnameRak (
+    OpnameId    BIGINT NOT NULL,
+    KodeRuangan NVARCHAR(30) NOT NULL,
+    KodeRak     NVARCHAR(30) NOT NULL,
+    Krani1      INT NOT NULL,
+    Krani2      INT NOT NULL,
+    Selesai1    BIT NOT NULL DEFAULT 0,
+    Selesai2    BIT NOT NULL DEFAULT 0,
+    CONSTRAINT PK_WHS_OpnameRak PRIMARY KEY (OpnameId, KodeRuangan, KodeRak),
+    CONSTRAINT CK_WHS_OpnameRak_Krani CHECK (Krani1 <> Krani2)
+);
+GO
+IF OBJECT_ID('dbo.WHS_OpnameSaldo') IS NULL
+CREATE TABLE dbo.WHS_OpnameSaldo (
+    OpnameId    BIGINT NOT NULL,
+    KodeRuangan NVARCHAR(30) NOT NULL,
+    ItemCode    NVARCHAR(50) NOT NULL,
+    ContainerNo NVARCHAR(20) NOT NULL,
+    NoBL        NVARCHAR(50) NOT NULL,
+    Titipan     BIT NOT NULL,
+    PtCode      NVARCHAR(30) NOT NULL,
+    NoLot       NVARCHAR(20) NOT NULL,
+    Kg          NUMERIC(19,6) NOT NULL,
+    Sak         NUMERIC(19,6) NOT NULL,
+    Palet       NUMERIC(19,6) NOT NULL,
+    CONSTRAINT PK_WHS_OpnameSaldo PRIMARY KEY (OpnameId, KodeRuangan, ItemCode, ContainerNo, NoBL, Titipan, PtCode, NoLot)
+);
+GO
+IF OBJECT_ID('dbo.WHS_OpnameHitung') IS NULL
+CREATE TABLE dbo.WHS_OpnameHitung (
+    HitungId    BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    OpnameId    BIGINT NOT NULL,
+    KodeRuangan NVARCHAR(30) NOT NULL,
+    KodeRak     NVARCHAR(30) NOT NULL,
+    Ke          TINYINT NOT NULL CHECK (Ke IN (1,2)),
+    UserId      INT NOT NULL,
+    Qr          NVARCHAR(120) NOT NULL,
+    ItemCode    NVARCHAR(50) NOT NULL,
+    ContainerNo NVARCHAR(20) NOT NULL,
+    NoBL        NVARCHAR(50) NOT NULL,
+    Titipan     BIT NOT NULL,
+    PtCode      NVARCHAR(30) NOT NULL,
+    NoLot       NVARCHAR(20) NOT NULL,
+    Kg          NUMERIC(19,6) NOT NULL,
+    Sak         NUMERIC(19,6) NOT NULL,
+    Palet       NUMERIC(19,6) NOT NULL,
+    CreatedAt   DATETIME2(0) NOT NULL DEFAULT SYSDATETIME()
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_WHS_OpnameHitung_Rak' AND object_id = OBJECT_ID('dbo.WHS_OpnameHitung'))
+    CREATE INDEX IX_WHS_OpnameHitung_Rak ON dbo.WHS_OpnameHitung (OpnameId, KodeRuangan, KodeRak, Ke);
+GO
+IF OBJECT_ID('dbo.WHS_OpnameFinal') IS NULL
+CREATE TABLE dbo.WHS_OpnameFinal (
+    OpnameId    BIGINT NOT NULL,
+    Kunci       NVARCHAR(260) NOT NULL,    -- ruangan|item|container|BL|titipan|PT|lot
+    Pilihan     NVARCHAR(6) NOT NULL CHECK (Pilihan IN ('h1','h2','saldo')),
+    UserId      INT NOT NULL,
+    UpdatedAt   DATETIME2(0) NOT NULL DEFAULT SYSDATETIME(),
+    CONSTRAINT PK_WHS_OpnameFinal PRIMARY KEY (OpnameId, Kunci)
+);
+GO
+/* Tahan transaksi: selama opname aktif (Status 'Hitung'), dokumen bertanggal >= tanggal opname di ruangan yang di-opname
+   tidak boleh dibuat (baris KRN1 baru) dan tidak boleh diposting. Dokumen bertanggal sebelumnya tetap boleh (lalu freeze ulang).
+   Dokumen hasil opname sendiri (TrxCode 'OP') dikecualikan. */
+CREATE OR ALTER TRIGGER dbo.TR_KRN1_OpnameTahan ON dbo.KRN1 AFTER INSERT, UPDATE AS
+BEGIN
+    SET NOCOUNT ON;
+    IF OBJECT_ID('dbo.WHS_Opname') IS NULL RETURN;
+    DECLARE @no NVARCHAR(20), @tgl DATE;
+    SELECT TOP 1 @no = o.OpnameNo, @tgl = o.TglOpname
+    FROM inserted i
+    JOIN dbo.OKRN h ON h.ObjType = i.ObjType AND h.DocEntry = i.DocEntry
+    JOIN dbo.WHS_Opname o ON o.WhsCode = h.WhsCode AND o.Status = 'Hitung' AND CAST(h.DocDate AS DATE) >= o.TglOpname
+    WHERE ISNULL(h.TrxCode, '') <> 'OP'
+      AND EXISTS (SELECT 1 FROM dbo.WHS_OpnameRak r WHERE r.OpnameId = o.OpnameId AND r.KodeRuangan = i.KodeRuangan);
+    IF @no IS NOT NULL
+    BEGIN
+        DECLARE @m NVARCHAR(300) = CONCAT('Ruangan sedang stock opname ', @no, ': transaksi bertanggal ', CONVERT(char(10), @tgl, 103), ' atau sesudahnya ditahan sampai opname diposting / dibatalkan.');
+        RAISERROR(@m, 16, 1);
+        ROLLBACK TRANSACTION;
+    END
+END
+GO
+CREATE OR ALTER TRIGGER dbo.TR_OKRN_OpnameTahan ON dbo.OKRN AFTER UPDATE AS
+BEGIN
+    SET NOCOUNT ON;
+    IF OBJECT_ID('dbo.WHS_Opname') IS NULL OR NOT UPDATE(DocStatus) RETURN;
+    DECLARE @no NVARCHAR(20), @tgl DATE;
+    SELECT TOP 1 @no = o.OpnameNo, @tgl = o.TglOpname
+    FROM inserted h
+    JOIN deleted d0 ON d0.ObjType = h.ObjType AND d0.DocEntry = h.DocEntry
+    JOIN dbo.WHS_Opname o ON o.WhsCode = h.WhsCode AND o.Status = 'Hitung' AND CAST(h.DocDate AS DATE) >= o.TglOpname
+    WHERE h.DocStatus = 'C' AND ISNULL(d0.DocStatus, '') <> 'C' AND ISNULL(h.TrxCode, '') <> 'OP'
+      AND EXISTS (SELECT 1 FROM dbo.KRN1 l JOIN dbo.WHS_OpnameRak r ON r.OpnameId = o.OpnameId AND r.KodeRuangan = l.KodeRuangan
+                  WHERE l.ObjType = h.ObjType AND l.DocEntry = h.DocEntry);
+    IF @no IS NOT NULL
+    BEGIN
+        DECLARE @m NVARCHAR(300) = CONCAT('Ruangan sedang stock opname ', @no, ': dokumen bertanggal ', CONVERT(char(10), @tgl, 103), ' atau sesudahnya belum boleh diposting.');
+        RAISERROR(@m, 16, 1);
+        ROLLBACK TRANSACTION;
+    END
+END
+GO
+-- GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.WHS_MasterRak, dbo.WHS_Opname, dbo.WHS_OpnameRak, dbo.WHS_OpnameSaldo, dbo.WHS_OpnameHitung, dbo.WHS_OpnameFinal TO gudang_app;

@@ -143,6 +143,14 @@ if (proxies.Length > 0) app.UseForwardedHeaders();
 // Error tidak membocorkan detail ke client; detail tetap tercatat di log server.
 app.UseExceptionHandler(e => e.Run(async ctx =>
 {
+    // Pesan aturan bisnis dari trigger database (RAISERROR ..., 16) diteruskan apa adanya, mis. transaksi ditahan stock opname
+    var ex = ctx.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
+    if (ex is Microsoft.Data.SqlClient.SqlException sx && sx.Number == 50000)
+    {
+        ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+        await ctx.Response.WriteAsJsonAsync(new { message = sx.Errors.Count > 0 ? sx.Errors[0].Message : sx.Message });
+        return;
+    }
     ctx.Response.StatusCode = StatusCodes.Status500InternalServerError;
     await ctx.Response.WriteAsJsonAsync(new { message = "Terjadi kesalahan di server. Hubungi IT bila berulang." });
 }));
@@ -205,6 +213,7 @@ api.MapKendaraan(Db);
 api.MapPlanKraniSave(Db);
 api.MapMuatLangsung(Db);
 api.MapKontainer(Db);
+api.MapOpnameKrani(Db);
 
 var cms = app.MapGroup("/api/cms").RequireAuthorization("Admin");
 cms.MapCms(Db, cfg);
@@ -215,6 +224,7 @@ cms.MapJadwal(Db);
 cms.MapKendaraanAdmin(Db);
 cms.MapSuratJalan(Db);
 cms.MapKontainerAdmin(Db);
+cms.MapOpnameCms(Db, cfg);
 
 // Path /api yang tidak dikenal -> 404 JSON, selain itu -> halaman SPA
 app.Map("/api/{**rest}", () => Results.NotFound(new { message = "Endpoint tidak ditemukan" }));
