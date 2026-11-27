@@ -20,7 +20,8 @@ public static class PlanKraniSave
             if (r.Lines is null || r.Lines.Count == 0) return Bad("Belum ada baris yang diisi");
             if (r.Lines.Any(l => l.Qty <= 0 || l.Qty > 10_000_000 || l.Qty2 < 0 || l.QtyPalet < 0)) return Bad("Qty tidak valid");
             // SPMB: krani memilih PT per baris (boleh campur) -> satu baris dokumen boleh dipecah per PT / ruangan
-            if (r.Lines.GroupBy(l => (l.PlanLine, Pt: (l.PtCode ?? "").Trim(), R: (l.KodeRuangan ?? "").Trim(), Bl: (l.NoBL ?? "").Trim())).Any(g => g.Count() > 1)) return Bad("Baris dokumen dobel (item + PT + ruangan + BL sama)");
+            // Satu SPBB / SPMB boleh lebih dari 1 ruangan: baris rencana yang sama boleh dipecah per ruangan / PT / BL / lot
+            if (r.Lines.GroupBy(l => (l.PlanLine, Pt: (l.PtCode ?? "").Trim(), R: (l.KodeRuangan ?? "").Trim(), Bl: (l.NoBL ?? "").Trim(), Lot: (l.NoLot ?? "").Trim())).Any(g => g.Count() > 1)) return Bad("Baris dokumen dobel (item + ruangan + PT + BL + lot sama) · gabungkan qty");
             await using var db = dbf();
             await db.OpenAsync();
             await using var tx = (SqlTransaction)await db.BeginTransactionAsync(IsolationLevel.Serializable);

@@ -286,6 +286,11 @@ class _TugasDetailState extends State<TugasDetail> {
         'noLot': spbb ? null : e.lot,
       });
     }
+    final kunci = items.map((i) => '${i['planLine']}|${i['kodeRuangan'] ?? ''}|${i['ptCode'] ?? ''}|${i['noBL'] ?? ''}|${i['noLot'] ?? ''}').toList();
+    if (kunci.toSet().length != kunci.length) {
+      return showError(context, spbb ? 'Item yang sama dipecah ke ruangan yang sama · pilih ruangan berbeda atau gabungkan qty' : 'Ada baris dobel (item, ruangan & sumber stok sama) · gabungkan qty');
+    }
+    if (items.any((i) => (i['kodeRuangan'] ?? '').toString().isEmpty)) return showError(context, 'Pilih ruangan untuk setiap baris yang diisi');
     if (spbb && _sesiId == null) return showError(context, 'Pilih kontainer yang sedang dibongkar');
     if (!spbb && _regId == null) return showError(context, 'Pilih kendaraan dulu (registrasi di pos timbang)');
     if (items.isEmpty) return showError(context, 'Isi qty minimal satu baris');
@@ -538,11 +543,12 @@ class _TugasDetailState extends State<TugasDetail> {
                 ),
               ],
             ],
-          if (!spbb && sisa > 0)
+          // 1 SPBB / SPMB boleh lebih dari 1 ruangan: satu item bisa dipecah ke beberapa ruangan (SPBB) atau diambil dari beberapa ruangan / BL / PT (SPMB)
+          if (sisa > 0)
             TextButton.icon(
-              onPressed: () => setState(() => _entries.add(_Entry(k, l['kodeRuangan']?.toString() ?? _h!['kodeRuangan']?.toString(), tambahan: true))),
+              onPressed: () => setState(() => _entries.add(_Entry(k, spbb ? null : l['kodeRuangan']?.toString() ?? _h!['kodeRuangan']?.toString(), tambahan: true))),
               icon: const Icon(Icons.add),
-              label: const Text('Tambah baris sumber lain (BL / PT lain)'),
+              label: Text(spbb ? 'Tambah baris ruangan lain (pecah ke ruangan berbeda)' : 'Tambah baris sumber lain (ruangan / BL / PT lain)'),
             ),
         ]),
       ),
