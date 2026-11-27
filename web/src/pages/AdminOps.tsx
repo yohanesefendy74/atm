@@ -141,7 +141,7 @@ export function AdminSuratJalan() {
             {(cand.data ?? []).map((c) => (
               <div key={c.planId} className="card pad-s stack tight">
                 <label className="row"><input type="checkbox" checked={!!pick[c.planId]} onChange={(e) => { const n = { ...pick }; if (e.target.checked) n[c.planId] = { po: c.poTerakhir ?? '', alamat: '' }; else delete n[c.planId]; setPick(n); }} />
-                  <span className="grow mono">{c.planNo}</span>{c.titipan && <span className="pill amber">Titipan</span>}</label>
+                  <span className="grow mono">{c.planNo} <span className="small muted">{c.whsCode}</span></span>{c.titipan && <span className="pill amber">Titipan</span>}</label>
                 <div className="small">{c.cardName} · {fmt(c.kg)} kg</div>
                 {pick[c.planId] && (<>
                   <input className="input" placeholder="No. PO" value={pick[c.planId].po} onChange={(e) => setPick({ ...pick, [c.planId]: { ...pick[c.planId], po: e.target.value } })} />

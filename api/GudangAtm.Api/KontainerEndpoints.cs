@@ -99,7 +99,7 @@ WHERE k.SesiId = @id", new { id });
     }
 
     static async Task<bool> Akses(SqlConnection db, ClaimsPrincipal u, string whs) =>
-        await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM USR9 WHERE UserId = @uid AND WhsCode = @whs", new { uid = u.UserId(), whs }) > 0;
+        await Area.Akses(db, null, u.UserId(), whs);   // kontainer di dock / yard dipakai bersama satu area (OWHS.State)
 
     public static void MapKontainer(this RouteGroupBuilder api, Func<SqlConnection> dbf)
     {
@@ -109,12 +109,12 @@ WHERE k.SesiId = @id", new { id });
             await using var db = dbf();
             if (!await Akses(db, u, whs)) return Results.Forbid();
             return Results.Ok(await db.QueryAsync(@"
-SELECT k.SesiId AS sesiId, k.ContainerNo AS containerNo, k.Status AS status, p.PlanNo AS planNo, p.PlanId AS planId, p.CardName AS cardName,
+SELECT k.SesiId AS sesiId, k.WhsCode AS whsCode, k.ContainerNo AS containerNo, k.Status AS status, p.PlanNo AS planNo, p.PlanId AS planId, p.CardName AS cardName,
        k.Plat1 AS plat1, k.T1Kg - k.T2Kg AS beratIsi, kt.Posisi AS posisi,
        (SELECT COUNT(*) FROM WHS_SamplingSak s WHERE s.SesiId = k.SesiId) AS jumlahSampling
 FROM WHS_KontainerSesi k LEFT JOIN WHS_Plan p ON p.PlanId = k.PlanId
 LEFT JOIN WHS_Kontainer kt ON kt.ContainerNo = k.ContainerNo AND kt.WhsCode = k.WhsCode AND kt.SesiId = k.SesiId
-WHERE k.WhsCode = @whs AND k.Status IN ('ISI_MASUK','DI_DOCK','KOSONG') ORDER BY k.SesiId", new { whs }));
+WHERE k.WhsCode IN " + Area.In("@whs") + @" AND k.Status IN ('ISI_MASUK','DI_DOCK','KOSONG') ORDER BY k.SesiId", new { whs }));
         });
 
         api.MapGet("/kontainer/{id:long}", async (long id, ClaimsPrincipal u) =>

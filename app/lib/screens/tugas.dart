@@ -780,7 +780,7 @@ class _MuatLangsungScreenState extends State<MuatLangsungScreen> {
                 DropdownButtonFormField<int>(
                   value: _sesiId,
                   isExpanded: true,
-                  items: [for (final k in _kont) DropdownMenuItem(value: toI(k['sesiId']), child: Text('${k['containerNo']} · ${k['planNo'] ?? ''} · ${k['cardName'] ?? ''}', overflow: TextOverflow.ellipsis))],
+                  items: [for (final k in _kont) DropdownMenuItem(value: toI(k['sesiId']), child: Text('${k['containerNo']} · ${k['planNo'] ?? ''} (${k['whsCode'] ?? ''}) · ${k['cardName'] ?? ''}', overflow: TextOverflow.ellipsis))],
                   onChanged: (v) async {
                     setState(() => _sesiId = v);
                     await _loadKont();

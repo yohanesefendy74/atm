@@ -20,11 +20,11 @@ public static class SuratJalanEndpoints
         {
             await using var db = dbf();
             return Results.Ok(await db.QueryAsync(@"
-SELECT p.PlanId AS planId, p.PlanNo AS planNo, p.CardCode AS cardCode, p.CardName AS cardName, CAST(COALESCE(p.Titipan, r.Titipan, 0) AS bit) AS titipan,
+SELECT p.PlanId AS planId, p.PlanNo AS planNo, p.WhsCode AS whsCode, p.CardCode AS cardCode, p.CardName AS cardName, CAST(COALESCE(p.Titipan, r.Titipan, 0) AS bit) AS titipan,
        (SELECT SUM(QtyDone) FROM WHS_Plan1 WHERE PlanId = p.PlanId) AS kg,
        (SELECT TOP 1 NumAtCard FROM WHS_SuratJalanPlan WHERE PlanId = p.PlanId ORDER BY SjId DESC) AS poTerakhir
 FROM WHS_Plan p LEFT JOIN WHS_MasterRuangan r ON r.KodeRuangan = p.KodeRuangan
-WHERE p.WhsCode = @whs AND p.Jenis = 'SPMB' AND p.Status IN ('Selesai','SelesaiKurang')
+WHERE p.WhsCode IN " + Area.In("@whs") + @" AND p.Jenis = 'SPMB' AND p.Status IN ('Selesai','SelesaiKurang')
   AND NOT EXISTS (SELECT 1 FROM WHS_SuratJalanPlan s WHERE s.PlanId = p.PlanId AND s.Aktif = 1)
 ORDER BY p.PlanId DESC", new { whs }));
         });
@@ -84,7 +84,9 @@ ORDER BY s.TglSj DESC, s.SjId DESC", new
                     "SELECT p.PlanId, p.WhsCode, p.Jenis, p.Status, p.CardCode, p.CardName, CAST(COALESCE(p.Titipan, rm.Titipan, 0) AS BIT) AS Titipan FROM WHS_Plan p LEFT JOIN WHS_MasterRuangan rm ON rm.KodeRuangan = p.KodeRuangan WHERE p.PlanId IN @ids", new { ids }, tx)).ToList();
                 if (ps.Count != ids.Length) return Bad("Ada SPMB yang tidak ditemukan");
                 if (ps.Any(p => p.Jenis != "SPMB")) return Bad("Surat Jalan hanya untuk SPMB");
-                if (ps.Any(p => p.WhsCode != r.WhsCode)) return Bad("SPMB harus dari gudang yang sama");
+                // Satu mobil bisa memuat SPMB dari beberapa kode gudang dalam satu area (OWHS.State) -> satu Surat Jalan gabungan
+                var area = await Area.Gudang(db, tx, r.WhsCode);
+                if (ps.Any(p => !area.Contains(p.WhsCode, StringComparer.OrdinalIgnoreCase))) return Bad("SPMB harus dari kode gudang dalam satu area");
                 if (r.WhsCode != "ATM") { /* aturan: hanya Gudang ATM */ if (!(await db.ExecuteScalarAsync<string?>("SELECT WhsName FROM OWHS WHERE WhsCode = @w", new { w = r.WhsCode }, tx) ?? "").Contains("ATM", StringComparison.OrdinalIgnoreCase)) return Bad("Surat Jalan hanya untuk Gudang ATM"); }
                 if (ps.Any(p => p.Status is not ("Selesai" or "SelesaiKurang"))) return Bad("SPMB harus sudah selesai dimuat");
                 if (ps.Select(p => p.Titipan ?? false).Distinct().Count() > 1) return Bad("Titipan dan non-titipan tidak boleh dicampur dalam satu Surat Jalan");
@@ -94,7 +96,7 @@ ORDER BY s.TglSj DESC, s.SjId DESC", new
                 if (r.RegId is not null)
                 {
                     var k = await db.QueryFirstOrDefaultAsync<(string NoPolisi, string? ContainerNo, string Sopir, string WhsCode)?>("SELECT NoPolisi, ContainerNo, Sopir, WhsCode FROM WHS_Kendaraan WHERE RegId = @id", new { id = r.RegId }, tx);
-                    if (k is null || k.Value.WhsCode != r.WhsCode) return Bad("Kendaraan tidak ditemukan di gudang ini");
+                    if (k is null || !area.Contains(k.Value.WhsCode, StringComparer.OrdinalIgnoreCase)) return Bad("Kendaraan tidak ditemukan di area gudang ini");
                     (plat, cont, sopir) = (k.Value.NoPolisi, k.Value.ContainerNo, k.Value.Sopir);
                 }
                 var prefix = $"SJ/{r.TglSj:yyMM}/";

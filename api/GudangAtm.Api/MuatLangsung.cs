@@ -75,7 +75,7 @@ public static class MuatLangsung
                     "SELECT PlanId, Status, ContainerNo, Plat1, RegId1, WhsCode FROM WHS_KontainerSesi WITH (UPDLOCK) WHERE SesiId = @s", new { s = r.SesiId }, tx);
                 if (ks is null || ks.Value.PlanId is null) return Bad("Kontainer SPBB tidak ditemukan");
                 if (ks.Value.Status is not ("ISI_MASUK" or "DI_DOCK")) return Bad("Kontainer sudah selesai dibongkar");
-                if (ks.Value.WhsCode != spmb.WhsCode) return Bad("Kontainer berada di gudang lain");
+                if (!await Area.Sama(db, tx, ks.Value.WhsCode, spmb.WhsCode)) return Bad("Kontainer berada di area gudang lain");
                 var spbb = await Plan(db, tx, ks.Value.PlanId.Value, u.UserId());
                 if (spbb is null) return Bad("SPBB kontainer ini bukan tugas Anda");
                 if (spbb.Status is not ("Terbit" or "Proses" or "Partial")) return Bad($"SPBB berstatus {spbb.Status}");
