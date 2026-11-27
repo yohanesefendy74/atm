@@ -137,7 +137,7 @@ Kalau gagal, lihat tabel masalah di bawah dan Event Viewer › Windows Logs › 
 
 | Tugas | Perintah |
 |---|---|
-| Update ke versi terbaru | `git push` dari dev → di server `.\02-ambil-dan-publish.ps1` |
+| Update ke versi terbaru | Di server: `powershell -ExecutionPolicy Bypass -File C:\GudangAtm\update-api.ps1` (sinkron Git + publish + restart service + cek health, rollback otomatis bila gagal; tambah `-Sql` untuk menjalankan skrip database) |
 | Lihat status | `.\05-cek-status.ps1` |
 | Start / stop / restart | `Start-Service GudangAtmApi` · `Stop-Service GudangAtmApi` · `Restart-Service GudangAtmApi` |
 | Rollback | `Stop-Service GudangAtmApi; robocopy C:\GudangAtm\backup\api-<tanggal> C:\GudangAtm\api /MIR; Start-Service GudangAtmApi` |
