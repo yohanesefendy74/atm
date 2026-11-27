@@ -593,7 +593,10 @@ class _KeluarScreenState extends State<KeluarScreen> {
   }
 }
 
-/// T2: kontainer sudah dilepas di dock, kepala truk ditimbang sendiri lalu keluar.
+/// Truk bongkar, dua cara:
+/// 1. Kontainer dilepas di dock: timbang KEPALA saja (T2), kepala keluar.
+/// 2. Bongkar di atas truk (kontainer tidak dilepas): setelah krani selesai bongkar, timbang truk + kontainer kosong.
+///    Net bongkar = T1 - T2. Truk boleh langsung lanjut muat SPMB (kode gudang mana pun dalam satu area) dalam kunjungan yang sama.
 class LepasScreen extends StatefulWidget {
   const LepasScreen({super.key, required this.whs, required this.veh});
   final String whs;
@@ -606,20 +609,65 @@ class _LepasScreenState extends State<LepasScreen> {
   Berat? _berat;
   final _dock = TextEditingController();
   bool _busy = false;
+  bool _diAtasTruk = false;
+  bool _lanjut = false;
+  String? _lanjutPlan;
+  List<Map<String, dynamic>> _spmb = [];
+
+  Future<void> _muatSpmb() async {
+    try {
+      final r = (await Api.get('/api/kendaraan/cari-dokumen', {'whs': widget.whs, 'keperluan': 'Muat'}) as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+      if (mounted) setState(() => _spmb = r);
+    } catch (e) {
+      if (mounted) showError(context, e);
+    }
+  }
 
   Future<void> _kirim() async {
     if (_berat == null) return showError(context, 'Baca berat dulu');
+    if (_diAtasTruk && _lanjut && _lanjutPlan == null) return showError(context, 'Pilih SPMB yang akan dimuat');
     setState(() => _busy = true);
     try {
+      if (!_diAtasTruk) {
+        final r = await _kirimTimbang(
+          context,
+          '/api/kendaraan/${widget.veh['regId']}/lepas-kontainer',
+          {'timbang': _berat!.toJson(), 'dock': _dock.text.trim().isEmpty ? null : _dock.text.trim().toUpperCase()},
+          butuhKode: _berat!.sumber == 'MANUAL',
+        );
+        if (r != null && mounted) {
+          showInfo(context, 'Berat kontainer isi ${toD(r['beratIsiKg']).toStringAsFixed(0)} kg · kepala keluar');
+          Navigator.of(context).pop();
+        }
+        return;
+      }
       final r = await _kirimTimbang(
         context,
-        '/api/kendaraan/${widget.veh['regId']}/lepas-kontainer',
-        {'timbang': _berat!.toJson(), 'dock': _dock.text.trim().isEmpty ? null : _dock.text.trim().toUpperCase()},
+        '/api/kendaraan/${widget.veh['regId']}/timbang-bongkar',
+        {'timbang': _berat!.toJson(), 'lanjutPlanNo': _lanjut ? _lanjutPlan : null},
         butuhKode: _berat!.sumber == 'MANUAL',
       );
       if (r != null && mounted) {
-        showInfo(context, 'Berat kontainer isi ${toD(r['beratIsiKg']).toStringAsFixed(0)} kg · kepala keluar');
-        Navigator.of(context).pop();
+        final al = (r['alokasi'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
+        await showDialog<void>(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: Text(r['lanjutPlanNo'] != null ? 'Bongkar selesai · lanjut muat ${r['lanjutPlanNo']}' : 'Bongkar selesai · truk keluar'),
+            content: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Net barang bongkar: ${toD(r['net']).toStringAsFixed(0)} kg', style: const TextStyle(fontWeight: FontWeight.w700)),
+                if (toD(r['input']) > 0) Text('Input krani: ${toD(r['input']).toStringAsFixed(0)} kg${r['selisihPersen'] != null ? ' · selisih ${r['selisihPersen']}%' : ''}'),
+                if (toD(r['kgMuatLangsung']) > 0) Text('Muat langsung: ${toD(r['kgMuatLangsung']).toStringAsFixed(0)} kg'),
+                for (final a in al) Text('${a['itemCode']}: ${toD(a['kgTimbang']).toStringAsFixed(0)} kg (krani ${toD(a['kgKrani']).toStringAsFixed(0)})'),
+                if (r['lanjutPlanNo'] != null) const Padding(padding: EdgeInsets.only(top: 8), child: Text('Timbangan ini jadi acuan SPMB. Setelah muat selesai, truk timbang keluar seperti biasa.')),
+              ]),
+            ),
+            actions: [FilledButton(onPressed: () => Navigator.pop(c), child: const Text('OK'))],
+          ),
+        );
+        if (mounted) Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) showError(context, e);
@@ -634,18 +682,58 @@ class _LepasScreenState extends State<LepasScreen> {
     return Scaffold(
       backgroundColor: C.ground,
       body: Column(children: [
-        Header(title: 'Lepas Kontainer', eyebrow: '${v['noPolisi']} · ${v['containerNo'] ?? ''}'),
+        Header(title: _diAtasTruk ? 'Timbang Setelah Bongkar' : 'Lepas Kontainer', eyebrow: '${v['noPolisi']} · ${v['containerNo'] ?? ''}'),
         Expanded(
           child: ListView(padding: const EdgeInsets.all(16), children: [
-            const Box(child: Text('Kontainer sudah dilepas di loading dock. Timbang KEPALA truk saja (T2). Berat kontainer isi = T1 - T2.')),
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(value: false, label: Text('Kontainer dilepas')),
+                ButtonSegment(value: true, label: Text('Bongkar di atas truk')),
+              ],
+              selected: {_diAtasTruk},
+              onSelectionChanged: (x) => setState(() => _diAtasTruk = x.first),
+            ),
             const SizedBox(height: 12),
-            TextField(controller: _dock, textCapitalization: TextCapitalization.characters, decoration: const InputDecoration(labelText: 'Loading dock (opsional)')),
-            const SizedBox(height: 16),
-            const FieldLabel('Timbang kepala saja (T2)'),
+            if (!_diAtasTruk) ...[
+              const Box(child: Text('Kontainer sudah dilepas di loading dock. Timbang KEPALA truk saja (T2). Berat kontainer isi = T1 - T2.')),
+              const SizedBox(height: 12),
+              TextField(controller: _dock, textCapitalization: TextCapitalization.characters, decoration: const InputDecoration(labelText: 'Loading dock (opsional)')),
+              const SizedBox(height: 16),
+              const FieldLabel('Timbang kepala saja (T2)'),
+            ] else ...[
+              const Box(child: Text('Kontainer tetap di truk. Timbang truk + kontainer kosong SETELAH krani menekan Selesai bongkar. Net bongkar = timbang masuk - timbang sekarang.')),
+              const SizedBox(height: 8),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _lanjut,
+                onChanged: (x) {
+                  setState(() => _lanjut = x ?? false);
+                  if (_lanjut && _spmb.isEmpty) _muatSpmb();
+                },
+                title: const Text('Lanjut muat SPMB (truk tidak keluar)'),
+                subtitle: const Text('Boleh SPMB dari kode gudang lain dalam satu area. Timbangan ini jadi acuan muat.'),
+              ),
+              if (_lanjut)
+                DropdownButtonFormField<String>(
+                  value: _lanjutPlan,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'SPMB yang dimuat'),
+                  items: [for (final s in _spmb) DropdownMenuItem(value: '${s['planNo']}', child: Text('${s['planNo']} · ${s['whsCode'] ?? ''} · ${s['party'] ?? ''}', overflow: TextOverflow.ellipsis))],
+                  onChanged: (x) => setState(() => _lanjutPlan = x),
+                ),
+              const SizedBox(height: 16),
+              const FieldLabel('Timbang truk + kontainer kosong (T2)'),
+            ],
             BeratField(whs: widget.whs, onChanged: (b) => setState(() => _berat = b)),
           ]),
         ),
-        Footer(children: [BigButton(label: 'Simpan · kepala keluar', busy: _busy, onPressed: _kirim)]),
+        Footer(children: [
+          BigButton(
+            label: !_diAtasTruk ? 'Simpan · kepala keluar' : _lanjut ? 'Simpan · lanjut muat' : 'Simpan · truk keluar',
+            busy: _busy,
+            onPressed: _kirim,
+          ),
+        ]),
       ]),
     );
   }

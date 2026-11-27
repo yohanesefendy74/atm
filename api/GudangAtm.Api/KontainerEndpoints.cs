@@ -159,8 +159,11 @@ WHERE k.WhsCode IN " + Area.In("@whs") + @" AND k.Status IN ('ISI_MASUK','DI_DOC
             var k = await db.QueryFirstOrDefaultAsync<(string WhsCode, string ContainerNo, string Status)?>("SELECT WhsCode, ContainerNo, Status FROM WHS_KontainerSesi WHERE SesiId = @id", new { id });
             if (k is null) return Results.NotFound(new { message = "Kontainer tidak ditemukan" });
             if (!await Akses(db, u, k.Value.WhsCode)) return Results.Forbid();
-            if (k.Value.Status == "ISI_MASUK") return Bad("Kepala truk belum ditimbang (lepas kontainer) di pos timbang");
-            if (k.Value.Status != "DI_DOCK") return Bad("Kontainer tidak dalam proses bongkar");
+            // ISI_MASUK = kontainer masih di atas truk: boleh bila truk pembawanya masih di dalam (bongkar di atas truk, lalu timbang setelah bongkar)
+            if (k.Value.Status == "ISI_MASUK" && await db.ExecuteScalarAsync<int>(@"SELECT COUNT(*) FROM WHS_KontainerSesi s JOIN WHS_Kendaraan v ON v.RegId = s.RegId1
+                    WHERE s.SesiId = @id AND v.Status = 'Di dalam'", new { id }) == 0)
+                return Bad("Kepala truk belum ditimbang (lepas kontainer) di pos timbang");
+            if (k.Value.Status is not ("DI_DOCK" or "ISI_MASUK")) return Bad("Kontainer tidak dalam proses bongkar");
             var items = await Items(db, null, id);
             var adaMuatLangsung = await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM KRN1 WHERE CrossDockSesiId = @id AND flags = 1", new { id }) > 0;
             if (items.Count == 0 && !adaMuatLangsung) return Bad("Belum ada input krani untuk kontainer ini");

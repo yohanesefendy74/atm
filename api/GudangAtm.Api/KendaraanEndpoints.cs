@@ -16,6 +16,7 @@ public record KeluarReq(TimbangIn Timbang, bool KontainerTinggal, string? YardAr
 public record SelesaiMuatReq(int JumlahPalet, decimal BeratPaletKg, TimbangIn? Timbang);
 public record LepasReq(TimbangIn Timbang, string? Dock, bool AckPeringatan, string? KodeAdmin);
 public record PlatReq(string NoPolisi);
+public record TimbangBongkarReq(TimbangIn Timbang, bool AckPeringatan, string? KodeAdmin, string? LanjutPlanNo);
 public record KodeAdminReq(string WhsCode, string? Tujuan);
 
 /// Registrasi kendaraan (pos timbang / layar gudang), timbang masuk-keluar, yard kontainer, riwayat berat, kode persetujuan Admin.
@@ -511,6 +512,118 @@ ORDER BY p.PlanId DESC", new { whs, jenis, cont }));
                 await Audit.Write(db, tx, u, ctx, "KENDARAAN_KELUAR", "KENDARAAN", regId, $"{kk.NoPolisi} {kk.Keperluan} {berat:N0} kg net {net:N0} kosong {kosongKg} selisih {selisih}%");
                 await tx.CommitAsync();
                 return Results.Ok(new { regId, net, input = bandingkan, kosongKg, selisihPersen = selisih, alokasi, warnings, muatLangsung = hasilMuatLangsung, kgMuatLangsung });
+            }
+            catch
+            {
+                try { await tx.RollbackAsync(); } catch { }
+                throw;
+            }
+        });
+
+        // ------------------------------------------------------------ Bongkar di atas truk (kontainer tidak dilepas), lalu boleh lanjut muat
+        // T1 = truk + kontainer isi saat masuk. Setelah krani selesai bongkar, truk ditimbang lagi (T2 = truk + kontainer kosong).
+        // Net barang bongkar = T1 - T2 (- muat langsung). Bila lanjut muat SPMB (kode gudang mana pun dalam satu area),
+        // T2 menjadi acuan timbang SPMB tsb dan kendaraan tetap di dalam; timbang keluar memakai alur Muat biasa.
+        api.MapPost("/kendaraan/{regId:long}/timbang-bongkar", async (long regId, TimbangBongkarReq r, ClaimsPrincipal u, HttpContext ctx) =>
+        {
+            if (r.Timbang is null || r.Timbang.BeratKg <= 0 || r.Timbang.BeratKg > 500000) return Bad("Berat timbangan tidak valid");
+            if (r.Timbang.Sumber is not ("LAN" or "GATEWAY" or "BLE" or "MANUAL")) return Bad("Sumber timbangan tidak valid");
+            await using var db = dbf();
+            await db.OpenAsync();
+            await using var tx = (SqlTransaction)await db.BeginTransactionAsync(IsolationLevel.Serializable);
+            try
+            {
+                var k = await db.QueryFirstOrDefaultAsync<(string WhsCode, string Keperluan, string NoPolisi, string? ContainerNo, string Status)?>(
+                    "SELECT WhsCode, Keperluan, NoPolisi, ContainerNo, Status FROM WHS_Kendaraan WITH (UPDLOCK) WHERE RegId = @regId", new { regId }, tx);
+                if (k is null) return Results.NotFound(new { message = "Kendaraan tidak ditemukan" });
+                var kk = k.Value;
+                if (!await Area.Akses(db, tx, u.UserId(), kk.WhsCode)) return Results.Forbid();
+                if (kk.Status != "Di dalam" || kk.Keperluan != "Bongkar") return Bad("Hanya untuk truk bongkar yang masih di dalam");
+                if (r.Timbang.Sumber != "MANUAL" && Clean(r.Timbang.IndikatorStatus) is { } ind && ind != "Normal" && ind != "Stabil") return Bad("Berat belum stabil · tunggu indikator STABIL");
+                var sesi = await db.QueryFirstOrDefaultAsync<(long SesiId, decimal T1, string ContainerNo, string Status, string WhsCode)?>(
+                    "SELECT SesiId, T1Kg, ContainerNo, Status, WhsCode FROM WHS_KontainerSesi WITH (UPDLOCK) WHERE RegId1 = @regId AND T2Kg IS NULL AND Status IN ('ISI_MASUK','KOSONG')", new { regId }, tx);
+                if (sesi is null) return Bad("Data kontainer (timbang masuk) tidak ditemukan");
+                if (sesi.Value.Status != "KOSONG") return Bad("Krani belum menyelesaikan bongkar kontainer ini");
+                var st = await Setup(db, tx);
+                decimal S(string k2, decimal d) => st.TryGetValue(k2, out var v) ? v : d;
+                var berat = r.Timbang.BeratKg;
+                if (berat >= sesi.Value.T1) return Bad($"Berat setelah bongkar ({berat:N0} kg) tidak lebih ringan dari timbang masuk ({sesi.Value.T1:N0} kg) · cek timbangan");
+                var warnings = new List<string>();
+
+                // SPMB berikutnya (boleh kode gudang lain dalam satu area)
+                var lanjut = Clean(r.LanjutPlanNo)?.ToUpperInvariant();
+                long? planLanjut = null;
+                if (lanjut is not null)
+                {
+                    var nx = await db.QueryFirstOrDefaultAsync<(long PlanId, string Jenis, string WhsCode, string Status)?>("SELECT PlanId, Jenis, WhsCode, Status FROM WHS_Plan WHERE PlanNo = @n", new { n = lanjut }, tx);
+                    if (nx is null || nx.Value.Jenis != "SPMB") return Bad($"SPMB {lanjut} tidak ditemukan");
+                    if (!await Area.Sama(db, tx, kk.WhsCode, nx.Value.WhsCode)) return Bad($"SPMB {lanjut} dari gudang {nx.Value.WhsCode} di luar area pos timbang ini");
+                    if (nx.Value.Status is not ("Terbit" or "Proses" or "Partial")) return Bad($"SPMB {lanjut} berstatus {nx.Value.Status}");
+                    if (await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WHS_PlanKrani WHERE PlanId = @id", new { id = nx.Value.PlanId }, tx) == 0) return Bad($"SPMB {lanjut} belum punya krani · hubungi Admin");
+                    planLanjut = nx.Value.PlanId;
+                }
+
+                // barang yang dimuat langsung ke truk lain sudah punya berat final dari timbang keluar truk tsb
+                if (await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM KRN1 WHERE CrossDockSesiId = @s AND flags = 1 AND ISNULL(CrossDockFinal, 0) = 0", new { s = sesi.Value.SesiId }, tx) > 0)
+                    return Bad("Ada truk muat langsung dari kontainer ini yang belum timbang keluar");
+                var kgMl = await db.ExecuteScalarAsync<decimal?>("SELECT SUM(qty) FROM KRN1 WHERE CrossDockSesiId = @s AND flags = 1", new { s = sesi.Value.SesiId }, tx) ?? 0;
+                var net = sesi.Value.T1 - berat - kgMl;
+                var items = await KontainerEndpoints.Items(db, tx, sesi.Value.SesiId);
+                if (items.Count == 0 && kgMl <= 0) return Bad("Belum ada input krani untuk kontainer ini");
+                List<KontainerEndpoints.AlokasiItem> alokasi = new();
+                decimal bandingkan = 0; decimal? selisih = null; var perluAdmin = false;
+                if (items.Count > 0)
+                {
+                    if (net <= 0) return Bad($"Net bongkar ≤ 0 (masuk {sesi.Value.T1:N0} - sekarang {berat:N0} - muat langsung {kgMl:N0}) · cek timbangan");
+                    if (KontainerEndpoints.PerluSampling(items) && items.Any(i => i.SakSampel <= 0)) return Bad("Lebih dari 1 item · ada barang tanpa sampling berat");
+                    bandingkan = items.Sum(i => i.KgKrani);
+                    alokasi = KontainerEndpoints.Hitung(items, net);
+                    if (bandingkan > 0)
+                    {
+                        selisih = Math.Round(Math.Abs(net - bandingkan) / bandingkan * 100, 2);
+                        var tolScale = Clean(r.Timbang.KodeTimbangan) is { } kt ? await db.ExecuteScalarAsync<decimal?>("SELECT TolOverridePct FROM WHS_MasterTimbangan WHERE KodeTimbangan = @kt", new { kt }, tx) : null;
+                        if (selisih > S("NET_ADMIN_PCT", 2)) perluAdmin = true;
+                        else if (selisih > (tolScale ?? S("NET_TOL_PCT", 0.5m))) warnings.Add($"Net bongkar {net:N0} kg beda {selisih:N2}% dari input krani {bandingkan:N0} kg");
+                    }
+                }
+                if (r.Timbang.Sumber == "MANUAL" || perluAdmin)
+                {
+                    var e = await PakaiKodeAdmin(db, tx, kk.WhsCode, r.KodeAdmin, u.UserId());
+                    if (e is not null) return Bad((perluAdmin ? $"Selisih net {selisih:N2}% melebihi batas · " : "Berat manual: ") + e);
+                    warnings.Add(perluAdmin ? $"Selisih net {selisih:N2}% disetujui Admin" : "Berat manual dengan persetujuan Admin");
+                }
+                if (warnings.Count > 0 && !r.AckPeringatan) return Results.Json(new { message = "Ada peringatan. Konfirmasi bahwa sudah diperiksa.", warnings, perluKonfirmasi = true }, statusCode: 409);
+
+                var per = warnings.Count == 0 ? null : string.Join("; ", warnings);
+                var adminId = perluAdmin || r.Timbang.Sumber == "MANUAL" ? u.UserId() : (int?)null;
+                var tid = await db.ExecuteScalarAsync<long>(@"INSERT WHS_Timbang (RegId, Alat, KodeTimbangan, Jenis, BeratKg, Sumber, IndikatorStatus, NetHitung, NetInputKrani, SelisihPersen, KodeAdminOleh, TeksMentah, Peringatan, UserId)
+                    OUTPUT INSERTED.TimbangId VALUES (@reg, 'KENDARAAN', @kode, @jenis, @berat, @sumber, @ind, @net, @inp, @sel, @adm, @raw, @per, @uid)",
+                    new { reg = regId, kode = Clean(r.Timbang.KodeTimbangan), jenis = planLanjut is null ? "TARA" : "ANTARA", berat, sumber = r.Timbang.Sumber, ind = Clean(r.Timbang.IndikatorStatus),
+                          net = net > 0 ? net : (decimal?)null, inp = bandingkan > 0 ? bandingkan : (decimal?)null, sel = selisih, adm = adminId,
+                          raw = r.Timbang.TeksMentah is { Length: > 200 } t ? t[..200] : r.Timbang.TeksMentah, per, uid = u.UserId() }, tx);
+                // kontainer tidak dilepas: kosong = 0 (T3 = T4 = 0), berat isi = T1 - T2
+                await db.ExecuteAsync(@"UPDATE WHS_KontainerSesi SET T2Kg = @berat, T2Id = @tid, T2At = SYSDATETIME(), T3Kg = 0, T4Kg = 0, T4Id = @tid, T4At = SYSDATETIME(),
+                    NetInputKrani = @inp, SelisihPersen = @sel, KodeAdminOleh = @adm, Peringatan = @per, Status = 'SELESAI', SelesaiAt = SYSDATETIME() WHERE SesiId = @id",
+                    new { berat, tid, inp = bandingkan, sel = selisih, adm = adminId, per, id = sesi.Value.SesiId }, tx);
+                await db.ExecuteAsync("DELETE WHS_KontainerAlokasi WHERE SesiId = @id", new { id = sesi.Value.SesiId }, tx);
+                foreach (var a in alokasi)
+                    await db.ExecuteAsync(@"INSERT WHS_KontainerAlokasi (SesiId, PlanLine, ItemCode, SakTotal, KgKrani, SakSampel, KgSampel, EstimasiSisaKg, AlokasiSisaKg, KgTimbang)
+                        VALUES (@SesiId, @PlanLine, @ItemCode, @SakTotal, @KgKrani, @SakSampel, @KgSampel, @EstimasiSisaKg, @AlokasiSisaKg, @KgTimbang)",
+                        new { SesiId = sesi.Value.SesiId, a.PlanLine, a.ItemCode, a.SakTotal, a.KgKrani, a.SakSampel, a.KgSampel, a.EstimasiSisaKg, a.AlokasiSisaKg, a.KgTimbang }, tx);
+
+                if (planLanjut is not null)
+                {
+                    // satu kunjungan: bongkar selesai, lanjut muat SPMB ke kontainer / bak yang sama
+                    await db.ExecuteAsync(@"UPDATE WHS_Kendaraan SET Keperluan = 'Muat', PlanId = @p, SelesaiKrani = 0, KontainerBawaan = CASE WHEN ContainerNo IS NULL THEN 0 ELSE 1 END,
+                        JumlahPalet = NULL, BeratPaletKg = NULL, PaletTimbangId = NULL WHERE RegId = @regId", new { p = planLanjut, regId }, tx);
+                    await db.ExecuteAsync("UPDATE WHS_Plan SET Status = 'Proses' WHERE PlanId = @p AND Status = 'Terbit'", new { p = planLanjut }, tx);
+                }
+                else
+                    await db.ExecuteAsync("UPDATE WHS_Kendaraan SET Status = 'Keluar', JamKeluar = SYSDATETIME(), OutUser = @u, CatatanKeluar = @c WHERE RegId = @reg", new { u = u.UserId(), c = per, reg = regId }, tx);
+                await Audit.Write(db, tx, u, ctx, "KENDARAAN_TIMBANG_BONGKAR", "KENDARAAN", regId,
+                    $"{kk.NoPolisi} {sesi.Value.ContainerNo} T1 {sesi.Value.T1:N0} T2 {berat:N0} net {net:N0}{(lanjut is null ? " keluar" : $" lanjut muat {lanjut}")}");
+                await tx.CommitAsync();
+                return Results.Ok(new { regId, net, input = bandingkan, selisihPersen = selisih, alokasi, warnings, kgMuatLangsung = kgMl, lanjutPlanNo = lanjut, keluar = planLanjut is null });
             }
             catch
             {

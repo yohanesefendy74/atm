@@ -384,7 +384,7 @@ class _TugasDetailState extends State<TugasDetail> {
                         _loadKont();
                       },
                     ),
-                    if (_kStatus == 'ISI_MASUK') const Hint('Kepala truk belum ditimbang (lepas kontainer). Input boleh, selesai bongkar setelah lepas.', color: C.amberText),
+                    if (_kStatus == 'ISI_MASUK') const Hint('Kontainer masih di atas truk. Boleh dibongkar di atas truk: setelah Selesai bongkar, truk ditimbang di pos (boleh lanjut muat SPMB). Atau lepas kontainer di dock dulu.', color: C.amberText),
                   ] else ...[
                     const FieldLabel('Kendaraan', required: true),
                     if (_veh.isEmpty) const Hint('Belum ada kendaraan terdaftar untuk dokumen ini. Daftarkan dulu di Pos Timbang.', color: C.outbound),
