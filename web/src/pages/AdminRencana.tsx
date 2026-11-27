@@ -77,7 +77,7 @@ export function PlanNew() {
       const r = await get<{ header: Src; lines: SrcLine[]; blDo?: Row[] }>(`/api/cms/plan/sumber/${src}/${d.docEntry}`);
       setDocs([...docs, { head: r.header, lines: r.lines.map((l) => {
         const bls = (r.blDo ?? []).filter((b) => b.lineNum === l.lineNum);
-        return { ...l, pick: true, qtyPlan: Math.max(0, Number(l.tersedia)), kontainer: l.containerNo ?? '', bls, bl: bls.length === 1 ? String(bls[0].noBL) : '' };
+        return { ...l, pick: !(jenis === 'SPMB' && l.lineWhs && whs && String(l.lineWhs).trim() !== whs), qtyPlan: Math.max(0, Number(l.tersedia)), kontainer: l.containerNo ?? '', bls, bl: bls.length === 1 ? String(bls[0].noBL) : '' };
       }) }]);
     } catch (e) { toast(errText(e), true); }
   }
@@ -165,7 +165,10 @@ export function PlanNew() {
           <div className="row"><strong className="grow">{src === 'BL' ? `BL ${d.head.numAtCard ?? d.head.docNum}` : `${src} ${d.head.docNum}`} · {d.head.cardName}</strong><button className="btn small ghost" onClick={() => setDocs(docs.filter((_, i) => i !== di))}>Hapus</button></div>
           {d.lines.map((l, li) => (
             <div key={l.lineNum} className="card pad-s stack tight">
-              <label className="row"><input type="checkbox" checked={!!l.pick} onChange={(e) => upd(di, li, { pick: e.target.checked })} /> <span className="grow">{l.itemCode} · {l.dscription}</span></label>
+              {(() => { const beda = jenis === 'SPMB' && !!l.lineWhs && !!whs && String(l.lineWhs).trim() !== whs; return (<>
+              <label className="row"><input type="checkbox" disabled={beda} checked={!!l.pick && !beda} onChange={(e) => upd(di, li, { pick: e.target.checked })} /> <span className="grow">{l.itemCode} · {l.dscription}</span>{l.lineWhs && <span className="pill">{l.lineWhs}</span>}</label>
+              {beda && <div className="small" style={{ color: 'var(--red)' }}>Baris ini untuk gudang {l.lineWhs} · 1 SPMB hanya untuk 1 gudang, buat SPMB terpisah</div>}
+              </>); })()}
               <div className="small muted">Open {fmt(l.openQty)} · teralokasi {fmt(l.teralokasi)} · tersedia {fmt(l.tersedia)} kg {l.brandName ? `· ${l.brandName}` : ''}</div>
               <div className="formrow">
                 <input className="input" type="number" value={l.qtyPlan ?? 0} onChange={(e) => upd(di, li, { qtyPlan: Number(e.target.value) })} aria-label="Qty rencana kg" />

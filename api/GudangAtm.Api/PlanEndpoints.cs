@@ -192,7 +192,7 @@ ORDER BY h.DocDate DESC, h.DocNum DESC";
             var lines = src == "SO"
                 ? await db.QueryAsync($@"SELECT l.LineNum AS lineNum, l.ItemCode AS itemCode, l.Dscription AS dscription, l.Quantity AS qty, l.OpenQty AS openQty,
                       l.OpenQty - (CASE WHEN l.OpenQty - ISNULL(a.Teralokasi, 0) < l.Quantity - ISNULL(a.Terpakai, 0) THEN l.OpenQty - ISNULL(a.Teralokasi, 0) ELSE l.Quantity - ISNULL(a.Terpakai, 0) END) AS teralokasi, (CASE WHEN l.OpenQty - ISNULL(a.Teralokasi, 0) < l.Quantity - ISNULL(a.Terpakai, 0) THEN l.OpenQty - ISNULL(a.Teralokasi, 0) ELSE l.Quantity - ISNULL(a.Terpakai, 0) END) AS tersedia, l.U_IDU_QtyPack AS qtyPack, l.FreeTxt AS freeTxt,
-                      NULL AS containerNo, NULL AS brandName, NULL AS size, NULL AS [type], NULL AS crop
+                      NULL AS containerNo, NULL AS brandName, NULL AS size, NULL AS [type], NULL AS crop, l.WhsCode AS lineWhs
                   FROM {t.Value.L} l LEFT JOIN vw_WHS_PlanAlokasi a ON a.BaseType = 'SO' AND a.BaseDocEntry = l.DocEntry AND a.BaseLineNum = l.LineNum
                   WHERE l.DocEntry = @docEntry AND l.OpenQty > 0 ORDER BY l.LineNum", new { docEntry })
                 : await db.QueryAsync($@"SELECT l.LineNum AS lineNum, l.ItemCode AS itemCode, l.Dscription AS dscription, l.Quantity AS qty, l.OpenQty AS openQty,
@@ -344,6 +344,13 @@ ORDER BY CASE WHEN p.Status IN ('Terbit','Proses','Partial') THEN 0 ELSE 1 END, 
                     if (l.QtyPlan <= 0 || l.QtyPlan > 10_000_000) return Bad("Qty plan harus lebih dari 0");
                     var colsBl = src == "SO" ? "NULL AS ShipToCode, NULL AS StgDesc, NULL AS SerialNum, NULL AS BaseAtCard, NULL AS BlockNum" : "ShipToCode, StgDesc, SerialNum, BaseAtCard, BlockNum";
                     var sap = await db.QueryFirstOrDefaultAsync($"SELECT ItemCode, Dscription, Quantity, OpenQty, U_IDU_QtyPack, FreeTxt, {colsBl} FROM {t.L} WHERE DocEntry = @d AND LineNum = @n AND OpenQty > 0", new { d = l.BaseDocEntry, n = l.BaseLineNum }, tx);
+                    // 1 SPMB hanya untuk 1 kode gudang: baris SO yang gudangnya berbeda tidak boleh ikut
+                    if (src == "SO" && sap is not null)
+                    {
+                        var lineWhs = await db.ExecuteScalarAsync<string?>($"SELECT WhsCode FROM {t.L} WHERE DocEntry = @d AND LineNum = @n", new { d = l.BaseDocEntry, n = l.BaseLineNum }, tx);
+                        if (!string.IsNullOrWhiteSpace(lineWhs) && !string.Equals(lineWhs.Trim(), r.WhsCode, StringComparison.OrdinalIgnoreCase))
+                            return Bad($"{(string)sap.ItemCode}: baris SO untuk gudang {lineWhs.Trim()}, bukan {r.WhsCode} · 1 SPMB hanya untuk 1 gudang");
+                    }
                     if (sap is null) return Bad($"Baris {l.BaseLineNum + 1} dokumen {l.BaseDocEntry} sudah tidak terbuka");
                     // Anti dobel: kunci baris dokumen sumber yang sama selama transaksi, lalu hitung sisa yang belum diambil SPBB/SPMB lain.
                     // Tersedia = MIN(OpenQty ERP - outstanding rencana aktif, Quantity ERP - (qty rencana aktif + qty sudah diterima/dikirim rencana selesai)).
