@@ -322,6 +322,7 @@ class _MasukScreenState extends State<MasukScreen> {
   bool _kontBawaan = false;
   List<Map<String, dynamic>> _yard = [];
   String? _yardPilih; // kontainer kosong yang dipilih dari yard (Ambil Kontainer)
+  bool _mobilBox = false; // mobil box barang lokal: tanpa kontainer, no. polisi dipakai sebagai no. kontainer
   Berat? _berat;
   bool _busy = false;
   String? _taraInfo;
@@ -341,7 +342,7 @@ class _MasukScreenState extends State<MasukScreen> {
     } catch (_) {}
   }
 
-  String? get _noKontainer => _kep == 'AmbilKontainer' ? _yardPilih : (_cont.text.trim().isEmpty ? null : _cont.text.trim().toUpperCase().replaceAll(' ', '').replaceAll('-', ''));
+  String? get _noKontainer => _kep == 'AmbilKontainer' ? _yardPilih : _kep == 'Bongkar' && _mobilBox ? null : (_cont.text.trim().isEmpty ? null : _cont.text.trim().toUpperCase().replaceAll(' ', '').replaceAll('-', ''));
 
   Future<void> _cekTara() async {
     try {
@@ -352,7 +353,7 @@ class _MasukScreenState extends State<MasukScreen> {
   }
 
   Future<void> _kirim() async {
-    if (_kep == 'Bongkar' && _noKontainer == null) return showError(context, 'No. kontainer wajib diisi untuk Bongkar');
+    if (_kep == 'Bongkar' && !_mobilBox && _noKontainer == null) return showError(context, 'No. kontainer wajib diisi untuk Bongkar (mobil box: centang Mobil box)');
     if (_kep == 'AmbilKontainer' && _yardPilih == null) return showError(context, 'Pilih kontainer kosong dari yard');
     if (_berat == null) return showError(context, 'Baca berat dulu');
     setState(() => _busy = true);
@@ -369,6 +370,7 @@ class _MasukScreenState extends State<MasukScreen> {
           'containerNo': _noKontainer,
           'alasanBedaPlan': _alasan.text.trim().isEmpty ? null : _alasan.text.trim(),
           'kontainerBawaan': _kep == 'Muat' && _kontBawaan,
+          'mobilBox': _kep == 'Bongkar' && _mobilBox,
           'timbang': _berat!.toJson(),
         },
         butuhKode: _berat!.sumber == 'MANUAL',
@@ -435,9 +437,17 @@ class _MasukScreenState extends State<MasukScreen> {
             const SizedBox(height: 10),
             TextField(controller: _sopir, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Nama sopir')),
             const SizedBox(height: 10),
+            if (_kep == 'Bongkar')
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _mobilBox,
+                onChanged: (v) => setState(() => _mobilBox = v ?? false),
+                title: const Text('Mobil box (barang lokal, tanpa kontainer)'),
+                subtitle: const Text('No. polisi dipakai sebagai no. kontainer. Dibongkar di atas truk, lalu timbang setelah bongkar.'),
+              ),
             if (_kep == 'AmbilKontainer')
               _yardField()
-            else
+            else if (!(_kep == 'Bongkar' && _mobilBox))
               TextField(
                 controller: _cont,
                 textCapitalization: TextCapitalization.characters,
@@ -451,7 +461,7 @@ class _MasukScreenState extends State<MasukScreen> {
             ],
             if (_kep == 'Muat') CheckboxListTile(contentPadding: EdgeInsets.zero, value: _kontBawaan, onChanged: (v) => setState(() => _kontBawaan = v ?? false), title: const Text('Membawa kontainer kosong')),
             const SizedBox(height: 16),
-            FieldLabel(_kep == 'Bongkar' ? 'Timbang truk + kontainer isi (T1)' : _kep == 'AmbilKontainer' ? 'Timbang kepala saja (T3)' : 'Timbang kepala (+ kontainer kosong) (A)'),
+            FieldLabel(_kep == 'Bongkar' ? (_mobilBox ? 'Timbang mobil box isi (T1)' : 'Timbang truk + kontainer isi (T1)') : _kep == 'AmbilKontainer' ? 'Timbang kepala saja (T3)' : 'Timbang kepala (+ kontainer kosong) (A)'),
             BeratField(whs: widget.whs, onChanged: (b) => setState(() => _berat = b)),
           ]),
         ),
@@ -610,6 +620,13 @@ class _LepasScreenState extends State<LepasScreen> {
   final _dock = TextEditingController();
   bool _busy = false;
   bool _diAtasTruk = false;
+  bool get _box => '${widget.veh['containerNo'] ?? ''}' == '${widget.veh['noPolisi'] ?? ''}'.toUpperCase().replaceAll(RegExp(r'[\s\-\.]'), '');
+
+  @override
+  void initState() {
+    super.initState();
+    if (_box) _diAtasTruk = true;
+  }
   bool _lanjut = false;
   String? _lanjutPlan;
   List<Map<String, dynamic>> _spmb = [];
@@ -685,7 +702,8 @@ class _LepasScreenState extends State<LepasScreen> {
         Header(title: _diAtasTruk ? 'Timbang Setelah Bongkar' : 'Lepas Kontainer', eyebrow: '${v['noPolisi']} · ${v['containerNo'] ?? ''}'),
         Expanded(
           child: ListView(padding: const EdgeInsets.all(16), children: [
-            SegmentedButton<bool>(
+            if (_box) const Hint('Mobil box: bak tidak bisa dilepas. Timbang setelah krani selesai bongkar.'),
+            if (!_box) SegmentedButton<bool>(
               segments: const [
                 ButtonSegment(value: false, label: Text('Kontainer dilepas')),
                 ButtonSegment(value: true, label: Text('Bongkar di atas truk')),

@@ -84,7 +84,7 @@ WHERE dl.DocEntry = @doEntry AND dl.LineNum = @lineNum
                 if (string.IsNullOrWhiteSpace(l.PaletCode) || await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WHS_MasterPalet WHERE PaletCode = @p AND Aktif = 1", new { p = l.PaletCode }, tx) == 0)
                     return Bad($"{item}: jenis palet wajib dipilih dari master");
                 var cont = Clean(l.ContainerNo) is { } c0 ? NormCont(c0) : null;
-                if (cont is not null && !Iso6346(cont)) return Bad($"{item}: nomor container tidak valid (ISO 6346)");
+                if (cont is not null && !Iso6346(cont) && !PlatBox(cont)) return Bad($"{item}: nomor container tidak valid (ISO 6346 atau no. polisi mobil box)");
                 rows.Add((l, item, desc, lineRoom, cont));
             }
             var total = rows.Sum(x => x.q.QtyPlan);
@@ -132,6 +132,9 @@ VALUES (@planId, @line, 'TT', 0, @line, @cont, @item, @desc, @free, @qp, @qp, @q
 
     // Tabel SAP sumber (kolom ASUMSI, cek ke skema asli): header, baris, kolom jumlah-per-kemasan
     static (string H, string L)? Tbl(string src) => src switch { "BL" => ("OPBL", "PBL1"), "DO" => ("ODLN", "DLN1"), "SO" => ("ORDR", "RDR1"), _ => null };
+
+    /// No. polisi mobil box (barang lokal) yang dipakai sebagai pengganti no. kontainer, mis. B9123KXT.
+    public static bool PlatBox(string? c) => c is not null && System.Text.RegularExpressions.Regex.IsMatch(c, @"^[A-Z]{1,2}\d{1,4}[A-Z]{1,3}$");
 
     public static bool Iso6346(string? c)
     {
@@ -377,7 +380,7 @@ ORDER BY CASE WHEN p.Status IN ('Terbit','Proses','Partial') THEN 0 ELSE 1 END, 
                             var c = NormCont((string?)sap.ShipToCode);
                             if (!Iso6346(c)) return Bad($"{sap.ItemCode}: nomor container BL tidak valid (ISO 6346)");
                         }
-                        else if (Clean(l.ContainerNo) is { } cc && !Iso6346(NormCont(cc))) return Bad($"{sap.ItemCode}: nomor container tidak valid (ISO 6346)");
+                        else if (Clean(l.ContainerNo) is { } cc && !Iso6346(NormCont(cc)) && !PlatBox(NormCont(cc))) return Bad($"{sap.ItemCode}: nomor container tidak valid (ISO 6346 atau no. polisi mobil box)");
                     }
                     var pack = sap.U_IDU_QtyPack is null ? 0m : (decimal)sap.U_IDU_QtyPack;
                     var quantity = (decimal)sap.Quantity;

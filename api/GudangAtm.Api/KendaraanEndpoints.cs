@@ -10,7 +10,7 @@ namespace GudangAtm.Api;
 
 public record TimbangIn(string? KodeTimbangan, decimal BeratKg, string Sumber, string? IndikatorStatus, string? TeksMentah);
 public record MasukReq(string WhsCode, string Keperluan, string? PlanNo, string NoPolisi, string Sopir, string? ContainerNo, string? AlasanBedaPlan,
-    bool KontainerBawaan, TimbangIn Timbang, bool AckPeringatan, string? KodeAdmin);
+    bool KontainerBawaan, TimbangIn Timbang, bool AckPeringatan, string? KodeAdmin, bool MobilBox = false);   // mobil box: tanpa kontainer, no. polisi dipakai sebagai no. kontainer
 public record KeluarReq(TimbangIn Timbang, bool KontainerTinggal, string? YardArea, decimal? TaraKontainer, bool AckPeringatan, string? KodeAdmin,
     string? LanjutPlanNo = null);   // truk muat beberapa SPMB: timbang antara lalu lanjut muat SPMB berikutnya (tidak keluar)
 public record SelesaiMuatReq(int JumlahPalet, decimal BeratPaletKg, TimbangIn? Timbang);
@@ -168,6 +168,12 @@ ORDER BY p.PlanId DESC", new { whs, jenis, cont }));
             var sopir = (r.Sopir ?? "").Trim();
             if (sopir.Length < 3 || sopir.Length > 60 || !Regex.IsMatch(sopir, @"^[A-Za-z .'\-]+$")) return Bad("Nama sopir minimal 3 huruf, tanpa angka atau simbol");
             var cont = Clean(r.ContainerNo)?.ToUpperInvariant().Replace(" ", "").Replace("-", "");
+            if (r.MobilBox)
+            {
+                // Mobil box (barang lokal): bak tidak bisa dilepas, no. polisi menjadi pengganti no. kontainer (label QR, sesi bongkar, laporan)
+                if (r.Keperluan != "Bongkar") return Bad("Mobil box hanya untuk Bongkar · untuk Muat cukup tanpa no. kontainer");
+                cont = plat;
+            }
             if (r.Timbang is null || r.Timbang.BeratKg <= 0 || r.Timbang.BeratKg > 500000) return Bad("Berat timbangan tidak valid");
             if (r.Timbang.Sumber is not ("LAN" or "GATEWAY" or "BLE" or "MANUAL")) return Bad("Sumber timbangan tidak valid");
 
@@ -205,9 +211,9 @@ ORDER BY p.PlanId DESC", new { whs, jenis, cont }));
 
                 // kontainer (yard / dock dipakai bersama satu area)
                 string kontWhs = r.WhsCode;
-                if (cont is not null && !PlanEndpoints.Iso6346(cont)) return Bad("Nomor kontainer tidak valid (ISO 6346: 4 huruf + 7 angka, digit pemeriksa)");
+                if (cont is not null && cont != plat && !PlanEndpoints.Iso6346(cont)) return Bad("Nomor kontainer tidak valid (ISO 6346: 4 huruf + 7 angka, digit pemeriksa) · mobil box: centang Mobil box");
                 if (r.Keperluan == "AmbilKontainer" && cont is null) return Bad("Pilih kontainer kosong dari yard");
-                if (r.Keperluan == "Bongkar" && cont is null) return Bad("No. kontainer wajib diisi untuk Bongkar");
+                if (r.Keperluan == "Bongkar" && cont is null) return Bad("No. kontainer wajib diisi untuk Bongkar (mobil box: centang Mobil box)");
                 if (cont is not null)
                 {
                     var plat2 = await db.ExecuteScalarAsync<string?>("SELECT TOP 1 NoPolisi FROM WHS_Kendaraan WHERE ContainerNo = @c AND Status = 'Di dalam'", new { c = cont }, tx);
@@ -601,6 +607,11 @@ ORDER BY p.PlanId DESC", new { whs, jenis, cont }));
                     new { reg = regId, kode = Clean(r.Timbang.KodeTimbangan), jenis = planLanjut is null ? "TARA" : "ANTARA", berat, sumber = r.Timbang.Sumber, ind = Clean(r.Timbang.IndikatorStatus),
                           net = net > 0 ? net : (decimal?)null, inp = bandingkan > 0 ? bandingkan : (decimal?)null, sel = selisih, adm = adminId,
                           raw = r.Timbang.TeksMentah is { Length: > 200 } t ? t[..200] : r.Timbang.TeksMentah, per, uid = u.UserId() }, tx);
+                // mobil box: timbang setelah bongkar = tara mobil kosong -> masuk riwayat berat mobil
+                if (kk.ContainerNo is not null && kk.ContainerNo == NormPlat(kk.NoPolisi))
+                    await db.ExecuteAsync(@"INSERT WHS_RiwayatBeratMobil (NoPolisi, WhsCode, TaraKg, Sumber, KodeTimbangan, TimbangId, RegId, Sopir, SelisihRataPersen, UserId)
+                        SELECT NoPolisi, WhsCode, @berat, @sumber, @kode, @tid, RegId, Sopir, NULL, @uid FROM WHS_Kendaraan WHERE RegId = @regId",
+                        new { berat, sumber = r.Timbang.Sumber, kode = Clean(r.Timbang.KodeTimbangan), tid, regId, uid = u.UserId() }, tx);
                 // kontainer tidak dilepas: kosong = 0 (T3 = T4 = 0), berat isi = T1 - T2
                 await db.ExecuteAsync(@"UPDATE WHS_KontainerSesi SET T2Kg = @berat, T2Id = @tid, T2At = SYSDATETIME(), T3Kg = 0, T4Kg = 0, T4Id = @tid, T4At = SYSDATETIME(),
                     NetInputKrani = @inp, SelisihPersen = @sel, KodeAdminOleh = @adm, Peringatan = @per, Status = 'SELESAI', SelesaiAt = SYSDATETIME() WHERE SesiId = @id",
@@ -648,6 +659,7 @@ ORDER BY p.PlanId DESC", new { whs, jenis, cont }));
                 var kk = k.Value;
                 if (!await Area.Akses(db, tx, u.UserId(), kk.WhsCode)) return Results.Forbid();
                 if (kk.Status != "Di dalam" || kk.Keperluan != "Bongkar") return Bad("Hanya untuk truk bongkar yang masih di dalam");
+                if (kk.ContainerNo is not null && kk.ContainerNo == NormPlat(kk.NoPolisi)) return Bad("Mobil box tidak bisa lepas kontainer · pakai Bongkar di atas truk (timbang setelah bongkar)");
                 if (r.Timbang.Sumber != "MANUAL" && Clean(r.Timbang.IndikatorStatus) is { } ind && ind != "Normal" && ind != "Stabil") return Bad("Berat belum stabil · tunggu indikator STABIL");
                 var sesi = await db.QueryFirstOrDefaultAsync<(long SesiId, decimal T1, string ContainerNo, string WhsCode)?>(
                     "SELECT SesiId, T1Kg, ContainerNo, WhsCode FROM WHS_KontainerSesi WITH (UPDLOCK) WHERE RegId1 = @regId AND Status = 'ISI_MASUK'", new { regId }, tx);
