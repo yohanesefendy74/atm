@@ -55,7 +55,7 @@ export default function Login() {
         <button className="btn danger" type="submit" disabled={busy}>
           {busy ? 'Memeriksa…' : 'Login'}
         </button>
-        <button className="btn navy" type="button" onClick={() => setError(new Error('Ganti password dilakukan oleh Admin di SAP.'))}>
+        <button className="btn navy" type="button" onClick={() => setError(new Error('Ganti password dilakukan oleh Admin di ERP.'))}>
           Change Password
         </button>
         <p className="hint">

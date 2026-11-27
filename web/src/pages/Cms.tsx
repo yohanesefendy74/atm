@@ -385,21 +385,21 @@ export function CmsDetail({ objType, docEntry }: { objType: string; docEntry: st
               {trx === 'RC' ? 'PT / Consignee' : 'PT'} <span className="req">*</span>
             </span>
             <Lookup url="/api/cms/pt" label="PT" value={pt.code} disabled={closed} onChange={(code, name) => setPt({ code, name })} />
-            <span className="hint">{pt.name || 'Kode PT dari OPRC · wajib diisi agar krani bisa cetak label QR'}</span>
+            <span className="hint">{pt.name || 'Kode PT wajib diisi agar krani bisa cetak label QR'}</span>
           </div>
           {cardType && (
             <div className="field">
               <span className="label">
-                CardCode ({cardType === 'S' ? 'Supplier' : 'Customer'}) <span className="req">*</span>
+                {cardType === 'S' ? 'Supplier' : 'Customer'} <span className="req">*</span>
               </span>
-              <Lookup url="/api/cms/bp" query={{ cardType }} label="CardCode" value={bp.code} disabled={closed} onChange={(code, name) => setBp({ code, name })} />
-              <span className="hint">{bp.name || `Hanya BP ${cardType === 'S' ? 'Supplier' : 'Customer'} (CardType ${cardType})`}</span>
+              <Lookup url="/api/cms/bp" query={{ cardType }} label={cardType === 'S' ? 'Supplier' : 'Customer'} value={bp.code} disabled={closed} onChange={(code, name) => setBp({ code, name })} />
+              <span className="hint">{bp.name || `Hanya ${cardType === 'S' ? 'supplier' : 'customer'}`}</span>
             </div>
           )}
           {(trx === 'IB' || trx === 'OB' || trx === 'BT') && (
             <label className="field">
               <span className="label">
-                Nomor DO / NumAtCard <span className="req">*</span>
+                Nomor DO / surat jalan <span className="req">*</span>
               </span>
               <input className="input mono" value={numAtCard} maxLength={100} disabled={closed} onChange={(e) => setNumAtCard(e.target.value)} />
             </label>
@@ -429,7 +429,7 @@ export function CmsDetail({ objType, docEntry }: { objType: string; docEntry: st
             <th className="num">Krani</th>
             <th className="num">Palet</th>
             <th className="num">Krani</th>
-            {trx === 'RC' && <th>No DO retur (ODLN)</th>}
+            {trx === 'RC' && <th>No DO retur</th>}
           </tr>
         </thead>
         <tbody>

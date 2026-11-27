@@ -134,7 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
             BigButton(
               label: 'Change Password',
               color: C.loginNavy,
-              onPressed: () => showInfo(context, 'Ganti password dilakukan oleh Admin di SAP / CMS'),
+              onPressed: () => showInfo(context, 'Ganti password dilakukan oleh Admin di ERP / CMS'),
             ),
             const SizedBox(height: 16),
             Center(

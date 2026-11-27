@@ -16,7 +16,7 @@ const CFG: Cfg[] = [
     { k: 'paletCode', label: 'Kode', pk: true }, { k: 'panjangCm', label: 'Panjang cm', type: 'number' }, { k: 'lebarCm', label: 'Lebar cm', type: 'number' },
     { k: 'tinggiCm', label: 'Tinggi cm', type: 'number' }, { k: 'beratKg', label: 'Berat kg', type: 'number' }, { k: 'aktif', label: 'Aktif', type: 'bool' }] },
   { key: 'scrap', title: 'Item Scrap', path: 'scrap', createable: true, fields: [
-    { k: 'itemCode', label: 'Item scrap (SAP)', pk: true, type: 'item', hint: 'item harus sudah ada di SAP (OITM)' }, { k: 'itemName', label: 'Nama (dari SAP)' }, { k: 'aktif', label: 'Aktif', type: 'bool' }] },
+    { k: 'itemCode', label: 'Item scrap (ERP)', pk: true, type: 'item', hint: 'item harus sudah ada di master item ERP' }, { k: 'itemName', label: 'Nama (dari ERP)' }, { k: 'aktif', label: 'Aktif', type: 'bool' }] },
   { key: 'jenis', title: 'Jenis Container', path: 'jenis-container', fields: [
     { k: 'kode', label: 'Kode', pk: true }, { k: 'nama', label: 'Nama' }, { k: 'batasMuatanKg', label: 'Batas muatan kg', type: 'number' }, { k: 'aktif', label: 'Aktif', type: 'bool' }] },
   { key: 'dock', title: 'Jalur (Dock)', path: 'dock', whsFilter: true, createable: true, fields: [
@@ -93,7 +93,7 @@ function MasterTable({ cfg }: { cfg: Cfg }) {
               ) : f.type === 'item' ? (
                 isNew ? (
                   <>
-                    <ItemSearch placeholder="Cari item SAP (kode / nama)" onPick={(i) => setForm({ ...form, [f.k]: i.itemCode, itemName: i.itemName })} />
+                    <ItemSearch placeholder="Cari item ERP (kode / nama)" onPick={(i) => setForm({ ...form, [f.k]: i.itemCode, itemName: i.itemName })} />
                     {form[f.k] && <span className="small mono">{form[f.k]}</span>}
                   </>
                 ) : <input className="input" value={form[f.k] ?? ''} disabled />
