@@ -36,6 +36,7 @@ const P: Record<string, string> = {
   eye: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
   logout: 'M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10',
   truck: 'M3 6h11v10H3zM14 9h4l3 3v4h-7M7 19.3a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6zM17 19.3a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6z',
+  menu: 'M4 6h16M4 12h16M4 18h16',
 };
 export function Icon({ name, size = 20 }: { name: keyof typeof P | string; size?: number }) {
   return (

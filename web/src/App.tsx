@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useAuth } from './auth';
 import { AdminMaster, AdminSetup } from './pages/AdminMaster';
 import { PlanDetail, PlanList, PlanNew } from './pages/AdminRencana';
@@ -74,6 +74,33 @@ export default function App() {
 
   const on = (prefix: string) => (prefix === '/' ? path === '/' : path === prefix || path.startsWith(prefix + '/'));
   const outActive = on('/outbound');
+  return <Shell path={path} on={on} outActive={outActive} isAdmin={isAdmin} user={user} logout={logout} />;
+}
+
+const ADMIN_LINKS: [string, string][] = [
+  ['/cms', 'CMS · Cek input krani'],
+  ['/admin/plan', 'Rencana SPBB / SPMB'],
+  ['/admin/opname', 'Stock Opname'],
+  ['/admin/jadwal', 'Jadwal'],
+  ['/admin/surat-jalan', 'Surat Jalan'],
+  ['/admin/kendaraan', 'Kendaraan & Berat'],
+  ['/admin/master', 'Master Data'],
+  ['/admin/setup', 'Setup'],
+];
+
+function Shell({ path, on, outActive, isAdmin, user, logout }: {
+  path: string; on: (p: string) => boolean; outActive: boolean; isAdmin: boolean;
+  user: { name: string; userCode: string }; logout: () => Promise<unknown>;
+}) {
+  // Di HP sidebar disembunyikan: semua menu (termasuk Admin) ada di tombol "Menu" bar bawah
+  const [menu, setMenu] = useState(false);
+  useEffect(() => setMenu(false), [path]);
+  useEffect(() => {
+    if (!menu) return;
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setMenu(false);
+    window.addEventListener('keydown', esc);
+    return () => window.removeEventListener('keydown', esc);
+  }, [menu]);
 
   return (
     <div className="shell">
@@ -98,13 +125,7 @@ export default function App() {
             <Link to="/cms" current={on('/cms')}>
               <Icon name="cms" /> CMS · Cek input krani
             </Link>
-            <Link to="/admin/plan" current={on('/admin/plan')}>Rencana SPBB / SPMB</Link>
-            <Link to="/admin/opname" current={on('/admin/opname')}>Stock Opname</Link>
-            <Link to="/admin/jadwal" current={on('/admin/jadwal')}>Jadwal</Link>
-            <Link to="/admin/surat-jalan" current={on('/admin/surat-jalan')}>Surat Jalan</Link>
-            <Link to="/admin/kendaraan" current={on('/admin/kendaraan')}>Kendaraan & Berat</Link>
-            <Link to="/admin/master" current={on('/admin/master')}>Master Data</Link>
-            <Link to="/admin/setup" current={on('/admin/setup')}>Setup</Link>
+            {ADMIN_LINKS.slice(1).map(([to, label]) => <Link key={to} to={to} current={on(to)}>{label}</Link>)}
           </>
         )}
         <div className="who">
@@ -136,11 +157,36 @@ export default function App() {
           <Icon name={isAdmin ? 'cms' : 'out'} size={22} />
           {isAdmin ? 'CMS' : 'Outbound'}
         </Link>
-        <Link to="/reports" current={on('/reports')}>
-          <Icon name="chart" size={22} />
-          Laporan
-        </Link>
+        <button type="button" className="menubtn" aria-expanded={menu} aria-controls="menu-hp" onClick={() => setMenu(!menu)}>
+          <Icon name="menu" size={22} />
+          Menu
+        </button>
       </nav>
+
+      {menu && (
+        <div className="sheet-backdrop" onClick={() => setMenu(false)}>
+          <nav id="menu-hp" className="sheet" aria-label="Semua menu" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-head">
+              <div><strong>{user.name}</strong><div className="small muted mono">{user.userCode} · {isAdmin ? 'Admin' : 'Krani'}</div></div>
+              <button type="button" className="btn small ghost" onClick={() => setMenu(false)}>Tutup</button>
+            </div>
+            <div className="sect">Krani</div>
+            <Link to="/" current={on('/')}><Icon name="home" /> Beranda</Link>
+            <Link to="/inbound" current={on('/inbound')}><Icon name="in" /> Inbound</Link>
+            <Link to="/outbound" current={outActive}><Icon name="out" /> Outbound</Link>
+            <Link to="/reports" current={on('/reports')}><Icon name="chart" /> Laporan</Link>
+            {isAdmin && (
+              <>
+                <div className="sect">Admin</div>
+                {ADMIN_LINKS.map(([to, label]) => <Link key={to} to={to} current={on(to)}>{label}</Link>)}
+              </>
+            )}
+            <button type="button" className="btn small ghost logout" onClick={() => logout().then(() => navigate('/', true))}>
+              <Icon name="logout" size={16} /> Logout
+            </button>
+          </nav>
+        </div>
+      )}
     </div>
   );
 }
