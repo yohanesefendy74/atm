@@ -119,6 +119,22 @@ FULL JOIN ({SaldoSaatIni}) c ON c.KodeRuangan = s.KodeRuangan AND c.ItemCode = s
 WHERE (s.OpnameId IS NULL OR c.ItemCode IS NULL OR c.Kg <> s.Kg OR c.Sak <> s.Sak OR c.Palet <> s.Palet)",
         new { id = h.OpnameId, whs = h.WhsCode, tgl = h.TglOpname.Date }, tx, commandTimeout: 300);
 
+    static bool RakOk(string? rak) => rak is not null && System.Text.RegularExpressions.Regex.IsMatch(rak, @"^[A-Z0-9][A-Z0-9\-]{0,29}$");
+
+    /// No. rak fleksibel: boleh rak lama dari master atau no. baru yang ditentukan saat opname.
+    /// No. baru otomatis disimpan ke master (supaya barcode bisa dicetak & dipakai lagi); rak lama yang nonaktif diaktifkan lagi.
+    static async Task TambahRak(SqlConnection db, SqlTransaction tx, long id, OpnameRakReq x)
+    {
+        if (x.KodeRak != "ALL")
+            await db.ExecuteAsync(@"
+IF EXISTS (SELECT 1 FROM WHS_MasterRak WHERE KodeRuangan = @ru AND KodeRak = @rk)
+    UPDATE WHS_MasterRak SET Aktif = 1 WHERE KodeRuangan = @ru AND KodeRak = @rk AND Aktif = 0
+ELSE
+    INSERT WHS_MasterRak (KodeRuangan, KodeRak, Aktif) VALUES (@ru, @rk, 1)", new { ru = x.KodeRuangan, rk = x.KodeRak }, tx);
+        await db.ExecuteAsync("INSERT WHS_OpnameRak (OpnameId, KodeRuangan, KodeRak, Krani1, Krani2) VALUES (@id, @ru, @rk, @k1, @k2)",
+            new { id, ru = x.KodeRuangan, rk = x.KodeRak, k1 = x.Krani1, k2 = x.Krani2 }, tx);
+    }
+
     public static void MapOpnameCms(this RouteGroupBuilder cms, Func<SqlConnection> dbf, IConfiguration cfg)
     {
         // ------------------------------------------------------------ Master rak
@@ -198,9 +214,9 @@ SELECT r.KodeRuangan AS kodeRuangan, r.NamaRuangan AS namaRuangan, r.Titipan AS 
        (SELECT TOP 1 o.OpnameNo FROM WHS_Opname o JOIN WHS_OpnameRak x ON x.OpnameId = o.OpnameId WHERE o.Status = 'Hitung' AND x.KodeRuangan = r.KodeRuangan) AS opnameAktif
 FROM WHS_MasterRuangan r WHERE r.WhsCode = @whs AND r.Aktif = 1 ORDER BY r.KodeRuangan", new { whs });
             var raks = await db.QueryAsync(@"
-SELECT k.KodeRuangan AS kodeRuangan, k.KodeRak AS kodeRak, k.NamaRak AS namaRak
+SELECT k.KodeRuangan AS kodeRuangan, k.KodeRak AS kodeRak, k.NamaRak AS namaRak, k.Aktif AS aktif
 FROM WHS_MasterRak k JOIN WHS_MasterRuangan r ON r.KodeRuangan = k.KodeRuangan
-WHERE r.WhsCode = @whs AND k.Aktif = 1 ORDER BY k.KodeRuangan, k.KodeRak", new { whs });
+WHERE r.WhsCode = @whs ORDER BY k.KodeRuangan, k.KodeRak", new { whs });
             var kranis = await db.QueryAsync("SELECT u.USERID AS userId, u.USER_CODE AS userCode, u.U_NAME AS name FROM OUSR u JOIN USR9 a ON a.UserId = u.USERID WHERE a.WhsCode = @whs ORDER BY u.USER_CODE", new { whs });
             return Results.Ok(new { rooms, raks, kranis });
         });
@@ -213,7 +229,7 @@ WHERE r.WhsCode = @whs AND k.Aktif = 1 ORDER BY k.KodeRuangan, k.KodeRak", new {
             if (raks.Count > 500) return Bad("Terlalu banyak rak");
             var tgl = r.TglOpname.Date;
             if (tgl > DateTime.Today.AddDays(30) || tgl < DateTime.Today.AddDays(-30)) return Bad("Tanggal opname maksimal 30 hari dari hari ini");
-            if (raks.Any(x => x.KodeRak.Length == 0 || x.KodeRak.Length > 30)) return Bad("Kode rak tidak valid");
+            if (raks.Any(x => !RakOk(x.KodeRak))) return Bad("Kode rak 1-30 karakter: huruf besar, angka, strip");
             if (raks.Any(x => x.Krani1 <= 0 || x.Krani2 <= 0)) return Bad("Setiap rak wajib punya krani hitung ke-1 dan ke-2");
             if (raks.Any(x => x.Krani1 == x.Krani2)) return Bad("Di setiap rak, krani hitung ke-1 dan ke-2 harus orang yang berbeda");
             if (raks.GroupBy(x => (x.KodeRuangan, x.KodeRak)).Any(g => g.Count() > 1)) return Bad("Rak dobel di daftar");
@@ -242,9 +258,7 @@ WHERE o.Status = 'Hitung' AND x.KodeRuangan IN @rooms", new { rooms = raks.Selec
                 var id = await db.ExecuteScalarAsync<long>(@"
 INSERT WHS_Opname (OpnameNo, WhsCode, BplId, TglOpname, Status, CreatedBy, Catatan) OUTPUT INSERTED.OpnameId
 VALUES (@no, @whs, @bpl, @tgl, 'Hitung', @uid, @cat)", new { no, whs, bpl = u.BplId(), tgl, uid = u.UserId(), cat = Helpers.Empty(r.Catatan) }, tx);
-                foreach (var x in raks)
-                    await db.ExecuteAsync("INSERT WHS_OpnameRak (OpnameId, KodeRuangan, KodeRak, Krani1, Krani2) VALUES (@id, @ru, @rk, @k1, @k2)",
-                        new { id, ru = x.KodeRuangan, rk = x.KodeRak, k1 = x.Krani1, k2 = x.Krani2 }, tx);
+                foreach (var x in raks) await TambahRak(db, tx, id, x);
                 var h = await db.QueryFirstAsync<Head>(HeadSql, new { id, bpl = u.BplId() }, tx);
                 await Freeze(db, tx, h, u.UserId());
                 await Audit.Write(db, tx, u, ctx, "OPNAME_ADD", "OPNAME", id, $"{no} {whs} {tgl:yyyy-MM-dd} {raks.Count} rak");
@@ -277,6 +291,69 @@ WHERE r.OpnameId = @id ORDER BY r.KodeRuangan, r.KodeRak", new { id });
             var rows = await Rows(db, null, h);
             var stale = h.Status == "Hitung" ? await Stale(db, null, h) : 0;
             return Results.Ok(new { header = h, raks, rows, stale });
+        });
+
+        // Tambah rak saat opname berjalan (rak baru ditemukan di lapangan, atau ruangan tambahan -> saldo di-freeze ulang)
+        cms.MapPost("/opname/{id:long}/rak", async (long id, OpnameRakReq r, ClaimsPrincipal u, HttpContext ctx) =>
+        {
+            var x = r with { KodeRuangan = (r.KodeRuangan ?? "").Trim(), KodeRak = (r.KodeRak ?? "").Trim().ToUpperInvariant() };
+            if (!RakOk(x.KodeRak)) return Bad("Kode rak 1-30 karakter: huruf besar, angka, strip");
+            if (x.Krani1 <= 0 || x.Krani2 <= 0) return Bad("Pilih krani hitung ke-1 dan ke-2");
+            if (x.Krani1 == x.Krani2) return Bad("Krani hitung ke-1 dan ke-2 harus orang yang berbeda");
+            await using var db = dbf();
+            await db.OpenAsync();
+            var whs = await db.ExecuteScalarAsync<string?>("SELECT WhsCode FROM WHS_Opname WHERE OpnameId = @id AND BplId = @bpl", new { id, bpl = u.BplId() });
+            if (whs is null) return Bad("Opname tidak ditemukan");
+            var (err, _) = await Helpers.CekRuangan(db, whs, new[] { (string?)x.KodeRuangan }, "opname");
+            if (err is not null) return Bad(err);
+            await using var tx = (SqlTransaction)await db.BeginTransactionAsync(IsolationLevel.Serializable);
+            try
+            {
+                var h = await db.QueryFirstOrDefaultAsync<Head>(HeadSql + " AND o.Status = 'Hitung'", new { id, bpl = u.BplId() }, tx);
+                if (h is null) { await tx.RollbackAsync(); return Bad("Opname tidak ditemukan atau sudah selesai"); }
+                var akses = (await db.QueryAsync<int>("SELECT UserId FROM USR9 WHERE WhsCode = @whs", new { whs = h.WhsCode }, tx)).ToHashSet();
+                if (!akses.Contains(x.Krani1) || !akses.Contains(x.Krani2)) { await tx.RollbackAsync(); return Bad("Krani tidak punya akses ke gudang ini"); }
+                if (await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WHS_OpnameRak WHERE OpnameId = @id AND KodeRuangan = @ru AND KodeRak = @rk", new { id, ru = x.KodeRuangan, rk = x.KodeRak }, tx) > 0)
+                { await tx.RollbackAsync(); return Bad("Rak sudah ada di opname ini"); }
+                var ruangBaru = await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WHS_OpnameRak WHERE OpnameId = @id AND KodeRuangan = @ru", new { id, ru = x.KodeRuangan }, tx) == 0;
+                if (ruangBaru)
+                {
+                    var lain = await db.QueryFirstOrDefaultAsync<string>(@"SELECT TOP 1 o.OpnameNo FROM WHS_Opname o JOIN WHS_OpnameRak r ON r.OpnameId = o.OpnameId
+WHERE o.Status = 'Hitung' AND o.OpnameId <> @id AND r.KodeRuangan = @ru", new { id, ru = x.KodeRuangan }, tx);
+                    if (lain is not null) { await tx.RollbackAsync(); return Bad($"Ruangan masih dalam opname aktif {lain}"); }
+                }
+                await TambahRak(db, tx, id, x);
+                if (ruangBaru) await Freeze(db, tx, h, u.UserId());
+                await Audit.Write(db, tx, u, ctx, "OPNAME_RAK_ADD", "OPNAME", id, $"{x.KodeRuangan}/{x.KodeRak}{(ruangBaru ? " (ruangan baru, freeze ulang)" : "")}");
+                await tx.CommitAsync();
+                return Results.Ok(new { kodeRuangan = x.KodeRuangan, kodeRak = x.KodeRak, barcode = Barcode(x.KodeRuangan, x.KodeRak), freezeUlang = ruangBaru });
+            }
+            catch
+            {
+                try { await tx.RollbackAsync(); } catch { }
+                throw;
+            }
+        });
+
+        // Hapus rak dari opname (hanya bila belum ada hitungan). Ruangan yang tidak punya rak lagi keluar dari opname -> freeze ulang.
+        cms.MapDelete("/opname/{id:long}/rak/{ruang}/{rak}", async (long id, string ruang, string rak, ClaimsPrincipal u, HttpContext ctx) =>
+        {
+            await using var db = dbf();
+            await db.OpenAsync();
+            await using var tx = (SqlTransaction)await db.BeginTransactionAsync();
+            var h = await db.QueryFirstOrDefaultAsync<Head>(HeadSql + " AND o.Status = 'Hitung'", new { id, bpl = u.BplId() }, tx);
+            if (h is null) { await tx.RollbackAsync(); return Bad("Opname tidak ditemukan atau sudah selesai"); }
+            if (await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WHS_OpnameHitung WHERE OpnameId = @id AND KodeRuangan = @ruang AND KodeRak = @rak", new { id, ruang, rak }, tx) > 0)
+            { await tx.RollbackAsync(); return Bad("Rak sudah ada hitungannya. Minta hitung ulang dulu bila ingin dihapus."); }
+            if (await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WHS_OpnameRak WHERE OpnameId = @id", new { id }, tx) <= 1)
+            { await tx.RollbackAsync(); return Bad("Opname minimal punya satu rak. Batalkan opname bila tidak jadi."); }
+            var n = await db.ExecuteAsync("DELETE WHS_OpnameRak WHERE OpnameId = @id AND KodeRuangan = @ruang AND KodeRak = @rak", new { id, ruang, rak }, tx);
+            if (n == 0) { await tx.RollbackAsync(); return Results.NotFound(new { message = "Rak tidak ada di opname ini" }); }
+            var ruangKeluar = await db.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WHS_OpnameRak WHERE OpnameId = @id AND KodeRuangan = @ruang", new { id, ruang }, tx) == 0;
+            if (ruangKeluar) await Freeze(db, tx, h, u.UserId());
+            await Audit.Write(db, tx, u, ctx, "OPNAME_RAK_DEL", "OPNAME", id, $"{ruang}/{rak}");
+            await tx.CommitAsync();
+            return Results.Ok(new { ok = true, freezeUlang = ruangKeluar });
         });
 
         cms.MapPost("/opname/{id:long}/freeze", async (long id, ClaimsPrincipal u, HttpContext ctx) =>

@@ -60,24 +60,29 @@ function OpnameBaru({ onDone }: { onDone: (id: number) => void }) {
   const [whs, setWhs] = useState('');
   const [tgl, setTgl] = useState(todayIso());
   const [on, setOn] = useState<Record<string, boolean>>({});
+  const [rakBy, setRakBy] = useState<Record<string, RakItem[]>>({});
   const [asg, setAsg] = useState<Record<string, [number, number]>>({});
   const [cat, setCat] = useState('');
   const [busy, setBusy] = useState(false);
   const form = useLoad(() => (whs ? get<Row>('/api/cms/opname/form', { whs }) : Promise.resolve(null)), [whs]);
   const rooms: Row[] = (form.data?.rooms as Row[]) ?? [];
   const kranis: Row[] = (form.data?.kranis as Row[]) ?? [];
+  const master: Row[] = (form.data?.raks as Row[]) ?? [];
   const kOpts = kranis.map((k) => ({ value: String(k.userId), label: `${k.userCode} · ${k.name ?? ''}` }));
 
-  // Rak per ruangan dari master; ruangan tanpa rak = satu rak "ALL" (seluruh ruangan)
-  const raks = useMemo(() => {
-    const list: { room: string; rak: string; nama?: string }[] = [];
-    for (const r of rooms.filter((x) => on[x.kodeRuangan])) {
-      const m = ((form.data?.raks as Row[]) ?? []).filter((k) => k.kodeRuangan === r.kodeRuangan);
-      if (m.length === 0) list.push({ room: r.kodeRuangan, rak: 'ALL', nama: 'Seluruh ruangan' });
-      else m.forEach((k) => list.push({ room: r.kodeRuangan, rak: k.kodeRak, nama: k.namaRak }));
+  // No. rak fleksibel per ruangan: default rak aktif dari master (atau ALL = seluruh ruangan),
+  // boleh ditambah no. rak lama atau no. baru sesuai kondisi saat opname, dan boleh dihapus.
+  function pilihRuang(room: string, v: boolean) {
+    setOn({ ...on, [room]: v });
+    if (v && !rakBy[room]) {
+      const m = master.filter((k) => k.kodeRuangan === room && k.aktif);
+      setRakBy({ ...rakBy, [room]: m.length ? m.map((k) => ({ rak: k.kodeRak, nama: k.namaRak })) : [{ rak: 'ALL', nama: 'Seluruh ruangan' }] });
     }
-    return list;
-  }, [rooms, on, form.data]);
+  }
+  const raks = useMemo(
+    () => rooms.filter((x) => on[x.kodeRuangan]).flatMap((r) => (rakBy[r.kodeRuangan] ?? []).map((k) => ({ room: r.kodeRuangan, ...k }))),
+    [rooms, on, rakBy],
+  );
 
   const key = (x: { room: string; rak: string }) => `${x.room}|${x.rak}`;
   const pairOf = (x: { room: string; rak: string }, i: number): [number, number] => {
@@ -89,7 +94,8 @@ function OpnameBaru({ onDone }: { onDone: (id: number) => void }) {
   const list: Asg[] = raks.map((x, i) => { const p = pairOf(x, i); return { kodeRuangan: x.room, kodeRak: x.rak, krani1: p[0], krani2: p[1] }; });
   const same = list.some((a) => a.krani1 === a.krani2);
   const kosong = list.some((a) => !a.krani1 || !a.krani2);
-  const err = !whs ? 'Pilih gudang' : list.length === 0 ? 'Pilih minimal satu ruangan' : kranis.length < 2 ? 'Gudang ini butuh minimal 2 krani' : same ? 'Di setiap rak, krani hitung ke-1 dan ke-2 harus orang yang berbeda' : kosong ? 'Pilih krani untuk setiap rak' : null;
+  const ruangKosong = rooms.filter((r) => on[r.kodeRuangan] && !(rakBy[r.kodeRuangan] ?? []).length).map((r) => r.kodeRuangan);
+  const err = !whs ? 'Pilih gudang' : ruangKosong.length ? `Ruangan ${ruangKosong.join(', ')} belum punya rak` : list.length === 0 ? 'Pilih minimal satu ruangan' : kranis.length < 2 ? 'Gudang ini butuh minimal 2 krani' : same ? 'Di setiap rak, krani hitung ke-1 dan ke-2 harus orang yang berbeda' : kosong ? 'Pilih krani untuk setiap rak' : null;
 
   async function simpan() {
     setBusy(true);
@@ -105,7 +111,7 @@ function OpnameBaru({ onDone }: { onDone: (id: number) => void }) {
       <strong>Buat opname baru</strong>
       <div className="formrow">
         <label className="stack tight"><span className="small muted">Warehouse *</span>
-          <SearchSelect options={whsOpts(wh.data)} value={whs} onChange={(v) => { setWhs(v); setOn({}); setAsg({}); }} placeholder="Cari & pilih gudang" /></label>
+          <SearchSelect options={whsOpts(wh.data)} value={whs} onChange={(v) => { setWhs(v); setOn({}); setAsg({}); setRakBy({}); }} placeholder="Cari & pilih gudang" /></label>
         <label className="stack tight"><span className="small muted">Tanggal opname *</span>
           <input className="input" type="date" value={tgl} onChange={(e) => setTgl(e.target.value)} /></label>
       </div>
@@ -118,7 +124,7 @@ function OpnameBaru({ onDone }: { onDone: (id: number) => void }) {
             <thead><tr><th /><th>Ruangan</th><th className="num">Stok kg</th><th className="num">Item</th><th>Catatan</th></tr></thead>
             <tbody>{rooms.map((r) => (
               <tr key={r.kodeRuangan}>
-                <td><input type="checkbox" aria-label={`Pilih ${r.kodeRuangan}`} disabled={!!r.opnameAktif} checked={!!on[r.kodeRuangan]} onChange={(e) => setOn({ ...on, [r.kodeRuangan]: e.target.checked })} /></td>
+                <td><input type="checkbox" aria-label={`Pilih ${r.kodeRuangan}`} disabled={!!r.opnameAktif} checked={!!on[r.kodeRuangan]} onChange={(e) => pilihRuang(r.kodeRuangan, e.target.checked)} /></td>
                 <td data-label="Ruangan"><span className="mono">{r.kodeRuangan}</span> · {r.namaRuangan} {r.titipan && <span className="pill amber">ruangan titipan</span>}</td>
                 <td data-label="Stok kg" className="num">{fmt(r.stokKg)}</td>
                 <td data-label="Item" className="num">{r.jumlahItem}</td>
@@ -127,25 +133,38 @@ function OpnameBaru({ onDone }: { onDone: (id: number) => void }) {
           </table></div>
         </div>
       )}
-      {raks.length > 0 && (
+      {rooms.some((r) => on[r.kodeRuangan]) && (
         <div className="stack tight">
-          <span className="small muted">Pembagian per rak · {raks.length} rak. Rak diatur di Master Data · Rak; banyak krani bisa menghitung satu ruangan bersamaan.</span>
-          <div className="tablewrap"><table className="table cards">
-            <thead><tr><th>Ruangan</th><th>Rak</th><th>Hitung ke-1</th><th>Hitung ke-2</th></tr></thead>
-            <tbody>{raks.map((x, i) => {
-              const p = pairOf(x, i);
-              const set = (ix: 0 | 1) => (v: string) => { const b: [number, number] = [p[0], p[1]]; b[ix] = Number(v); setAsg({ ...asg, [key(x)]: b }); };
-              return (
-                <tr key={key(x)}>
-                  <td data-label="Ruangan" className="mono">{x.room}</td>
-                  <td data-label="Rak"><span className="mono">{x.rak}</span> {x.nama && <span className="small muted">{x.nama}</span>}</td>
-                  <td data-label="Hitung ke-1"><SearchSelect options={kOpts} value={String(p[0] || '')} onChange={set(0)} placeholder="Cari krani" /></td>
-                  <td data-label="Hitung ke-2"><SearchSelect options={kOpts} value={String(p[1] || '')} onChange={set(1)} placeholder="Cari krani" />
-                    {p[0] === p[1] && p[0] !== 0 && <div className="small" style={{ color: 'var(--red)' }}>Harus beda dengan hitung ke-1</div>}</td>
-                </tr>
-              );
-            })}</tbody>
-          </table></div>
+          <span className="small muted">Pembagian per rak · {raks.length} rak. No. rak bebas: pakai no. rak lama atau isi no. baru sesuai kondisi saat opname (no. baru otomatis masuk Master Rak). Banyak krani bisa menghitung satu ruangan bersamaan.</span>
+          {rooms.filter((r) => on[r.kodeRuangan]).map((r) => {
+            const cur = rakBy[r.kodeRuangan] ?? [];
+            return (
+              <div key={r.kodeRuangan} className="card stack tight">
+                <div className="row"><strong className="mono">{r.kodeRuangan}</strong><span className="small muted">{r.namaRuangan} · {cur.length} rak</span></div>
+                <RakPicker room={r.kodeRuangan} master={master} dipakai={cur.map((k) => k.rak)}
+                  onAdd={(k) => setRakBy({ ...rakBy, [r.kodeRuangan]: [...cur.filter((x) => x.rak !== 'ALL' || k.rak === 'ALL'), k] })} />
+                {cur.length > 0 && (
+                  <div className="tablewrap"><table className="table cards">
+                    <thead><tr><th>Rak</th><th>Hitung ke-1</th><th>Hitung ke-2</th><th /></tr></thead>
+                    <tbody>{cur.map((k) => {
+                      const x = { room: r.kodeRuangan, rak: k.rak };
+                      const p = pairOf(x, raks.findIndex((z) => z.room === x.room && z.rak === x.rak));
+                      const set = (ix: 0 | 1) => (v: string) => { const b: [number, number] = [p[0], p[1]]; b[ix] = Number(v); setAsg({ ...asg, [key(x)]: b }); };
+                      return (
+                        <tr key={key(x)}>
+                          <td data-label="Rak"><span className="mono">{k.rak}</span> {k.nama && <span className="small muted">{k.nama}</span>}{k.baru && <span className="pill amber">baru</span>}</td>
+                          <td data-label="Hitung ke-1"><SearchSelect options={kOpts} value={String(p[0] || '')} onChange={set(0)} placeholder="Cari krani" /></td>
+                          <td data-label="Hitung ke-2"><SearchSelect options={kOpts} value={String(p[1] || '')} onChange={set(1)} placeholder="Cari krani" />
+                            {p[0] === p[1] && p[0] !== 0 && <div className="small" style={{ color: 'var(--red)' }}>Harus beda dengan hitung ke-1</div>}</td>
+                          <td><button className="btn small ghost" aria-label={`Hapus rak ${k.rak}`} onClick={() => setRakBy({ ...rakBy, [r.kodeRuangan]: cur.filter((z) => z.rak !== k.rak) })}>Hapus</button></td>
+                        </tr>
+                      );
+                    })}</tbody>
+                  </table></div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
       <label className="stack tight"><span className="small muted">Catatan</span><input className="input" maxLength={250} value={cat} onChange={(e) => setCat(e.target.value)} /></label>
@@ -159,6 +178,31 @@ function OpnameBaru({ onDone }: { onDone: (id: number) => void }) {
         <span className="spacer" />
         <button className="btn small" disabled={!!err || busy} onClick={simpan}>Simpan & freeze saldo</button>
       </div>
+    </div>
+  );
+}
+
+type RakItem = { rak: string; nama?: string; baru?: boolean };
+const RAK_RE = /^[A-Z0-9][A-Z0-9-]{0,29}$/;
+
+/// Tambah rak: ketik untuk mencari no. rak lama (master ruangan ini) atau isi no. baru.
+function RakPicker({ room, master, dipakai, onAdd }: { room: string; master: Row[]; dipakai: string[]; onAdd: (k: RakItem) => void }) {
+  const [v, setV] = useState('');
+  const lama = master.filter((k) => k.kodeRuangan === room && !dipakai.includes(k.kodeRak));
+  const kode = v.trim().toUpperCase();
+  const m = lama.find((k) => k.kodeRak === kode);
+  const salah = kode !== '' && !RAK_RE.test(kode) ? 'Huruf besar, angka, strip; maks 30' : dipakai.includes(kode) ? 'Sudah ada' : null;
+  const add = () => { if (!kode || salah) return; onAdd({ rak: kode, nama: m?.namaRak ?? (kode === 'ALL' ? 'Seluruh ruangan' : undefined), baru: !m && kode !== 'ALL' }); setV(''); };
+  const id = `rak-${room}`;
+  return (
+    <div className="stack tight">
+      <div className="row">
+        <input className="input" list={id} placeholder="No. rak lama atau baru, mis. A01-03" value={v}
+          onChange={(e) => setV(e.target.value.toUpperCase())} onKeyDown={(e) => e.key === 'Enter' && add()} />
+        <datalist id={id}>{lama.map((k) => <option key={k.kodeRak} value={k.kodeRak}>{`${k.namaRak ?? ''}${k.aktif ? '' : ' (lama, nonaktif)'}`}</option>)}</datalist>
+        <button className="btn small outline" disabled={!kode || !!salah} onClick={add}>+ Rak</button>
+      </div>
+      <span className="small" style={{ color: salah ? 'var(--red)' : undefined }}>{salah ?? (kode ? (m ? `Rak lama${m.aktif ? '' : ' (diaktifkan lagi)'}` : 'No. rak baru, disimpan ke master') : lama.length ? `${lama.length} no. rak lama tersedia, ketik untuk mencari` : 'Belum ada rak lama di ruangan ini')}</span>
     </div>
   );
 }
@@ -241,9 +285,12 @@ export function OpnameDetail({ id }: { id: string }) {
               {[1, 2].map((n) => (
                 <td key={n} data-label={`Hitung ke-${n}`}>{k[`krani${n}Code`]} <span className={`pill ${k[`selesai${n}`] ? 'green' : k[`baris${n}`] > 0 ? 'amber' : 'grey'}`}>{k[`selesai${n}`] ? 'Dikirim' : k[`baris${n}`] > 0 ? 'Sedang dihitung' : 'Belum'}</span> <span className="small muted">{k[`baris${n}`]} baris</span></td>
               ))}
-              {aktif && <td><button className="btn small ghost" disabled={busy} onClick={() => confirm(`Hapus hitungan rak ${k.kodeRak} (ke-1 & ke-2) dan minta hitung ulang?`) && act(() => post(`/api/cms/opname/${id}/ulang`, { KodeRuangan: k.kodeRuangan, KodeRak: k.kodeRak, Ke: 0 }), 'Rak dibuka untuk hitung ulang')}>Hitung ulang</button></td>}
+              {aktif && <td>{k.baris1 === 0 && k.baris2 === 0 && !k.selesai1 && !k.selesai2
+                ? <button className="btn small ghost" disabled={busy || raks.length <= 1} onClick={() => confirm(`Hapus rak ${k.kodeRak} dari opname ini?`) && act(() => api(`/api/cms/opname/${id}/rak/${encodeURIComponent(k.kodeRuangan)}/${encodeURIComponent(k.kodeRak)}`, { method: 'DELETE' }), 'Rak dihapus dari opname')}>Hapus rak</button>
+                : <button className="btn small ghost" disabled={busy} onClick={() => confirm(`Hapus hitungan rak ${k.kodeRak} (ke-1 & ke-2) dan minta hitung ulang?`) && act(() => post(`/api/cms/opname/${id}/ulang`, { KodeRuangan: k.kodeRuangan, KodeRak: k.kodeRak, Ke: 0 }), 'Rak dibuka untuk hitung ulang')}>Hitung ulang</button>}</td>}
             </tr>))}</tbody>
         </table></div>
+        {aktif && <TambahRak id={id} whs={String(h.whsCode)} raks={raks} onDone={reload} />}
       </div>
 
       <div className="chips" role="tablist">
@@ -282,6 +329,54 @@ export function OpnameDetail({ id }: { id: string }) {
         {shown.length === 0 && <tr><td colSpan={9} className="empty">Tidak ada baris</td></tr>}</tbody>
       </table></div>
     </Page>
+  );
+}
+
+/// Tambah rak saat opname berjalan: no. rak lama atau baru; ruangan baru ikut di-freeze ulang.
+function TambahRak({ id, whs, raks, onDone }: { id: string; whs: string; raks: Row[]; onDone: () => void }) {
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [room, setRoom] = useState('');
+  const [rak, setRak] = useState<RakItem | null>(null);
+  const [k1, setK1] = useState('');
+  const [k2, setK2] = useState('');
+  const [busy, setBusy] = useState(false);
+  const form = useLoad(() => (open ? get<Row>('/api/cms/opname/form', { whs }) : Promise.resolve(null)), [open, whs]);
+  if (!open) return <div><button className="btn small outline" onClick={() => setOpen(true)}>+ Tambah rak</button></div>;
+  const rooms: Row[] = (form.data?.rooms as Row[]) ?? [];
+  const inOp = new Set(raks.map((k) => k.kodeRuangan));
+  const kOpts = ((form.data?.kranis as Row[]) ?? []).map((k) => ({ value: String(k.userId), label: `${k.userCode} · ${k.name ?? ''}` }));
+  const rOpts = rooms.filter((r) => inOp.has(r.kodeRuangan) || !r.opnameAktif)
+    .map((r) => ({ value: r.kodeRuangan, label: `${r.kodeRuangan} · ${r.namaRuangan}${inOp.has(r.kodeRuangan) ? '' : ' (ruangan baru, freeze ulang)'}` }));
+  const err = !room ? 'Pilih ruangan' : !rak ? 'Isi no. rak lalu klik + Rak' : !k1 || !k2 ? 'Pilih krani hitung ke-1 dan ke-2' : k1 === k2 ? 'Krani ke-1 dan ke-2 harus berbeda' : null;
+  async function simpan() {
+    if (!rak) return;
+    setBusy(true);
+    try {
+      const r = await post<Row>(`/api/cms/opname/${id}/rak`, { KodeRuangan: room, KodeRak: rak.rak, Krani1: Number(k1), Krani2: Number(k2) });
+      toast(r.freezeUlang ? `Rak ${r.kodeRak} ditambah, saldo di-freeze ulang` : `Rak ${r.kodeRak} ditambah`);
+      setRak(null); setOpen(false); onDone();
+    } catch (e) { toast(errMsg(e), true); } finally { setBusy(false); }
+  }
+  return (
+    <div className="card stack tight">
+      <strong>Tambah rak</strong>
+      {form.error !== null && <ErrorBox error={form.error} onRetry={form.reload} />}
+      <SearchSelect options={rOpts} value={room} onChange={(v) => { setRoom(v); setRak(null); }} placeholder="Cari & pilih ruangan" />
+      {room && (rak
+        ? <div className="row"><span className="mono">Rak {rak.rak}</span>{rak.baru && <span className="pill amber">baru</span>}<button className="btn small ghost" onClick={() => setRak(null)}>Ganti</button></div>
+        : <RakPicker room={room} master={(form.data?.raks as Row[]) ?? []} dipakai={raks.filter((k) => k.kodeRuangan === room).map((k) => k.kodeRak)} onAdd={setRak} />)}
+      <div className="formrow">
+        <div><SearchSelect options={kOpts} value={k1} onChange={setK1} placeholder="Krani hitung ke-1" /></div>
+        <div><SearchSelect options={kOpts} value={k2} onChange={setK2} placeholder="Krani hitung ke-2" /></div>
+      </div>
+      <div className="row">
+        <span className="small" style={{ color: err ? 'var(--red)' : undefined }}>{err ?? 'Siap ditambah'}</span>
+        <span className="spacer" />
+        <button className="btn small ghost" onClick={() => setOpen(false)}>Batal</button>
+        <button className="btn small" disabled={!!err || busy} onClick={simpan}>Tambah</button>
+      </div>
+    </div>
   );
 }
 
