@@ -385,7 +385,7 @@ ORDER BY CASE WHEN p.Status IN ('Terbit','Proses','Partial') THEN 0 ELSE 1 END, 
                     var pack = sap.U_IDU_QtyPack is null ? 0m : (decimal)sap.U_IDU_QtyPack;
                     var quantity = (decimal)sap.Quantity;
                     var karung = quantity > 0 ? Math.Round(l.QtyPlan * pack / quantity) : 0;
-                    rows.Add((l, sap, lineRoom, karung));
+                    rows.Add((l, sap, lineRoom ?? r.KodeRuangan ?? "", karung));
                 }
 
                 var total = rows.Sum(x => x.q.QtyPlan);
