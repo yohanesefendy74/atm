@@ -48,10 +48,68 @@ export function AdminJadwal() {
   );
 }
 
+const isoMinus = (days: number) => { const d = new Date(); d.setDate(d.getDate() - days); return d.toISOString().slice(0, 10); };
+
+/// Daftar Surat Jalan yang sudah dibuat, dengan filter gudang, status, periode dan kata kunci.
+function DaftarSuratJalan({ onOpen, reloadKey }: { onOpen: (id: number) => void; reloadKey: number }) {
+  const wh = useWarehouses();
+  const [whs, setWhs] = useState('');
+  const [status, setStatus] = useState('');
+  const [dari, setDari] = useState(isoMinus(30));
+  const [sampai, setSampai] = useState(todayIso());
+  const [q, setQ] = useState('');
+  const [cari, setCari] = useState('');
+  const { data, error, loading, reload } = useLoad(() => get<Row[]>('/api/cms/surat-jalan', { whs, status, dari, sampai, q: cari }), [whs, status, dari, sampai, cari, reloadKey]);
+  const rows = data ?? [];
+  const aktif = rows.filter((r) => r.status !== 'Batal');
+  return (
+    <div className="card stack">
+      <strong>Daftar Surat Jalan</strong>
+      <div className="formrow">
+        <div><SearchSelect options={whsOpts(wh.data)} value={whs} onChange={setWhs} allowEmpty="Semua gudang" placeholder="Cari gudang" /></div>
+        <select className="input" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
+          <option value="">Semua status</option><option value="Terbit">Terbit</option><option value="Batal">Batal</option>
+        </select>
+        <label className="stack tight"><span className="small muted">Dari</span><input className="input" type="date" value={dari} max={sampai} onChange={(e) => setDari(e.target.value)} /></label>
+        <label className="stack tight"><span className="small muted">Sampai</span><input className="input" type="date" value={sampai} min={dari} onChange={(e) => setSampai(e.target.value)} /></label>
+      </div>
+      <div className="row">
+        <input className="input grow" placeholder="Cari no. SJ / no. polisi / container / sopir / SPMB / customer / PO" value={q}
+          onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && setCari(q.trim())} />
+        <button className="btn small" onClick={() => setCari(q.trim())}>Cari</button>
+        {cari && <button className="btn small ghost" onClick={() => { setQ(''); setCari(''); }}>Reset</button>}
+      </div>
+      {error !== null && <ErrorBox error={error} onRetry={reload} />}
+      {loading && !data && <Spinner />}
+      <div className="small muted">{rows.length} Surat Jalan{rows.length >= 500 ? ' (maks 500, persempit filter)' : ''} · {aktif.length} aktif · total {fmt(aktif.reduce((a, r) => a + Number(r.totalKg ?? 0), 0))} kg</div>
+      <div className="tablewrap"><table className="table cards">
+        <thead><tr><th>No. SJ</th><th>Tanggal</th><th>Gudang</th><th>Kendaraan</th><th>SPMB</th><th>Customer · PO</th><th className="num">Total</th><th>Status</th></tr></thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.sjId} className="click" onClick={() => onOpen(r.sjId)}>
+              <td data-label="No. SJ" className="mono"><strong>{r.sjNo}</strong></td>
+              <td data-label="Tanggal">{fmtDate(r.tglSj)}</td>
+              <td data-label="Gudang">{r.whsCode}</td>
+              <td data-label="Kendaraan"><span className="mono">{r.noPolisi ?? '-'}</span><div className="small muted">{r.containerNo ? `${r.containerNo} · ` : ''}{r.sopir ? `sopir ${r.sopir}` : ''}</div></td>
+              <td data-label="SPMB" className="mono small">{r.spmb}</td>
+              <td data-label="Customer · PO">{r.customer}<div className="small muted">{r.po ? `PO ${r.po}` : ''}</div></td>
+              <td data-label="Total" className="num">{fmt(r.totalKg)} kg<div className="small muted">{fmt(r.totalSak)} sak · {fmt(r.totalPalet)} plt</div></td>
+              <td data-label="Status"><StatusPill status={r.status} /></td>
+            </tr>
+          ))}
+          {data && rows.length === 0 && <tr><td colSpan={8} className="empty">Tidak ada Surat Jalan untuk filter ini</td></tr>}
+        </tbody>
+      </table></div>
+    </div>
+  );
+}
+
 export function AdminSuratJalan() {
   const toast = useToast();
   const [whs, setWhs] = useState('');
-  const list = useLoad(() => (whs ? get<Row[]>('/api/cms/surat-jalan', { whs }) : Promise.resolve([])), [whs]);
+  const [tab, setTab] = useState<'buat' | 'daftar'>('daftar');
+  const [rk, setRk] = useState(0);
+  const list = { reload: () => setRk((n) => n + 1) };
   const cand = useLoad(() => (whs ? get<Row[]>('/api/cms/surat-jalan/kandidat', { whs }) : Promise.resolve([])), [whs]);
   const veh = useLoad(() => (whs ? get<Row[]>('/api/kendaraan', { whs, status: 'Di dalam' }) : Promise.resolve([])), [whs]);
   const [pick, setPick] = useState<Record<number, { po: string; alamat: string }>>({});
@@ -62,14 +120,20 @@ export function AdminSuratJalan() {
   async function buat() {
     try {
       const r = await post<Row>('/api/cms/surat-jalan', { WhsCode: whs, TglSj: tgl, RegId: reg ? Number(reg) : null, Plans: ids.map((id) => ({ PlanId: id, NumAtCard: pick[id].po || null, AlamatKirim: pick[id].alamat })) });
-      toast(`Terbit ${r.sjNo}`); setPick({}); list.reload(); cand.reload();
+      toast(`Terbit ${r.sjNo}`); setPick({}); list.reload(); cand.reload(); setTab('daftar');
     } catch (e) { toast(errText(e), true); }
   }
-  async function lihat(id: number) { setDetail(await get<Row>(`/api/cms/surat-jalan/${id}`)); }
+  async function lihat(id: number) { try { setDetail(await get<Row>(`/api/cms/surat-jalan/${id}`)); window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { toast(errText(e), true); } }
   async function batal(id: number) { if (!confirm('Batalkan Surat Jalan ini?')) return; try { await post(`/api/cms/surat-jalan/${id}/batal`); toast('Dibatalkan'); setDetail(null); list.reload(); cand.reload(); } catch (e) { toast(errText(e), true); } }
   return (
-    <Page eyebrow="Admin" title="Surat Jalan" accent="ink" extra={<WhsPick value={whs} onChange={setWhs} />}>
-      {whs && (
+    <Page eyebrow="Admin" title="Surat Jalan" accent="ink" extra={tab === 'buat' ? <WhsPick value={whs} onChange={setWhs} /> : undefined}>
+      <div className="chips" role="tablist">
+        <button className="chip" aria-pressed={tab === 'daftar'} onClick={() => setTab('daftar')}>Daftar Surat Jalan</button>
+        <button className="chip" aria-pressed={tab === 'buat'} onClick={() => setTab('buat')}>Buat Surat Jalan</button>
+      </div>
+      {tab === 'buat' && !whs && <div className="small muted">Pilih gudang untuk melihat SPMB yang siap dibuatkan Surat Jalan.</div>}
+      {tab === 'daftar' && !detail && <DaftarSuratJalan onOpen={lihat} reloadKey={rk} />}
+      {tab === 'buat' && whs && (
         <>
           <div className="card stack">
             <strong>SPMB siap dibuatkan Surat Jalan</strong>
@@ -91,25 +155,18 @@ export function AdminSuratJalan() {
               <button className="btn" onClick={buat}>Terbitkan Surat Jalan ({ids.length} SPMB)</button>
             </>)}
           </div>
-          <div className="stack">
-            {(list.data ?? []).map((s) => (
-              <button key={s.sjId} className="card pad-s click stack tight" onClick={() => lihat(s.sjId)}>
-                <div className="row"><strong className="mono grow">{s.sjNo}</strong><StatusPill status={s.status} /></div>
-                <div className="small">{fmtDate(s.tglSj)} · {s.noPolisi ?? '-'} · {s.jumlahSpmb} SPMB · {fmt(s.totalKg)} kg</div>
-              </button>
-            ))}
-          </div>
         </>
       )}
       {detail && (
         <div className="card stack">
-          <strong className="mono">{detail.header.sjNo}</strong>
+          <div className="row"><strong className="mono grow">{detail.header.sjNo}</strong><StatusPill status={detail.header.status} /></div>
+          <div className="small muted">{fmtDate(detail.header.tglSj)} · {detail.header.noPolisi ?? 'tanpa kendaraan'}{detail.header.containerNo ? ` · ${detail.header.containerNo}` : ''}{detail.header.sopir ? ` · sopir ${detail.header.sopir}` : ''} · {fmt(detail.header.totalKg)} kg</div>
           {(detail.plans as Row[]).map((p) => <div key={p.planId} className="small">{p.planNo} · {p.cardName} · PO {p.numAtCard ?? '-'}<br />{p.alamatKirim}</div>)}
           {(detail.lines as Row[]).map((l) => <div key={l.sjLine} className="small">{l.itemCode} · muat {fmt(l.qtyMuat)} kg (rencana {fmt(l.qtyPlan)}){l.noBL ? ` · BL ${l.noBL}` : ''}{l.ptCode ? ` · PT ${l.ptCode}` : ''}</div>)}
           <div className="row">
             <button className="btn small outline" onClick={() => window.print()}>Cetak</button>
             {detail.header.status !== 'Batal' && <button className="btn small ghost" onClick={() => batal(detail.header.sjId)}>Batalkan</button>}
-            <button className="btn small ghost" onClick={() => setDetail(null)}>Tutup</button>
+            <button className="btn small ghost" onClick={() => setDetail(null)}>Tutup / kembali ke daftar</button>
           </div>
         </div>
       )}

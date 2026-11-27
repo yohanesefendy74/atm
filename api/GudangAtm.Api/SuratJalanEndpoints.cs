@@ -29,15 +29,33 @@ WHERE p.WhsCode = @whs AND p.Jenis = 'SPMB' AND p.Status IN ('Selesai','SelesaiK
 ORDER BY p.PlanId DESC", new { whs }));
         });
 
-        cms.MapGet("/surat-jalan", async (string whs, string? status) =>
+        // Daftar Surat Jalan yang sudah dibuat + filter: gudang, status, periode tanggal SJ, kata kunci
+        // (no. SJ / no. polisi / container / sopir / no. SPMB / customer / PO).
+        cms.MapGet("/surat-jalan", async (string? whs, string? status, DateTime? dari, DateTime? sampai, string? q) =>
         {
             await using var db = dbf();
+            var key = string.IsNullOrWhiteSpace(q) ? null : "%" + q.Trim().Replace("[", "[[]").Replace("%", "[%]").Replace("_", "[_]") + "%";
             return Results.Ok(await db.QueryAsync(@"
-SELECT TOP 200 s.SjId AS sjId, s.SjNo AS sjNo, s.TglSj AS tglSj, s.NoPolisi AS noPolisi, s.ContainerNo AS containerNo, s.Sopir AS sopir, s.TotalKg AS totalKg, s.Status AS status,
-       (SELECT COUNT(*) FROM WHS_SuratJalanPlan WHERE SjId = s.SjId) AS jumlahSpmb
+SELECT TOP 500 s.SjId AS sjId, s.SjNo AS sjNo, s.TglSj AS tglSj, s.NoPolisi AS noPolisi, s.ContainerNo AS containerNo, s.Sopir AS sopir,
+       s.TotalKg AS totalKg, s.TotalSak AS totalSak, s.TotalPalet AS totalPalet, s.Status AS status,
+       (SELECT COUNT(*) FROM WHS_SuratJalanPlan WHERE SjId = s.SjId) AS jumlahSpmb,
+       STUFF((SELECT DISTINCT ', ' + p.WhsCode FROM WHS_SuratJalanPlan sp JOIN WHS_Plan p ON p.PlanId = sp.PlanId WHERE sp.SjId = s.SjId FOR XML PATH('')), 1, 2, '') AS whsCode,
+       STUFF((SELECT ', ' + p.PlanNo FROM WHS_SuratJalanPlan sp JOIN WHS_Plan p ON p.PlanId = sp.PlanId WHERE sp.SjId = s.SjId ORDER BY p.PlanNo FOR XML PATH('')), 1, 2, '') AS spmb,
+       STUFF((SELECT DISTINCT ', ' + sp.CardName FROM WHS_SuratJalanPlan sp WHERE sp.SjId = s.SjId FOR XML PATH('')), 1, 2, '') AS customer,
+       STUFF((SELECT DISTINCT ', ' + sp.NumAtCard FROM WHS_SuratJalanPlan sp WHERE sp.SjId = s.SjId AND sp.NumAtCard <> '' FOR XML PATH('')), 1, 2, '') AS po
 FROM WHS_SuratJalan s
-WHERE EXISTS (SELECT 1 FROM WHS_SuratJalanPlan sp JOIN WHS_Plan p ON p.PlanId = sp.PlanId WHERE sp.SjId = s.SjId AND p.WhsCode = @whs)
-  AND (@status IS NULL OR s.Status = @status) ORDER BY s.SjId DESC", new { whs, status = string.IsNullOrWhiteSpace(status) ? null : status }));
+WHERE EXISTS (SELECT 1 FROM WHS_SuratJalanPlan sp JOIN WHS_Plan p ON p.PlanId = sp.PlanId WHERE sp.SjId = s.SjId AND (@whs IS NULL OR p.WhsCode = @whs))
+  AND (@status IS NULL OR s.Status = @status)
+  AND (@dari IS NULL OR s.TglSj >= @dari) AND (@sampai IS NULL OR s.TglSj < DATEADD(DAY, 1, @sampai))
+  AND (@key IS NULL OR s.SjNo LIKE @key OR s.NoPolisi LIKE @key OR s.ContainerNo LIKE @key OR s.Sopir LIKE @key
+       OR EXISTS (SELECT 1 FROM WHS_SuratJalanPlan sp JOIN WHS_Plan p ON p.PlanId = sp.PlanId
+                  WHERE sp.SjId = s.SjId AND (p.PlanNo LIKE @key OR sp.CardName LIKE @key OR sp.CardCode LIKE @key OR sp.NumAtCard LIKE @key)))
+ORDER BY s.TglSj DESC, s.SjId DESC", new
+            {
+                whs = string.IsNullOrWhiteSpace(whs) ? null : whs,
+                status = string.IsNullOrWhiteSpace(status) ? null : status,
+                dari = dari?.Date, sampai = sampai?.Date, key,
+            }));
         });
 
         cms.MapGet("/surat-jalan/{id:long}", async (long id) =>
