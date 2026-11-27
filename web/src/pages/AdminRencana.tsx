@@ -28,7 +28,7 @@ export function PlanList() {
 }
 
 type ManualLine = { itemCode: string; itemName: string; qty: number; sak: number; kontainer: string; palet: string; paletPlan?: number; ruang: string };
-type Src = Row; type SrcLine = Row & { pick?: boolean; qtyPlan?: number; kontainer?: string; palet?: string; paletPlan?: number; ruang?: string; bls?: Row[]; bl?: string };
+type Src = Row; type SrcLine = Row & { pecahan?: boolean; pick?: boolean; qtyPlan?: number; kontainer?: string; palet?: string; paletPlan?: number; ruang?: string; bls?: Row[]; bl?: string };
 
 export function PlanNew() {
   const toast = useToast();
@@ -81,6 +81,10 @@ export function PlanNew() {
       }) }]);
     } catch (e) { toast(errText(e), true); }
   }
+  // 1 SPBB / SPMB boleh > 1 ruangan: satu baris sumber dipecah ke ruangan lain (qty dibagi), jadi default ruangan krani per baris
+  const pecah = (di: number, li: number) => setDocs(docs.map((d, i) => (i !== di ? d : { ...d, lines: [...d.lines.slice(0, li + 1), { ...d.lines[li], pecahan: true, pick: true, qtyPlan: 0, ruang: '' }, ...d.lines.slice(li + 1)] })));
+  const hapusPecahan = (di: number, li: number) => setDocs(docs.map((d, i) => (i !== di ? d : { ...d, lines: d.lines.filter((_, j) => j !== li) })));
+  const totalBaris = (d: { lines: SrcLine[] }, lineNum: unknown) => d.lines.filter((x) => x.lineNum === lineNum && x.pick).reduce((a, x) => a + Number(x.qtyPlan ?? 0), 0);
   const upd = (di: number, li: number, patch: Partial<SrcLine>) => setDocs(docs.map((d, i) => (i !== di ? d : { ...d, lines: d.lines.map((l, j) => (j !== li ? l : { ...l, ...patch })) })));
   const room = ruangList.find((r) => r.kodeRuangan === ruang);
   const roomOpts = ruangList
@@ -164,12 +168,14 @@ export function PlanNew() {
         <div key={d.head.docEntry} className="card stack">
           <div className="row"><strong className="grow">{src === 'BL' ? `BL ${d.head.numAtCard ?? d.head.docNum}` : `${src} ${d.head.docNum}`} · {d.head.cardName}</strong><button className="btn small ghost" onClick={() => setDocs(docs.filter((_, i) => i !== di))}>Hapus</button></div>
           {d.lines.map((l, li) => (
-            <div key={l.lineNum} className="card pad-s stack tight">
+            <div key={`${l.lineNum}-${li}`} className="card pad-s stack tight" style={l.pecahan ? { marginLeft: 24 } : undefined}>
+              {l.pecahan && <div className="row"><span className="pill">pecahan ruangan</span><span className="spacer" /><button className="btn small ghost" onClick={() => hapusPecahan(di, li)}>Hapus pecahan</button></div>}
               {(() => { const beda = jenis === 'SPMB' && !!l.lineWhs && !!whs && String(l.lineWhs).trim() !== whs; return (<>
               <label className="row"><input type="checkbox" disabled={beda} checked={!!l.pick && !beda} onChange={(e) => upd(di, li, { pick: e.target.checked })} /> <span className="grow">{l.itemCode} · {l.dscription}</span>{l.lineWhs && <span className="pill">{l.lineWhs}</span>}</label>
               {beda && <div className="small" style={{ color: 'var(--red)' }}>Baris ini untuk gudang {l.lineWhs} · 1 SPMB hanya untuk 1 gudang, buat SPMB terpisah</div>}
               </>); })()}
               <div className="small muted">Open {fmt(l.openQty)} · teralokasi {fmt(l.teralokasi)} · tersedia {fmt(l.tersedia)} kg {l.brandName ? `· ${l.brandName}` : ''}</div>
+              {totalBaris(d, l.lineNum) > Number(l.tersedia) && <div className="small" style={{ color: 'var(--red)' }}>Total semua ruangan {fmt(totalBaris(d, l.lineNum))} kg melebihi tersedia {fmt(l.tersedia)} kg</div>}
               <div className="formrow">
                 <input className="input" type="number" value={l.qtyPlan ?? 0} onChange={(e) => upd(di, li, { qtyPlan: Number(e.target.value) })} aria-label="Qty rencana kg" />
                 <input className="input" placeholder="Container" value={l.kontainer ?? ''} onChange={(e) => upd(di, li, { kontainer: e.target.value.toUpperCase() })} />
@@ -188,6 +194,7 @@ export function PlanNew() {
               <label className="stack tight"><span className="small muted">Ruangan {jenis === 'SPBB' ? 'tujuan' : 'sumber'} item ini</span>
                 <SearchSelect options={roomOpts} value={l.ruang ?? ''} onChange={(v) => upd(di, li, { ruang: v })} allowEmpty={ruang ? `Ikut ruangan dokumen (${ruang})` : '(pilih ruangan dokumen dulu)'} placeholder="Ruangan" />
               </label>
+              {!l.pecahan && l.pick && <div><button className="btn small outline" onClick={() => pecah(di, li)}>+ Pecah ke ruangan lain</button></div>}
               {jenis === 'SPBB' && (
                 <div className="formrow">
                   <SearchSelect options={paletOpts} value={l.palet ?? ''} onChange={(v) => upd(di, li, { palet: v })} allowEmpty="(tanpa palet)" placeholder="Jenis palet" />

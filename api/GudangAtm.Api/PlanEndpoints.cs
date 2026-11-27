@@ -334,13 +334,15 @@ ORDER BY CASE WHEN p.Status IN ('Terbit','Proses','Partial') THEN 0 ELSE 1 END, 
                 }
 
                 // baris
-                var seen = new HashSet<(int, int)>();
+                // Satu baris dokumen sumber boleh dipecah Admin ke beberapa ruangan (1 SPBB / SPMB > 1 ruangan): kunci = baris sumber + ruangan
+                var seen = new HashSet<(int, int, string)>();
+                var dipakai = new Dictionary<(int, int), decimal>();
                 var rows = new List<(PlanLineReq q, dynamic sap, string room, decimal karung)>();
                 var warnings = new List<string>();
                 foreach (var l in r.Lines)
                 {
                     if (!docs.Contains(l.BaseDocEntry)) return Bad("Baris dari dokumen yang tidak dipilih");
-                    if (!seen.Add((l.BaseDocEntry, l.BaseLineNum))) return Bad("Baris dobel");
+                    if (!seen.Add((l.BaseDocEntry, l.BaseLineNum, (Clean(l.KodeRuangan) ?? r.KodeRuangan ?? "").ToUpperInvariant()))) return Bad("Baris dobel (item & ruangan sama) · gabungkan qty");
                     if (l.QtyPlan <= 0 || l.QtyPlan > 10_000_000) return Bad("Qty plan harus lebih dari 0");
                     var colsBl = src == "SO" ? "NULL AS ShipToCode, NULL AS StgDesc, NULL AS SerialNum, NULL AS BaseAtCard, NULL AS BlockNum" : "ShipToCode, StgDesc, SerialNum, BaseAtCard, BlockNum";
                     var sap = await db.QueryFirstOrDefaultAsync($"SELECT ItemCode, Dscription, Quantity, OpenQty, U_IDU_QtyPack, FreeTxt, {colsBl} FROM {t.L} WHERE DocEntry = @d AND LineNum = @n AND OpenQty > 0", new { d = l.BaseDocEntry, n = l.BaseLineNum }, tx);
@@ -357,7 +359,9 @@ ORDER BY CASE WHEN p.Status IN ('Terbit','Proses','Partial') THEN 0 ELSE 1 END, 
                     // Suku kedua menutup celah: barang sudah diterima krani tapi dokumen ERP-nya belum dibuat (OpenQty belum turun).
                     var alok = await db.QueryFirstOrDefaultAsync<(decimal Teralokasi, decimal Terpakai)?>("SELECT Teralokasi, Terpakai FROM vw_WHS_PlanAlokasi WITH (UPDLOCK, HOLDLOCK) WHERE BaseType = @s AND BaseDocEntry = @d AND BaseLineNum = @n", new { s = src, d = l.BaseDocEntry, n = l.BaseLineNum }, tx);
                     var tersedia = Math.Min((decimal)sap.OpenQty - (alok?.Teralokasi ?? 0), (decimal)sap.Quantity - (alok?.Terpakai ?? 0));
-                    if (l.QtyPlan > tersedia) return Bad($"{sap.ItemCode}: qty {l.QtyPlan:N0} melebihi tersedia {tersedia:N0}");
+                    var sudah = dipakai.GetValueOrDefault((l.BaseDocEntry, l.BaseLineNum));
+                    if (sudah + l.QtyPlan > tersedia) return Bad($"{sap.ItemCode}: total qty {sudah + l.QtyPlan:N0} (semua ruangan) melebihi tersedia {tersedia:N0}");
+                    dipakai[(l.BaseDocEntry, l.BaseLineNum)] = sudah + l.QtyPlan;
 
                     var lineRoom = Clean(l.KodeRuangan) ?? r.KodeRuangan;
                     var lr = await db.QueryFirstOrDefaultAsync<(string WhsCode, bool Titipan, bool Aktif)?>("SELECT WhsCode, Titipan, Aktif FROM WHS_MasterRuangan WHERE KodeRuangan = @k", new { k = lineRoom }, tx);

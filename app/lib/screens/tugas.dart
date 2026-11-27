@@ -546,7 +546,7 @@ class _TugasDetailState extends State<TugasDetail> {
           // 1 SPBB / SPMB boleh lebih dari 1 ruangan: satu item bisa dipecah ke beberapa ruangan (SPBB) atau diambil dari beberapa ruangan / BL / PT (SPMB)
           if (sisa > 0)
             TextButton.icon(
-              onPressed: () => setState(() => _entries.add(_Entry(k, spbb ? null : l['kodeRuangan']?.toString() ?? _h!['kodeRuangan']?.toString(), tambahan: true))),
+              onPressed: () => setState(() => _entries.add(_Entry(k, l['kodeRuangan']?.toString() ?? _h!['kodeRuangan']?.toString(), tambahan: true))),
               icon: const Icon(Icons.add),
               label: Text(spbb ? 'Tambah baris ruangan lain (pecah ke ruangan berbeda)' : 'Tambah baris sumber lain (ruangan / BL / PT lain)'),
             ),
