@@ -202,6 +202,18 @@ try {
     if (-not (Test-Path "$tmp\wwwroot\index.html")) { Warn 'wwwroot\index.html tidak ada di hasil publish (web tidak ikut?)' }
     Ok "Hasil publish: $tmp"
 
+    # ---------------------------------------------------------------- cek sertifikat sebelum ganti versi
+    $certPath = $null
+    $envSvc = (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\$ServiceName" -ErrorAction SilentlyContinue).Environment
+    if ($envSvc) { $certPath = ($envSvc | Where-Object { $_ -like 'Kestrel__Endpoints__Https__Certificate__Path=*' } | Select-Object -First 1) -replace '^[^=]+=', '' }
+    if (-not $certPath -and (Test-Path "$out\appsettings.Production.json")) {
+        try { $certPath = (Get-Content "$out\appsettings.Production.json" -Raw | ConvertFrom-Json).Kestrel.Endpoints.Https.Certificate.Path } catch { }
+    }
+    if ($certPath) {
+        $full = if ([IO.Path]::IsPathRooted($certPath)) { $certPath } else { Join-Path $out $certPath }
+        if (Test-Path $full) { Ok "Sertifikat: $full" } else { Warn "Sertifikat $full TIDAK ditemukan; API akan gagal start." }
+    }
+
     # ---------------------------------------------------------------- 5. ganti versi + jalankan service
     Info 'Pasang versi baru'
     Stop-Api
@@ -211,7 +223,14 @@ try {
         Get-ChildItem $backup -Directory -Filter 'api-*' | Sort-Object Name -Descending | Select-Object -Skip 5 | Remove-Item -Recurse -Force
         Ok "Cadangan: $bk"
     }
-    Copy-Folder $tmp $out
+    # File khusus server di folder api TIDAK boleh tertimpa / terhapus: sertifikat (certs\, *.pfx), konfigurasi lokal
+    # (appsettings.Production.json berisi path & password server), folder logs / unduh. Robocopy /XD /XF = tidak disalin & tidak dihapus.
+    New-Item -ItemType Directory -Force -Path $out | Out-Null
+    robocopy $tmp $out /MIR /NFL /NDL /NJH /NJS /R:3 /W:2 /XD certs logs unduh /XF appsettings.Production.json appsettings.Local.json *.pfx *.pem *.key | Out-Null
+    if ($LASTEXITCODE -ge 8) { throw "robocopy publish -> $out gagal (kode $LASTEXITCODE)" }
+    if (-not (Test-Path "$out\appsettings.Production.json") -and (Test-Path "$tmp\appsettings.Production.json")) {
+        Copy-Item "$tmp\appsettings.Production.json" "$out\appsettings.Production.json"   # hanya bila server belum punya
+    }
     Remove-Item $tmp -Recurse -Force
     Set-Content -Path "$out\VERSION.txt" -Value "$baru $(Get-Date -Format s)"
 

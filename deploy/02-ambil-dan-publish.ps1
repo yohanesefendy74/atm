@@ -40,7 +40,8 @@ if (Test-Path "$out\GudangAtm.Api.dll") {
     Get-ChildItem 'C:\GudangAtm\backup' -Directory -Filter 'api-*' | Sort-Object Name -Descending | Select-Object -Skip 5 | Remove-Item -Recurse -Force
 }
 New-Item -ItemType Directory -Force -Path $out | Out-Null
-robocopy $tmp $out /MIR /NFL /NDL /NJH /NJS | Out-Null   # robocopy: kode 0-7 = sukses
+robocopy $tmp $out /MIR /NFL /NDL /NJH /NJS /XD certs logs unduh /XF appsettings.Production.json appsettings.Local.json *.pfx *.pem *.key | Out-Null   # file khusus server tidak ditimpa/dihapus; kode 0-7 = sukses
+if (-not (Test-Path "$out\appsettings.Production.json") -and (Test-Path "$tmp\appsettings.Production.json")) { Copy-Item "$tmp\appsettings.Production.json" "$out\appsettings.Production.json" }
 if ($LASTEXITCODE -ge 8) { throw "robocopy gagal (kode $LASTEXITCODE)" }
 Remove-Item $tmp -Recurse -Force
 
