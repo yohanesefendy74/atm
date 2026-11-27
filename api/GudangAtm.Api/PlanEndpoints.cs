@@ -191,12 +191,12 @@ ORDER BY h.DocDate DESC, h.DocNum DESC";
             if (head is null) return Results.NotFound(new { message = "Dokumen tidak ditemukan" });
             var lines = src == "SO"
                 ? await db.QueryAsync($@"SELECT l.LineNum AS lineNum, l.ItemCode AS itemCode, l.Dscription AS dscription, l.Quantity AS qty, l.OpenQty AS openQty,
-                      ISNULL(a.Teralokasi, 0) AS teralokasi, l.OpenQty - ISNULL(a.Teralokasi, 0) AS tersedia, l.U_IDU_QtyPack AS qtyPack, l.FreeTxt AS freeTxt,
+                      l.OpenQty - (CASE WHEN l.OpenQty - ISNULL(a.Teralokasi, 0) < l.Quantity - ISNULL(a.Terpakai, 0) THEN l.OpenQty - ISNULL(a.Teralokasi, 0) ELSE l.Quantity - ISNULL(a.Terpakai, 0) END) AS teralokasi, (CASE WHEN l.OpenQty - ISNULL(a.Teralokasi, 0) < l.Quantity - ISNULL(a.Terpakai, 0) THEN l.OpenQty - ISNULL(a.Teralokasi, 0) ELSE l.Quantity - ISNULL(a.Terpakai, 0) END) AS tersedia, l.U_IDU_QtyPack AS qtyPack, l.FreeTxt AS freeTxt,
                       NULL AS containerNo, NULL AS brandName, NULL AS size, NULL AS [type], NULL AS crop
                   FROM {t.Value.L} l LEFT JOIN vw_WHS_PlanAlokasi a ON a.BaseType = 'SO' AND a.BaseDocEntry = l.DocEntry AND a.BaseLineNum = l.LineNum
                   WHERE l.DocEntry = @docEntry AND l.OpenQty > 0 ORDER BY l.LineNum", new { docEntry })
                 : await db.QueryAsync($@"SELECT l.LineNum AS lineNum, l.ItemCode AS itemCode, l.Dscription AS dscription, l.Quantity AS qty, l.OpenQty AS openQty,
-                      ISNULL(a.Teralokasi, 0) AS teralokasi, l.OpenQty - ISNULL(a.Teralokasi, 0) AS tersedia, l.U_IDU_QtyPack AS qtyPack, l.FreeTxt AS freeTxt,
+                      l.OpenQty - (CASE WHEN l.OpenQty - ISNULL(a.Teralokasi, 0) < l.Quantity - ISNULL(a.Terpakai, 0) THEN l.OpenQty - ISNULL(a.Teralokasi, 0) ELSE l.Quantity - ISNULL(a.Terpakai, 0) END) AS teralokasi, (CASE WHEN l.OpenQty - ISNULL(a.Teralokasi, 0) < l.Quantity - ISNULL(a.Terpakai, 0) THEN l.OpenQty - ISNULL(a.Teralokasi, 0) ELSE l.Quantity - ISNULL(a.Terpakai, 0) END) AS tersedia, l.U_IDU_QtyPack AS qtyPack, l.FreeTxt AS freeTxt,
                       l.ShipToCode AS containerNo, l.StgDesc AS brandName, l.SerialNum AS size, l.BaseAtCard AS [type], l.BlockNum AS crop
                   FROM {t.Value.L} l LEFT JOIN vw_WHS_PlanAlokasi a ON a.BaseType = @src AND a.BaseDocEntry = l.DocEntry AND a.BaseLineNum = l.LineNum
                   WHERE l.DocEntry = @docEntry AND l.OpenQty > 0 ORDER BY l.LineNum", new { docEntry, src });
@@ -345,8 +345,11 @@ ORDER BY CASE WHEN p.Status IN ('Terbit','Proses','Partial') THEN 0 ELSE 1 END, 
                     var colsBl = src == "SO" ? "NULL AS ShipToCode, NULL AS StgDesc, NULL AS SerialNum, NULL AS BaseAtCard, NULL AS BlockNum" : "ShipToCode, StgDesc, SerialNum, BaseAtCard, BlockNum";
                     var sap = await db.QueryFirstOrDefaultAsync($"SELECT ItemCode, Dscription, Quantity, OpenQty, U_IDU_QtyPack, FreeTxt, {colsBl} FROM {t.L} WHERE DocEntry = @d AND LineNum = @n AND OpenQty > 0", new { d = l.BaseDocEntry, n = l.BaseLineNum }, tx);
                     if (sap is null) return Bad($"Baris {l.BaseLineNum + 1} dokumen {l.BaseDocEntry} sudah tidak terbuka");
-                    var alok = await db.ExecuteScalarAsync<decimal?>("SELECT Teralokasi FROM vw_WHS_PlanAlokasi WITH (UPDLOCK, HOLDLOCK) WHERE BaseType = @s AND BaseDocEntry = @d AND BaseLineNum = @n", new { s = src, d = l.BaseDocEntry, n = l.BaseLineNum }, tx) ?? 0;
-                    var tersedia = (decimal)sap.OpenQty - alok;
+                    // Anti dobel: kunci baris dokumen sumber yang sama selama transaksi, lalu hitung sisa yang belum diambil SPBB/SPMB lain.
+                    // Tersedia = MIN(OpenQty ERP - outstanding rencana aktif, Quantity ERP - (qty rencana aktif + qty sudah diterima/dikirim rencana selesai)).
+                    // Suku kedua menutup celah: barang sudah diterima krani tapi dokumen ERP-nya belum dibuat (OpenQty belum turun).
+                    var alok = await db.QueryFirstOrDefaultAsync<(decimal Teralokasi, decimal Terpakai)?>("SELECT Teralokasi, Terpakai FROM vw_WHS_PlanAlokasi WITH (UPDLOCK, HOLDLOCK) WHERE BaseType = @s AND BaseDocEntry = @d AND BaseLineNum = @n", new { s = src, d = l.BaseDocEntry, n = l.BaseLineNum }, tx);
+                    var tersedia = Math.Min((decimal)sap.OpenQty - (alok?.Teralokasi ?? 0), (decimal)sap.Quantity - (alok?.Terpakai ?? 0));
                     if (l.QtyPlan > tersedia) return Bad($"{sap.ItemCode}: qty {l.QtyPlan:N0} melebihi tersedia {tersedia:N0}");
 
                     var lineRoom = Clean(l.KodeRuangan) ?? r.KodeRuangan;

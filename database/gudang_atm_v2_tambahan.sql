@@ -496,3 +496,19 @@ BEGIN
 END
 GO
 -- GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.WHS_MasterRak, dbo.WHS_Opname, dbo.WHS_OpnameRak, dbo.WHS_OpnameSaldo, dbo.WHS_OpnameHitung, dbo.WHS_OpnameFinal TO gudang_app;
+
+/* Anti dobel pengambilan dokumen sumber (BL / DO / SO) oleh SPBB / SPMB.
+   Teralokasi = outstanding rencana aktif (QtyPlan - QtyDone), termasuk Draft.
+   Terpakai   = qty rencana aktif + qty yang sudah diterima/dikirim rencana yang selesai/ditutup (rencana Batal tidak dihitung).
+   Tersedia   = MIN(OpenQty - Teralokasi, Quantity - Terpakai): tetap aman walau dokumen ERP penerimaan/pengiriman belum dibuat. */
+CREATE OR ALTER VIEW dbo.vw_WHS_PlanAlokasi AS
+SELECT d.BaseType, d.BaseDocEntry, d.BaseLineNum,
+       SUM(CASE WHEN p.Status IN ('Draft','Terbit','Proses','Partial') AND d.QtyPlan > d.QtyDone THEN d.QtyPlan - d.QtyDone ELSE 0 END) AS Teralokasi,
+       SUM(CASE WHEN p.Status IN ('Draft','Terbit','Proses','Partial') THEN CASE WHEN d.QtyPlan > d.QtyDone THEN d.QtyPlan ELSE d.QtyDone END ELSE d.QtyDone END) AS Terpakai
+FROM   dbo.WHS_Plan p JOIN dbo.WHS_Plan1 d ON d.PlanId = p.PlanId
+WHERE  p.Status <> 'Batal' AND d.BaseType IS NOT NULL AND d.BaseType <> 'TT'
+GROUP BY d.BaseType, d.BaseDocEntry, d.BaseLineNum;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_WHS_Plan1_Base' AND object_id = OBJECT_ID('dbo.WHS_Plan1'))
+    CREATE INDEX IX_WHS_Plan1_Base ON dbo.WHS_Plan1 (BaseType, BaseDocEntry, BaseLineNum) INCLUDE (PlanId, QtyPlan, QtyDone);
+GO
