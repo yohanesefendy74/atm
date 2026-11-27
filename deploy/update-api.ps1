@@ -16,6 +16,7 @@
    .\update-api.ps1 -Paksa               # publish ulang walau kode tidak berubah
    .\update-api.ps1 -Restart             # hanya restart service + cek health
    .\update-api.ps1 -Rollback            # kembali ke cadangan terakhir
+   .\update-api.ps1 -Diagnosa            # jalankan versi gagal terakhir di konsol 20 detik untuk melihat error start-up
 
  Rahasia (connection string, JWT, password sertifikat) TIDAK ada di file ini; tersimpan di pengaturan service (langkah 03).
 #>
@@ -31,7 +32,8 @@ param(
     [string]$SqlUser = '',                # kosong = Windows Authentication; isi (mis. login admin DB) untuk SQL login, password ditanya
     [switch]$Paksa,
     [switch]$Restart,
-    [switch]$Rollback
+    [switch]$Rollback,
+    [switch]$Diagnosa
 )
 $ErrorActionPreference = 'Stop'
 $root   = 'C:\GudangAtm'
@@ -72,6 +74,18 @@ function Test-Health([int]$Detik = 60) {
     return $false
 }
 
+function Show-Events {
+    try {
+        $ev = Get-WinEvent -LogName Application -MaxEvents 400 -ErrorAction Stop |
+            Where-Object { $_.ProviderName -in '.NET Runtime', 'Application Error' -or $_.ProviderName -like '*GudangAtm*' -or $_.Message -like '*GudangAtm*' } |
+            Where-Object { $_.TimeCreated -gt (Get-Date).AddMinutes(-15) } | Select-Object -First 6
+        if ($ev) {
+            Warn 'Event Viewer (15 menit terakhir):'
+            $ev | ForEach-Object { Write-Host "---- $($_.TimeCreated) $($_.ProviderName) $($_.LevelDisplayName)" -ForegroundColor DarkYellow; Write-Host ($_.Message.Substring(0, [Math]::Min(1500, $_.Message.Length))) }
+        } else { Warn 'Tidak ada event GudangAtm / .NET Runtime di 15 menit terakhir.' }
+    } catch { Warn "Event Viewer tidak bisa dibaca: $($_.Exception.Message)" }
+}
+
 function Copy-Folder($from, $to) {
     New-Item -ItemType Directory -Force -Path $to | Out-Null
     robocopy $from $to /MIR /NFL /NDL /NJH /NJS /R:3 /W:2 | Out-Null
@@ -91,6 +105,30 @@ function Restore-Last {
 try {
     # ---------------------------------------------------------------- mode singkat
     if ($Rollback) { Restore-Last; return }
+    if ($Diagnosa) {
+        # Jalankan exe di konsol dengan environment service (rahasia tidak ditampilkan), tampilkan output start-up
+        $dir = if (Test-Path "$root\gagal\GudangAtm.Api.exe") { "$root\gagal" } else { $out }
+        Info "Diagnosa: menjalankan $dir\GudangAtm.Api.exe selama 20 detik"
+        $reg = (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\$ServiceName" -ErrorAction Stop).Environment
+        foreach ($e in $reg) { $kv = $e -split '=', 2; if ($kv.Count -eq 2) { Set-Item -Path "env:$($kv[0])" -Value $kv[1] } }
+        $env:Logging__LogLevel__Default = 'Information'
+        Stop-Api
+        $o = "$root\logs\diag-out.txt"; $er = "$root\logs\diag-err.txt"
+        $p = Start-Process "$dir\GudangAtm.Api.exe" -WorkingDirectory $dir -PassThru -NoNewWindow -RedirectStandardOutput $o -RedirectStandardError $er
+        Start-Sleep 12
+        $code = & curl.exe -sk -o "$root\logs\diag-health.txt" -w '%{http_code}' "https://localhost:$Port/api/health"
+        Start-Sleep 3
+        if (-not $p.HasExited) { Stop-Process $p.Id -Force } else { Warn "Proses berhenti sendiri (exit code $($p.ExitCode))" }
+        Start-Sleep 2
+        Write-Host "Health: HTTP $code" -ForegroundColor Cyan
+        Write-Host '---- output ----' -ForegroundColor Cyan
+        # sembunyikan password / kunci bila ada di output
+        foreach ($f in $o, $er) { if (Test-Path $f) { Get-Content $f -Tail 80 | ForEach-Object { $_ -replace '(?i)(password|pwd|key)=[^;\s]+', '$1=***' } } }
+        Info 'Menjalankan service lagi'
+        Start-Api
+        if (Test-Health 60) { Ok 'Service berjalan (versi yang terpasang).' } else { Warn 'Service belum sehat.'; Show-Events }
+        return
+    }
     if ($Restart) {
         Info "Restart service $ServiceName"
         Stop-Api; Start-Api
@@ -191,8 +229,10 @@ try {
         Get-Service $ServiceName | Format-Table Name, Status, StartType -AutoSize
     } else {
         Warn 'Health gagal dalam 90 detik.'
+        Show-Events
+        Copy-Folder $out "$root\gagal"     # simpan versi gagal untuk -Diagnosa
         if ($svc -and (Get-ChildItem $backup -Directory -Filter 'api-*' -ErrorAction SilentlyContinue)) { Restore-Last }
-        throw 'Versi baru tidak sehat. Cek Event Viewer > Application (GudangAtm.Api) atau jalankan 05-cek-status.ps1.'
+        throw 'Versi baru tidak sehat (sudah dikembalikan ke versi sebelumnya). Jalankan: .\update-api.ps1 -Diagnosa  lalu kirim hasilnya.'
     }
 }
 catch {
