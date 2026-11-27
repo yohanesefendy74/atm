@@ -59,10 +59,30 @@ public static class AuthEndpoints
         return roles;
     }
 
-    static List<Claim> Claims(LoginUser u, List<string> roles)
+    /// Satu user satu sesi: tolak bila masih login di perangkat lain, kecuali user memilih mengeluarkan perangkat itu.
+    static async Task<(string? sid, IResult? error)> MulaiSesi(LoginUser user, LoginRequest req, string perangkat, SesiStore sesi, HttpContext ctx, AuthOptions opt, ILogger log)
+    {
+        var aktif = await sesi.CariAktif(user.UserId);
+        if (aktif is not null && !req.Paksa)
+        {
+            var lalu = Math.Max(0, (int)(DateTime.Now - aktif.LastSeen).TotalMinutes);
+            return (null, Results.Json(new
+            {
+                message = $"User {user.UserCode} sedang login di {aktif.Perangkat} (login {aktif.LoginAt:dd/MM HH:mm}, aktif {lalu} menit lalu). " +
+                          "Login di sini akan mengeluarkan perangkat tersebut.",
+                code = "SESI_AKTIF",
+                perangkat = aktif.Perangkat,
+            }, statusCode: 409));
+        }
+        if (aktif is not null) await Audit.TryWrite(opt.ConnString, ctx, "LOGIN_GANTI_SESI", user.UserCode, null, log);
+        return (await sesi.Mulai(user.UserId, perangkat, ctx.Connection.RemoteIpAddress?.ToString()), null);
+    }
+
+    static List<Claim> Claims(LoginUser u, List<string> roles, string sid)
     {
         var c = new List<Claim>
         {
+            new("sid", sid),
             new("uid", u.UserId.ToString()),
             new("ucode", u.UserCode),
             new("bpl", u.BplId.ToString()),
@@ -90,12 +110,14 @@ public static class AuthEndpoints
             Results.Ok(new { token = af.GetAndStoreTokens(ctx).RequestToken }));
 
         // ---- Web (cookie HttpOnly + SameSite=Strict)
-        app.MapPost("/api/auth/web-login", async (LoginRequest req, LoginGuard guard, IAntiforgery af, HttpContext ctx, ILogger<LoginGuard> log) =>
+        app.MapPost("/api/auth/web-login", async (LoginRequest req, LoginGuard guard, SesiStore sesi, IAntiforgery af, HttpContext ctx, ILogger<LoginGuard> log) =>
         {
             var (user, error) = await Verify(req, opt, guard, ctx, log);
             if (user is null) return error!;
+            var (sid, sesiErr) = await MulaiSesi(user, req, "Web", sesi, ctx, opt, log);
+            if (sid is null) return sesiErr!;
             var roles = RolesFor(user, opt);
-            var principal = new ClaimsPrincipal(new ClaimsIdentity(Claims(user, roles), CookieAuthenticationDefaults.AuthenticationScheme, "ucode", RoleClaim));
+            var principal = new ClaimsPrincipal(new ClaimsIdentity(Claims(user, roles, sid), CookieAuthenticationDefaults.AuthenticationScheme, "ucode", RoleClaim));
             await ctx.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
             // token CSRF terikat ke identitas -> buat baru untuk user yang baru login
             ctx.User = principal;
@@ -103,8 +125,9 @@ public static class AuthEndpoints
             return Results.Ok(new { user = Me(principal), csrf });
         }).RequireRateLimiting("login");
 
-        app.MapPost("/api/auth/logout", async (HttpContext ctx) =>
+        app.MapPost("/api/auth/logout", async (HttpContext ctx, SesiStore sesi) =>
         {
+            if (int.TryParse(ctx.User.FindFirstValue("uid"), out var uid)) await sesi.Selesai(uid, ctx.User.FindFirstValue("sid"));
             await Audit.TryWrite(opt.ConnString, ctx, "LOGOUT", ctx.User.UserCode(), null, ctx.RequestServices.GetRequiredService<ILogger<LoginGuard>>());
             await ctx.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return Results.Ok(new { ok = true });
@@ -113,14 +136,16 @@ public static class AuthEndpoints
         app.MapGet("/api/auth/me", (ClaimsPrincipal u) => Results.Ok(Me(u))).RequireAuthorization();
 
         // ---- Aplikasi HP (Bearer JWT, tidak memakai cookie)
-        app.MapPost("/api/auth/login", async (LoginRequest req, LoginGuard guard, HttpContext ctx, ILogger<LoginGuard> log) =>
+        app.MapPost("/api/auth/login", async (LoginRequest req, LoginGuard guard, SesiStore sesi, HttpContext ctx, ILogger<LoginGuard> log) =>
         {
             var (user, error) = await Verify(req, opt, guard, ctx, log);
             if (user is null) return error!;
+            var (sid, sesiErr) = await MulaiSesi(user, req, "HP", sesi, ctx, opt, log);
+            if (sid is null) return sesiErr!;
             var roles = RolesFor(user, opt);
             var token = new JwtSecurityToken(
                 issuer: opt.JwtIssuer,
-                claims: Claims(user, roles),
+                claims: Claims(user, roles, sid),
                 expires: DateTime.UtcNow.AddHours(opt.JwtHours),
                 signingCredentials: new SigningCredentials(opt.SigningKey, SecurityAlgorithms.HmacSha256));
             return Results.Ok(new { token = new JwtSecurityTokenHandler().WriteToken(token), user, roles });

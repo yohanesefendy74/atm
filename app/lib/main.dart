@@ -31,12 +31,23 @@ class _InternalCert extends HttpOverrides {
   }
 }
 
+final navKey = GlobalKey<NavigatorState>();
+
 class GudangApp extends StatelessWidget {
   const GudangApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Sesi ditolak server (login di perangkat lain / habis): tutup semua layar, kembali ke login dengan pesan
+    Session.I.onSesiBerakhir = (pesan) {
+      final nav = navKey.currentState;
+      if (nav == null) return;
+      nav.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+      final ctx = navKey.currentContext;
+      if (ctx != null) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(pesan), duration: const Duration(seconds: 6)));
+    };
     return MaterialApp(
+      navigatorKey: navKey,
       title: 'Gudang ATM',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),

@@ -44,7 +44,25 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     setState(() => _busy = true);
     try {
-      await Api.login(_user.text.trim(), _pass.text);
+      try {
+        await Api.login(_user.text.trim(), _pass.text);
+      } on ApiException catch (e) {
+        // satu user satu sesi: masih login di perangkat lain
+        if (e.status != 409 || !mounted) rethrow;
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: const Text('Sedang login di perangkat lain'),
+            content: Text(e.message),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Batal')),
+              FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Login di sini')),
+            ],
+          ),
+        );
+        if (ok != true) return;
+        await Api.login(_user.text.trim(), _pass.text, paksa: true);
+      }
       await Session.I.saveRememberedUser(_remember ? _user.text.trim() : null);
       if (!mounted) return;
       Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const Shell()));

@@ -513,3 +513,17 @@ GO
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_WHS_Plan1_Base' AND object_id = OBJECT_ID('dbo.WHS_Plan1'))
     CREATE INDEX IX_WHS_Plan1_Base ON dbo.WHS_Plan1 (BaseType, BaseDocEntry, BaseLineNum) INCLUDE (PlanId, QtyPlan, QtyDone);
 GO
+
+/* Satu user satu sesi (web atau HP): sesi aktif per user. Login baru di perangkat lain ditolak kecuali user memilih
+   mengeluarkan perangkat lama; perangkat lama lalu ditolak di request berikutnya. */
+IF OBJECT_ID('dbo.WHS_UserSesi') IS NULL
+CREATE TABLE dbo.WHS_UserSesi (
+    UserId    INT          NOT NULL PRIMARY KEY,   -- OUSR.USERID
+    SesiId    NVARCHAR(40) NOT NULL,
+    Perangkat NVARCHAR(20) NOT NULL,               -- Web / HP
+    Ip        NVARCHAR(45) NULL,
+    LoginAt   DATETIME2(0) NOT NULL,
+    LastSeen  DATETIME2(0) NOT NULL
+);
+GO
+-- GRANT SELECT, INSERT, UPDATE ON dbo.WHS_UserSesi TO gudang_app;

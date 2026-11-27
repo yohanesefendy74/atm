@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { ApiError } from '../api';
 import { useAuth } from '../auth';
 import { ErrorBox, Icon } from '../ui';
 
@@ -16,7 +17,15 @@ export default function Login() {
     setBusy(true);
     setError(null);
     try {
-      await login(userCode.trim(), password);
+      try {
+        await login(userCode.trim(), password);
+      } catch (err) {
+        // Satu user satu sesi: masih login di perangkat lain -> tanya dulu sebelum mengeluarkan perangkat itu
+        if (err instanceof ApiError && err.status === 409) {
+          if (!confirm(`${err.message}\n\nLanjutkan login di sini?`)) { setBusy(false); return; }
+          await login(userCode.trim(), password, true);
+        } else throw err;
+      }
     } catch (err) {
       setError(err);
       setPassword('');

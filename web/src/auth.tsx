@@ -14,7 +14,7 @@ type Ctx = {
   user: User | null;
   ready: boolean;
   isAdmin: boolean;
-  login: (userCode: string, password: string) => Promise<void>;
+  login: (userCode: string, password: string, paksa?: boolean) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -35,8 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setReady(true));
   }, []);
 
-  const login = useCallback(async (userCode: string, password: string) => {
-    const r = await post<{ user: User; csrf: string }>('/api/auth/web-login', { userCode, password });
+  const login = useCallback(async (userCode: string, password: string, paksa = false) => {
+    const r = await post<{ user: User; csrf: string }>('/api/auth/web-login', { userCode, password, paksa });
     setCsrf(r.csrf);
     setUser(r.user);
   }, []);

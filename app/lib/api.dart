@@ -25,6 +25,9 @@ class Session {
   String? printerName;
   String? rememberedUser;
 
+  /// Dipanggil saat server menolak sesi (login di perangkat lain / sesi habis): kembali ke layar login.
+  void Function(String pesan)? onSesiBerakhir;
+
   String get userName => (user?['name'] ?? user?['userCode'] ?? '').toString();
   String get userCode => (user?['userCode'] ?? '').toString();
 
@@ -96,7 +99,13 @@ class Api {
     if (r.statusCode >= 200 && r.statusCode < 300) return body;
     String msg = 'Server error ${r.statusCode}';
     if (body is Map && body['message'] != null) msg = body['message'].toString();
-    if (r.statusCode == 401 && Session.I.token != null) msg = 'Sesi habis, silakan login ulang';
+    if (r.statusCode == 401 && Session.I.token != null) {
+      // satu user satu sesi: akun dipakai login di perangkat lain -> pesan dari server
+      msg = body is Map && body['code'] == 'SESI_DIGANTI' ? body['message'].toString() : 'Sesi habis, silakan login ulang';
+      Session.I.token = null;
+      final cb = Session.I.onSesiBerakhir;
+      if (cb != null) Future.microtask(() => cb(msg));
+    }
     throw ApiException(msg, r.statusCode, body is Map ? body : null);
   }
 
@@ -164,8 +173,9 @@ class Api {
 
   // ------------------------------------------------------------ endpoint
 
-  static Future<void> login(String userCode, String password) async {
-    final res = await post('/api/auth/login', {'userCode': userCode, 'password': password});
+  /// [paksa] = keluarkan sesi user ini di perangkat lain (satu user satu sesi).
+  static Future<void> login(String userCode, String password, {bool paksa = false}) async {
+    final res = await post('/api/auth/login', {'userCode': userCode, 'password': password, 'paksa': paksa});
     Session.I.token = res['token'] as String;
     Session.I.user = Map<String, dynamic>.from(res['user'] as Map);
   }

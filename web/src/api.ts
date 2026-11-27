@@ -74,7 +74,7 @@ export async function api<T = Row>(path: string, opts: Opts = {}, retry = true):
 
   if (r.status === 401 && !path.startsWith('/api/auth/web-login')) {
     onUnauthorized();
-    throw new ApiError('Sesi berakhir, silakan login ulang', 401);
+    throw new ApiError(data?.code === 'SESI_DIGANTI' ? String(data.message) : 'Sesi berakhir, silakan login ulang', 401);
   }
   // token CSRF kedaluwarsa (mis. setelah server restart) -> ambil ulang sekali
   if (r.status === 400 && unsafe && retry && String(data?.message ?? '').startsWith('Sesi keamanan')) {

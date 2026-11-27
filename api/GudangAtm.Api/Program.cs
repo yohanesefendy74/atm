@@ -45,6 +45,9 @@ builder.Services.AddSingleton(new LoginGuard
     LockFor = TimeSpan.FromMinutes(cfg.GetValue("Security:LockMinutes", 15)),
 });
 
+// Satu user satu sesi (web atau HP). Sesi dianggap aktif bila dipakai dalam N menit terakhir.
+builder.Services.AddSingleton(new SesiStore(connString, cfg.GetValue("Security:SessionIdleMinutes", 30)));
+
 builder.Services.AddAntiforgery(o =>
 {
     o.HeaderName = "X-XSRF-TOKEN";
@@ -194,6 +197,7 @@ app.UseStaticFiles(new StaticFileOptions
 }
 
 app.UseAuthentication();
+app.UseSatuSesi();
 app.UseRateLimiter();
 app.UseCsrfProtection();
 app.UseAuthorization();

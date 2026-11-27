@@ -1,6 +1,6 @@
 namespace GudangAtm.Api;
 
-public record LoginRequest(string UserCode, string Password);
+public record LoginRequest(string UserCode, string Password, bool Paksa = false);   // Paksa: keluarkan sesi di perangkat lain
 
 public class LoginUser
 {
