@@ -275,6 +275,7 @@ GO
    (contoh SPBB/2611/0012 -> lot 26110012; item & container sudah ada di QR). Barang yang diterima krani dari SPBB memakai lot ini.
    Transaksi krani tanpa rencana (inbound bebas, hasil KR/RP) memakai lot = ObjType + DocEntry. */
 IF COL_LENGTH('dbo.WHS_Plan1','NoLot') IS NULL ALTER TABLE dbo.WHS_Plan1 ADD NoLot NVARCHAR(20) NULL;
+IF COL_LENGTH('dbo.KRN1','NoLot') IS NULL ALTER TABLE dbo.KRN1 ADD NoLot NVARCHAR(20) NULL;  -- juga dibuat di saldo.sql; di sini karena dipakai di bawah
 GO
 -- baris transaksi krani yang sempat memakai format lama (nomor SPBB + 3 digit baris) disamakan
 UPDATE d SET NoLot = REPLACE(SUBSTRING(p.PlanNo, 6, 20), '/', '')
